@@ -58,6 +58,13 @@ SOMLIT_1m %>%
   geom_line()
 
 #################################################################################
+#oxygen
+
+plot(DF_O2)
+
+
+
+#################################################################################
 ###NA values
 #interpolation variable temperature
 ggplot_na_distribution(SOMLIT_1m$temp_B)
@@ -165,7 +172,7 @@ O2_interpol_without_200rows <- O2_interpol[-seq(0,200,1)]
 ggplot_na_imputations(x_with_na = SOMLIT_1m$O2_B, x_with_imputations = O2_interpol)
 
 ###Nouvelle data frame oxygen interpolee
-DF_O2 <- data.frame(Date=SOMLIT_1m$datetime, O2=O2_interpol)
+DF_O2 <- data.frame(Date=SOMLIT_1m$datetime[-seq(1:200)], O2=O2_interpol[-seq(1:200)])
 
 #com
 #bcp d'interpolations dans la variable O2, comment savoir si ca ne modifie pas la tendance ?
