@@ -14,6 +14,7 @@ library("tidyr")
 library("tseries")
 library("forecast")
 library("tsDyn")
+library("tsoutliers")
 
 
 ####Data filled SAMIR (B > B+ quand B+ empty), mean profondeur 1 ? 3m
@@ -56,12 +57,6 @@ SOMLIT_1m %>%
   ggplot() +
   aes(x=datetime, y=temp_B) +
   geom_line()
-
-#################################################################################
-#oxygen
-
-plot(DF_O2)
-
 
 
 #################################################################################
@@ -352,6 +347,41 @@ plot(model_O2)
 shapiro.test(model_O2$residuals) 
 #p-value < 0.05
 #residus ne suivent pas une loi normale
+
+#################################################################################
+#etude des moyennes
+
+DF_temp %>% 
+  mutate(Year = format(Date, format="%Y")) %>% 
+  group_by(Year) %>% 
+  summarise(mean = mean(Temp), sd = sd(Temp)) %>% 
+  ggplot() + 
+  aes(x=Year, y=mean) +
+  geom_bar(stat="identity", fill='#CC6666') +
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2)
+#1996 et 2022 : donnees d'hiver seulement donc T plus faible
+
+DF_sal %>% 
+  mutate(Year = format(Date, format="%Y")) %>% 
+  group_by(Year) %>% 
+  summarise(mean = mean(Sal), sd = sd(Sal)) %>% 
+  ggplot() + 
+  aes(x=Year, y=mean) +
+  geom_bar(stat="identity", fill='#6699CC') +
+  scale_y_continuous(limits = c(0,45)) +
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.075)
+
+
+DF_O2 %>% 
+  mutate(Year = format(Date, format="%Y")) %>% 
+  group_by(Year) %>% 
+  summarise(mean = mean(O2), sd = sd(O2)) %>% 
+  ggplot() + 
+  aes(x=Year, y=mean) +
+  geom_bar(stat="identity", fill='#669999') +
+  scale_y_continuous(limits=c(0,8)) +
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2)
+#oxygen, outliers les premieres annees
 
 
 
