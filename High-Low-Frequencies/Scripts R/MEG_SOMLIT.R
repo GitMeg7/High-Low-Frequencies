@@ -1,0 +1,386 @@
+#Libraries
+library("viridis")
+library("scales")
+library("lubridate")
+library("gsignal")
+library("FactoMineR")
+library("factoextra")
+library("gplots")
+library("heatwaveR")
+library("dplyr")
+library("imputeTS")
+library("Metrics")
+
+####Data filled SAMIR (B > B+ quand B+ empty), mean profondeur 1 ? 3m
+RAW_SOMLIT_1m <- readRDS("rh_B_Bplus_1m_mean.rds")
+###tri
+SOMLIT_1m <- RAW_SOMLIT_1m %>%
+  dplyr::select(datetime, mean_temp_rhBplus_B, mean_sal_rhBplus_B, mean_oxy_mll_rhBplus_B)
+
+SOMLIT_1m = SOMLIT_1m %>% arrange(datetime)
+
+###visualisation globale des donn?es
+plot.ts(SOMLIT_1m %>% dplyr::select(-datetime))
+
+####Rename
+SOMLIT_1m <- SOMLIT_1m %>%
+  dplyr::rename(temp_B = mean_temp_rhBplus_B,
+                sal_B = mean_sal_rhBplus_B,
+                O2_B = mean_oxy_mll_rhBplus_B)
+
+########################################################################################
+#comparaison T par annee
+
+SOMLIT_1m %>% ggplot() +
+  geom_line(aes(x= as.Date(yday(datetime), "1970-01-01"), 
+                y=temp_B, 
+                group = factor(year(datetime)), 
+                color = factor(year(datetime))), 
+            size = 0.75) +
+  scale_colour_viridis_d() +
+  scale_x_date(date_breaks="months", date_labels="%b", name = "") +
+  labs(x="Month",colour="") +
+  theme_bw() +
+  scale_y_continuous(name = "Temperature (?C)") 
+
+#Annee 2018
+SOMLIT_1m %>%
+  mutate(Year = format(datetime, format="%Y"),
+         Month = format(datetime, format="%m-%d")) %>% 
+  dplyr::filter(Year ==2018) %>% 
+  ggplot() +
+  aes(x=datetime, y=temp_B) +
+  geom_line()
+
+#################################################################################
+###NA values
+#interpolation variable temperature
+ggplot_na_distribution(SOMLIT_1m$temp_B)
+statsNA(SOMLIT_1m$temp_B) #nombre de NA (82) + gaps
+ggplot_na_gapsize(SOMLIT_1m$temp_B, orientation="vertical")
+
+#plot nb NA par années (temperature)
+SOMLIT_na <- SOMLIT_1m %>% 
+  dplyr::mutate(Year = format(datetime, format="%Y"),
+                Month = format(datetime, format="%m-%d")) %>% 
+  dplyr::group_by(Year, Month) 
+
+SOMLIT_na$temp_B[is.na(SOMLIT_na$temp_B)] <- "NA"
+
+SOMLIT_na %>% 
+  dplyr::filter(temp_B == "NA") %>% 
+  dplyr::group_by(Year) %>% 
+  dplyr::summarise(number_of_NA = n()) %>% 
+  ggplot(aes(x = Year, y = number_of_NA))  +
+  geom_segment(aes(x = Year, xend = Year, y = 0, yend = number_of_NA), 
+               color = "grey", linewidth = 2) +
+  geom_point(size = 5, fill = "#EE6677", shape = 21, color = "black") +
+  coord_flip() +
+  scale_x_discrete(name = "") +
+  scale_y_continuous(name = "NA occurences", limits = c(0,10), breaks = seq(0, 10, 1))
+  
+
+temp_interpol <- na_interpolation(SOMLIT_1m$temp_B)
+
+ggplot_na_imputations(x_with_na = SOMLIT_1m$temp_B, x_with_imputations = temp_interpol)
+
+####Creation data frame temperature interpolee
+DF_temp <- data.frame(Date=SOMLIT_1m$datetime, Temp=temp_interpol)
+
+
+
+#interpolation variable sal
+
+ggplot_na_distribution(SOMLIT_1m$sal_B)
+statsNA(SOMLIT_1m$sal_B) #nombre de NA (103) + gaps
+ggplot_na_gapsize(SOMLIT_1m$sal_B, orientation="vertical")
+
+#plot nb NA par années (salinité)
+SOMLIT_na_sal <- SOMLIT_1m %>% 
+  dplyr::mutate(Year = format(datetime, format="%Y"),
+                Month = format(datetime, format="%m-%d")) %>% 
+  dplyr::group_by(Year, Month) 
+
+SOMLIT_na_sal$sal_B[is.na(SOMLIT_na_sal$sal_B)] <- "NA"
+
+SOMLIT_na_sal %>% 
+  dplyr::filter(sal_B == "NA") %>% 
+  dplyr::group_by(Year) %>% 
+  dplyr::summarise(number_of_NA = n()) %>% 
+  ggplot(aes(x = Year, y = number_of_NA))  +
+  geom_segment(aes(x = Year, xend = Year, y = 0, yend = number_of_NA), 
+               color = "grey", linewidth = 2) +
+  geom_point(size = 5, fill = "#69b3a2", shape = 21, color = "black") +
+  coord_flip() +
+  scale_x_discrete(name = "") +
+  scale_y_continuous(name = "NA occurences", limits = c(0,17), breaks = seq(0, 17, 1))
+
+
+sal_interpol <- na_interpolation(SOMLIT_1m$sal_B)
+
+ggplot_na_imputations(x_with_na = SOMLIT_1m$sal_B, x_with_imputations = sal_interpol)
+
+##Nouvelle data frame salinite interpolee
+DF_sal <- data.frame(Date=SOMLIT_1m$datetime, Sal=sal_interpol)
+
+
+
+#interpolation variable O2
+ggplot_na_distribution(SOMLIT_1m$O2_B)
+statsNA(SOMLIT_1m$O2_B) #nombre de NA (405) + gaps
+ggplot_na_gapsize(SOMLIT_1m$O2_B, orientation="vertical")
+
+#plot nb NA par années (oxygen)
+SOMLIT_na_O2 <- SOMLIT_1m %>% 
+  dplyr::mutate(Year = format(datetime, format="%Y"),
+                Month = format(datetime, format="%m-%d")) %>% 
+  dplyr::group_by(Year, Month) 
+
+SOMLIT_na_O2$O2_B[is.na(SOMLIT_na_O2$O2_B)] <- "NA"
+
+SOMLIT_na_O2 %>% 
+  dplyr::filter(O2_B == "NA") %>% 
+  dplyr::group_by(Year) %>% 
+  dplyr::summarise(number_of_NA = n()) %>% 
+  ggplot(aes(x = Year, y = number_of_NA))  +
+  geom_segment(aes(x = Year, xend = Year, y = 0, yend = number_of_NA), 
+               color = "grey", linewidth = 2) +
+  geom_point(size = 5, fill = "#999933", shape = 21, color = "black") +
+  coord_flip() +
+  scale_x_discrete(name = "") +
+  scale_y_continuous(name = "NA occurences", limits = c(0,50), breaks = seq(0, 50, 10))
+
+O2_interpol <- na_interpolation(SOMLIT_1m$O2_B, maxgap = 35) #ne pas fill les premi?res NA
+ggplot_na_distribution(O2_interpol)
+
+#remove gap of 200 first values
+O2_interpol_without_200rows <- O2_interpol[-seq(0,200,1)]
+O2_interpol_without_200rows <- as.numeric(O2_interpol_without_200rows)
+
+ggplot_na_imputations(x_with_na = SOMLIT_1m$O2_B, x_with_imputations = O2_interpol)
+
+###Nouvelle data frame oxygen interpolee
+DF_O2 <- data.frame(Date=SOMLIT_1m$datetime, O2=O2_interpol)
+
+#com
+#bcp d'interpolations dans la variable O2, comment savoir si ca ne modifie pas la tendance ?
+#faire un t-test entre les donn?es sans interpolation et avec pour voir si diff?rence ?
+
+###############################################################################################
+###############################################################################################
+#Autocorrelation temperature
+acfT <- acf(temp_interpol, type="correlation", lag.max = 100)
+#un lag = 1 semaine
+#donc 1 mois = 4 lags
+#donc 1 ans = 52 lags
+plot(acfT$lag, acfT$acf, type="l", ylim=c(-1,1), pch=20) #k=52
+abline(v=52)
+
+####################################################################################
+##decomposition serie temp
+
+compo_temp <- decompose(ts(DF_temp$Temp, frequency=52.14, start=1992))
+plot(compo_temp)
+
+
+####################################################################################
+## estimation de la tendance temperature
+##avec une moyenne glissante sur 52 intervalles
+temp_trend <- stats::filter(DF_temp$Temp, rep(1/52,52))
+
+plot(temp_trend, ylim=c(10,30), col='red')
+lines(DF_temp$Temp, col=8)
+#repr?sentations en pointill?s de la p?riodicit? T=52 semaines
+abline(v=seq(from=0, to=1400, by=52), col='blue', lty=2)
+
+####################################################################################
+##linear model temperature
+model_temp <- lm(temp_trend ~ DF_temp$Date)
+
+plot(temp_trend, ylim=c(10,30), col='red')
+lines(DF_temp$Temp, col=8)
+lines(model_temp$fitted.values, col='blue')
+legend(x=150, y=29.8, "T° = 6.64e-10*x + 1.78e01", cex=0.85, box.lty=0)
+
+
+#visualisation de la regression
+
+plot(DF_temp$Date, model_temp$fitted.values, type='l', ylim=c(17,20)) #visuellement : augmentation 
+summary(model_temp)
+ 
+#equation : 6.63e-10 * x + 1.78e01
+# mod?le statistiquement significatif
+#pente positive donc augmentation au cours des ann?es
+
+#Analyse de la regression
+#residual standard error : - il est ?lev?, plus les observations fit avec la droite
+#ici 084 donc pas top
+#multiple R-squared = coef de determination. + il est proche de 1 mieux c'est
+#ici, 0.03 donc la ligne de regression pr?dit tr?s mal les valeurs de y
+#p-value = mod?le de regression significatif
+plot(model_temp)
+#1 : horizontal line = residuals follow a linear pattern
+#2 : distribution normale des r?sidus ?
+shapiro.test(model_temp$residuals) #r?sidus ne suivent pas une loi normale
+#3 : homosc?dasticit? (variance ?gales), horizontal line
+#4 : influential observations
+
+
+####################################################################################
+compo_sal <- decompose(ts(DF_sal$Sal, frequency=52.14, start=1992))
+plot(compo_sal)
+#Autocorrelation salinité
+acfS <- acf(sal_interpol, type="correlation", lag.max = 80)
+#un lag = 1 semaine
+#donc 1 mois = 4 lags
+#donc 1 ans = 52 lags
+plot(acfT$lag, acfT$acf, type="l", ylim=c(-1,1), pch=20) #k=52
+abline(v=17)
+
+####################################################################################
+## estimation de la tendance salinity
+##avec une moyenne glissante sur 52 intervalles
+sal_trend <- stats::filter(DF_sal$Sal, rep(1/52.14,52.14))
+ts(compo_sal$trend)
+
+plot(sal_trend, ylim=c(37,39), col='red', type='l')
+lines(DF_sal$Sal, col=8)
+lines(ts(compo_sal$trend))
+#repr?sentations en pointill?s de la p?riodicit? T=52 semaines
+abline(v=seq(from=0, to=1400, by=52), col='blue', lty=2)
+
+####################################################################################
+##linear model temperature
+model_temp <- lm(temp_trend ~ DF_temp$Date)
+
+plot(temp_trend, ylim=c(10,30), col='red')
+lines(DF_temp$Temp, col=8)
+lines(model_temp$fitted.values, col='blue')
+legend(x=150, y=29.8, "T° = 6.64e-10*x + 1.78e01", cex=0.85, box.lty=0)
+
+
+#visualisation de la regression
+
+plot(DF_temp$Date, model_temp$fitted.values, type='l', ylim=c(17,20)) #visuellement : augmentation 
+summary(model_temp)
+
+####################################################################################
+
+#Autocorrelation oxygen
+acfT <- acf(temp_interpol, type="correlation", na.action = na.pass, lag.max = 100)
+#un lag = 1 semaine
+#donc 1 mois = 4 lags
+#donc 1 ans = 52 lags
+plot(acfT$lag, acfT$acf, type="l", ylim=c(-1,1), pch=20) #k=52
+abline(v=52)
+
+####################################################################################
+## estimation de la tendance temperature
+##avec une moyenne glissante sur 52 intervalles
+temp_trend <- stats::filter(DF_temp$Temp, rep(1/52,52))
+length(temp_trend)
+
+plot(temp_trend, ylim=c(10,30), col='red')
+lines(DF_temp$Temp, col=8)
+#repr?sentations en pointill?s de la p?riodicit? T=52 semaines
+abline(v=seq(from=0, to=1400, by=52), col='blue', lty=2)
+
+####################################################################################
+##linear model temperature
+model_temp <- lm(temp_trend ~ DF_temp$Date)
+
+plot(temp_trend, ylim=c(10,30), col='red')
+lines(DF_temp$Temp, col=8)
+lines(model_temp$fitted.values, col='blue')
+legend(x=150, y=29.8, "T° = 6.64e-10*x + 1.78e01", cex=0.85, box.lty=0)
+
+
+#visualisation de la regression
+
+plot(DF_temp$Date, model_temp$fitted.values, type='l', ylim=c(17,20)) #visuellement : augmentation 
+summary(model_temp)
+
+
+
+
+##########################################################################################
+#Traitement du signal
+#Fourier transform
+
+Fourier <- abs(fft(temp_interpol))
+plot(Fourier, type='l')
+Fourier %>% data.frame() %>% select(-1)
+which.max(Fourier)
+max(Fourier, 5)
+
+
+##########################################################################################
+### Jerem
+
+SOMLIT_1m_wX_NA <- SOMLIT_1m[!(is.na(SOMLIT_1m$temp_B)), ]
+
+summary_min_max_temp <- 
+  SOMLIT_1m_wX_NA %>% mutate(Year = format(datetime, format="%Y")) %>% 
+  group_by(Year) %>% summarise(max_Temp = max(temp_B), 
+                               min_Temp = min(temp_B)) 
+
+SOMLIT_1m_split <- SOMLIT_1m_wX_NA %>% 
+  mutate(Year = format(datetime, format="%Y")) %>% 
+  group_by(Year) %>% group_split()
+
+# init loop
+summary_min_max_temp$date_temp_max = structure(rep(NA_real_, 30), class="Date")
+summary_min_max_temp$date_temp_min = structure(rep(NA_real_, 30), class="Date")
+
+for (i in 1:30) {
+  summary_min_max_temp$date_temp_max[i] = 
+    SOMLIT_1m_split[[i]]$datetime[SOMLIT_1m_split[[i]]$temp_B == max(SOMLIT_1m_split[[i]]$temp_B)]
+  summary_min_max_temp$date_temp_min[i] = 
+    SOMLIT_1m_split[[i]]$datetime[SOMLIT_1m_split[[i]]$temp_B == min(SOMLIT_1m_split[[i]]$temp_B)]
+}
+
+# 1994 missing
+summary_min_max_temp <- rbind(summary_min_max_temp[c(1:2),],
+      data.frame(Year = 1994,
+           max_Temp = NA, 
+           min_Temp = NA, 
+           date_temp_max = NA, 
+           date_temp_min = NA),
+      summary_min_max_temp[c(3:30),])
+
+summary_min_max_temp$nb_jr_decrease =
+abs(difftime(summary_min_max_temp$date_temp_max, summary_min_max_temp$date_temp_min))
+summary_min_max_temp$nb_jr_increase = 365 - summary_min_max_temp$nb_jr_decrease
+
+# incomplete monitoring
+summary_min_max_temp <- summary_min_max_temp %>% dplyr::filter(Year != 1994, Year != 1996,
+                                                               Year != 2022)
+
+# Barplot dataset + ggplot
+data.frame(Year = rep(summary_min_max_temp$Year, 2),
+           Temp = c(summary_min_max_temp$max_Temp, 
+                    summary_min_max_temp$min_Temp),
+           Temperature = c(rep("Max", 28), rep("Min", 28))) %>%
+  ggplot(aes(x=Year, y=Temp, fill=Temperature)) +
+  geom_bar(stat="identity", position="dodge", color = "black") +
+  scale_y_continuous("Temperature (T?C)", breaks = seq(0,28,1)) +
+  theme_classic() +
+  scale_fill_manual(values = c("#FF4040", "#63B8FF"))
+
+
+#########################################################################################
+#Heatwaves Robert
+
+DF_temp2 <- DF_temp %>% 
+  mutate(t = as.Date(Date)) %>% 
+  rename(temp = Temp)
+DF_exceedance <- exceedance(DF_temp2, threshold = 25, maxPadLength = 6)
+ 
+DF_exceedance_E <- DF_exceedance$exceedance
+
+#reunion Laurent jeudi 14h 
+
+#tendance pluriannuelle ? significative 
+
+#demander Carla les derni?res donn?es SOMLIT 2022
+#travailler les r?sidus ? pas accept? en s?rie temporelle 

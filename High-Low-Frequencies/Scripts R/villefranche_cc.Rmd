@@ -1,0 +1,2545 @@
+---
+title: "Time series and comparison for Point B/B+ and EOL data"
+author: "Samir Alliouane, Frederic Gazeau, Steeve Comeau, Jean-Pierre Gattuso,Nuria Teixido, CNRS-SU."
+date: '`r format(Sys.Date(), "%d %B %Y")`'
+output:
+  rmarkdown::html_document:
+    code_folding: hide
+    fig_caption: yes
+    toc: yes
+    toc_float: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r setup, include=FALSE}
+rm(list = ls())
+require(tidyverse)
+require(data.table)
+require(readxl)
+require(pander)
+library(scales)
+require(seacarb)
+library(cowplot)
+library(scales)
+library(kableExtra)
+library(RColorBrewer)
+library(gridExtra)
+library(reshape2)
+library(xtable)
+library(zoo)
+library(lubridate)
+library(nlme)
+library(lmtest)
+library(readr)
+library(dygraphs)
+library(grid)
+library(viridis)
+library(animation)
+library(directlabels)
+library(tibble)
+library(xts)
+library(stringr)
+require("knitr")
+library(broom)
+library("lmodel2") # modele II regression
+#library(plyr)
+library(pander)
+library(lubridate)
+library(tidyr)
+
+#define who is the user and define path
+if (Sys.getenv("LOGNAME") == "gattuso") {
+  path = "../../pCloud\ Sync/Documents/experiments/exp153_carbonates_point_B/"
+  path_sami = "../../pCloud\ Sync/Documents/experiments/exp176_sami/vlfr_ph_data/3_out_ph_sami_seafet/out_deployment/"
+}
+if (Sys.getenv("LOGNAME") == "samir") {
+  path = "../../pCloud Sync/exp153_carbonates_point_B/"
+  path_sami = "../../pCloud\ Sync/exp176_sami/vlfr_ph_data/3_out_ph_sami_seafet/out_deployment/"
+  path_par ="../../pCloud Sync/Light_Series_Odyssey/par_data/Villefranche/"
+}
+
+Sys.setenv(TZ='UTC')
+
+#################### Regression function 
+
+######## To add regression line on ggplots
+# use as annotate(aes(x = 25, y = 300, label = lm_eqn(lm(y ~ x, df))), parse = TRUE)
+# http://stackoverflow.com/questions/7549694/ggplot2-adding-regression-line-equation-and-r2-on-graph
+lm_eqn = function(m) {
+  l <- list(a = format(coef(m)[1], digits = 2),
+      b = format(abs(coef(m)[2]), digits = 2),
+      r2 = format(summary(m)$r.squared, digits = 3));
+  if (coef(m)[2] >= 0)  {
+    eq <- substitute(italic(y) == a + b %.% italic(x)*","~~italic(r)^2~"="~r2,l)
+  } else {
+    eq <- substitute(italic(y) == a - b %.% italic(x)*","~~italic(r)^2~"="~r2,l)    
+  }
+  as.character(as.expression(eq));                 
+}
+
+######## function to make regression plot with model I equation in title
+ggreg <- function (fit, point_size=2) {
+  ggplot(fit$model, aes_string(x = names(fit$model)[2],
+                               y = names(fit$model)[1])) +
+    geom_point(size = point_size, col = "blue") +
+    stat_smooth(method = "lm", col = "black") +
+    labs(title = paste(title, "\nAdj R2 = ",signif(summary(fit)$adj.r.squared, 5),
+                       "; Intercept =",signif(fit$coef[[1]],5 ),
+                       "; Slope =",signif(fit$coef[[2]], 5),
+                       "; P =",signif(summary(fit)$coef[2,4], 5))) +
+    theme(plot.title = element_text(size=7))
+}
+
+########### Regression function 
+####
+# function regression plot with model II equation (MA) in title
+## Dans labs ajout de la variable TITRE pour mettre titre avant chaque graphe
+ggreg2 <- function (fit, xdata, ydata) { # x and y are the names of the variables
+  fit_data <- data.frame(fit$x, fit$y)
+  colnames(fit_data) = c(xdata, ydata)
+reg <- fit$regression.results[2,] #one selects MA only
+intercept <- reg$Intercept
+slope <- reg$Slope
+  ggplot(data = fit_data, aes_string(x = xdata, y = ydata)) + 
+  geom_point(size = 3, col = "blue") +
+  geom_abline(aes(intercept = fit$regression.results[2,2], slope = fit$regression.results[2,3]),
+              colour = "blue")  + 
+  labs(title = paste(titre,"\n Adj R2 = ", signif(fit$rsquare, 3),
+                     "; Intercept =", signif(intercept, 3),
+                     "; Slope =", signif(slope, 3),
+                     "; P =", signif(fit$P.param, 3),
+                     "; n =", (fit$n)))
+}
+
+mytheme <- theme_bw() +
+  theme(axis.text.x=element_text(size=16, color="black"),
+        axis.title.x=element_text(face="bold", size=16),
+        axis.text.y=element_text(size=16, color="black"),
+        axis.title.y=element_text(face="bold", size=16),
+        plot.title = element_text(face="bold", size=14)
+)
+```
+
+# **PAR EOL** {.tabset .tabset-pills}
+
+## **Deployment**
+```{r PAR air, warning = FALSE, message=FALSE}
+# YOU MUST add manually: "_calibrated" in the end of the title file's data.
+file_list_air <- list.files(path  = paste0(path_par, "EOL_air"), pattern = "*_calibrated.CSV")
+
+if (length(file_list_air) == 0) {stop()} # script does not run if there is no data file to read
+ii <- 0
+par_air <- NULL
+for (ii in 1:length(file_list_air)){
+#  print(ii)
+#  print(file_list_air[ii])
+
+tmp <- read.table(paste0(path_par, "EOL_air/", file_list_air[ii], sep = ""), header = F, dec = ".", as.is = TRUE, sep = ",", skip = 9, fill = TRUE)
+
+par_air <- rbind(par_air, tmp)
+}
+
+par_air <- par_air %>% 
+  dplyr::select(-c("V1")) %>% 
+  tidyr::unite(col="datetime", V2, V3, sep = " " )
+colnames(par_air)  <- c("datetime", "raw_value_air", "int_light_air")
+# PAR data are in local France time
+par_air$datetime <- dmy_hms(par_air$datetime, tz="Europe/Paris")
+# Convert to UTC
+par_air$datetime <- with_tz(par_air$datetime, tzone = "UTC")
+# Remove NA 
+par_air <- par_air%>%
+  dplyr::filter(!is.na(datetime))
+# Remove outliers/biofouling periodes
+par_air <- par_air %>% 
+  dplyr::filter(datetime < as.POSIXct("2021-03-16 09:00:00") | datetime > as.POSIXct("2021-03-17 13:00:00") &
+                 datetime < as.POSIXct("2021-06-11 07:30:00") | datetime > as.POSIXct("2021-06-11 09:00:00") ) 
+```
+
+```{r PAR 10m, warning = FALSE, message=FALSE}
+# YOU MUST add manually the "deployement"_calibrated" information in the end of the title file
+file_list_10m <- list.files(path  = paste0(path_par, "EOL_10m"), pattern = "*_calibrated.CSV")
+
+if (length(file_list_10m) == 0) {stop()} # script does not run if there is no data file to read
+ii <- 0
+par_10m <- NULL
+for (ii in 1:length(file_list_10m)){
+ #  print(ii)
+ # print(file_list_10m[ii])
+  
+tmp <- read.table(paste0(path_par, "EOL_10m/", file_list_10m[ii], sep = ""), header = F, dec = ".", as.is = TRUE, sep = ",", skip = 9, fill = TRUE)
+
+par_10m <- rbind(par_10m, tmp)
+}
+par_10m <- par_10m %>% 
+    dplyr::select(-c("V1")) %>% 
+  tidyr::unite(col="datetime", V2, V3, sep = " " )
+colnames(par_10m)  <- c("datetime", "raw_value_10", "int_light_10")
+# PAR data are in local France time
+par_10m$datetime <- dmy_hms(par_10m$datetime, tz="Europe/Paris")
+# Convert to UTC
+par_10m$datetime <- with_tz(par_10m$datetime, tzone = "UTC")
+# Remove outliers/biofouling periodes
+par_10m <- par_10m %>% 
+  dplyr::filter(datetime < as.POSIXct("2021-11-26 09:00:00") | datetime > as.POSIXct("2021-12-03 11:00:00")  )
+```
+
+```{r PAR 20m, warning = FALSE, message=FALSE}
+file_list_20m <- list.files(path  = paste0(path_par, "EOL_20m"), pattern = "*_calibrated.CSV")
+
+if (length(file_list_20m) == 0) {stop()} # script does not run if there is no data file to read
+ii <- 0
+par_20m <- NULL
+for (ii in 1:length(file_list_20m)){
+#   print(ii)
+#  print(file_list_20m[ii])
+  
+tmp <- read.table(paste0(path_par, "EOL_20m/", file_list_20m[ii], sep = ""), header = F, dec = ".", as.is = TRUE, sep = ",", skip = 9, fill = TRUE)
+
+par_20m <- rbind(par_20m, tmp)
+}
+par_20m <- par_20m %>% 
+    dplyr::select(-c("V1")) %>% 
+  tidyr::unite(col="datetime", V2, V3, sep = " " )
+colnames(par_20m)  <- c("datetime", "raw_value_20", "int_light_20")
+# PAR data are in local France time
+par_20m$datetime <- dmy_hms(par_20m$datetime, tz="Europe/Paris")
+# Convert to UTC
+par_20m$datetime <- with_tz(par_20m$datetime, tzone = "UTC")
+# Remove outliers/biofouling periodes
+par_20m <- par_20m %>% 
+  dplyr::filter(datetime < as.POSIXct("2021-11-26 09:00:00") | datetime > as.POSIXct("2021-12-03 11:00:00")  )
+```
+
+```{r PAR 30m, echo=FALSE, message=FALSE, warning=FALSE}
+file_list_30m <- list.files(path  = paste0(path_par, "EOL_30m"), pattern = "*_calibrated.CSV")
+
+if (length(file_list_30m) == 0) {stop()} # script does not run if there is no data file to read
+ii <- 0
+par_30m <- NULL
+for (ii in 1:length(file_list_30m)){
+#   print(ii)
+#  print(file_list_30m[ii])
+  
+tmp <- read.table(paste0(path_par, "EOL_30m/", file_list_30m[ii], sep = ""), header = F, dec = ".", as.is = TRUE, sep = ",", skip = 12, fill = TRUE)
+
+par_30m <- rbind(par_30m, tmp)
+}
+par_30m <- par_30m %>% 
+    dplyr::select(-c("V1")) %>% 
+  tidyr::unite(col="datetime", V2, V3, sep = " " )
+colnames(par_30m)  <- c("datetime", "raw_value_30", "int_light_30")
+# PAR data are in local France time
+par_30m$datetime <- dmy_hms(par_30m$datetime, tz="Europe/Paris")
+# Convert to UTC
+par_30m$datetime <- with_tz(par_30m$datetime, tzone = "UTC")
+
+# Remove outliers/biofouling periodes
+par_30m <- par_30m %>% 
+  dplyr::filter(datetime < as.POSIXct("2021-11-19 09:00:00") | datetime > as.POSIXct("2021-12-03 11:00:00")  ) #remove from 19 because sensor was too dirty on the 26 Nov
+```
+
+```{r PAR plot, warning = FALSE, out.width='100%'}
+par_all <- left_join(par_20m,par_10m,by="datetime") #put 20m BEFORE because data are missing in 10m (stops on 28dec only)
+par_all <- left_join(par_all,par_30m,by="datetime")
+# remove outliers due to end of periode (raising to the surface + lab manipulations)
+# add each periode of time to be removed
+par_all <- par_all %>% 
+  dplyr::filter(datetime < as.POSIXct("2021-03-16 09:00:00") | datetime > as.POSIXct("2021-03-16 13:00:00") &
+                datetime < as.POSIXct("2021-05-21 04:50:00") | datetime > as.POSIXct("2021-06-11 09:00:00") )
+# add each periode here
+par_periode <- c("2020-10-29 12:20:00", "2020-12-09 08:00:00","2020-12-17 10:00:00","2021-03-16 11:00:00","2021-03-17 11:00:00", "2021-05-21 06:50:00","2021-06-11 10:00:00", "2021-11-26 09:00:00", "2021-12-03 11:00:00", "2022-03-23 08:50:00", "2022-09-02 08:40:00")
+
+par_xts <- dplyr::select(par_all, datetime, int_light_10, int_light_20, int_light_30)
+par_xts <- as.xts(par_xts, order.by=par_xts$datetime)
+
+dygraph(par_xts, ylab = "") %>%
+  
+    dyEvent(as.POSIXct("2020-12-28 09:10:00"), "par_10m stops", labelLoc = "top", color="black",strokePattern = "dashed") %>% 
+      dyEvent(as.POSIXct("2021-10-03 03:15:00"), "dirty - data removing", labelLoc = "top", color="black",strokePattern = "dashed") %>% 
+
+  dyEvent(as.POSIXct("2021-02-17 10:00:00"), "cleaning", labelLoc = "top", color="red",strokePattern = "dashed") %>% 
+    dyEvent(as.POSIXct("2021-03-16 10:00:00"), "cleaning", labelLoc = "top", color="red",strokePattern = "dashed") %>% 
+  dyEvent(as.POSIXct("2021-03-30 09:50:00"), "cleaning", labelLoc = "top", color="red",strokePattern = "dashed") %>% 
+    dyEvent(as.POSIXct("2021-04-21 08:20:00"), "cleaning", labelLoc = "top", color="red",strokePattern = "dashed") %>% 
+      dyEvent(as.POSIXct("2021-06-11 10:00:00"), "cleaning", labelLoc = "top", color="red",strokePattern = "dashed") %>% 
+
+      dyEvent(as.POSIXct("2021-08-17 08:00:00"), "cleaning", labelLoc = "top", color="red",strokePattern = "dashed") %>% 
+        dyEvent(as.POSIXct("2021-09-24 08:30:00"), "cleaning", labelLoc = "top", color="red",strokePattern = "dashed") %>% 
+        dyEvent(as.POSIXct("2021-10-19 08:30:00"), "cleaning", labelLoc = "top", color="red",strokePattern = "dashed") %>%
+            dyEvent(as.POSIXct("2021-12-03 11:00:00"), "cleaning", labelLoc = "top", color="red",strokePattern = "dashed") %>%
+
+        dyEvent(as.POSIXct("2022-02-23 09:30:00"), "cleaning", labelLoc = "top", color="red",strokePattern = "dashed") %>%
+          dyEvent(as.POSIXct("2022-03-07 09:30:00"), "cleaning", labelLoc = "top", color="red",strokePattern = "dashed") %>%
+  dySeries("int_light_10", drawPoints = TRUE, pointSize=3, color="deepskyblue",label = "PAR 10m")%>%
+  dySeries("int_light_20", drawPoints = TRUE, pointSize=3, color = "dodgerblue", label = "PAR 20m") %>%
+  dySeries("int_light_30", drawPoints = TRUE, pointSize=3, color= "dodgerblue4", label = "PAR 30m") %>%
+
+dyShading(from = par_periode[1], to = par_periode[2], color = "#C0C0C0") %>%
+  dyShading(from = par_periode[3], to = par_periode[4], color = "#E0E0E0") %>%
+  dyShading(from = par_periode[5], to = par_periode[6], color = "#C0C0C0") %>%
+    dyShading(from = par_periode[7], to = par_periode[8], color = "#E0E0E0") %>%
+   dyShading(from = par_periode[9], to = par_periode[10], color = "#C0C0C0") %>%
+      dyShading(from = par_periode[10], to = par_periode[11], color = "#E0E0E0") %>%
+
+ # dyLegend(show = "always", width = 600)%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+```
+
+```{r PAR plot AIR, warning = FALSE, out.width='100%'}
+par_periode_air <- c("2020-12-17 10:00:00","2021-03-16 09:00:00","2021-03-17 13:00:00","2021-06-11 07:30:00", "2021-06-11 09:00:00","2021-11-26 09:00:00","2021-12-03 11:00:00", "2022-03-23 08:50:00", "2022-09-02 08:50:00")
+####### AIR
+par_air_xts <- dplyr::select(par_air, datetime,int_light_air)
+par_air_xts <- as.xts(par_air_xts, order.by=par_air_xts$datetime)
+
+dygraph(par_air_xts, ylab = "") %>%
+   dySeries("int_light_air", drawPoints = TRUE, pointSize=3, color = "orange", label = "PAR air") %>%
+  dyShading(from = par_periode_air[1], to = par_periode_air[2], color = "#C0C0C0") %>%
+  dyShading(from = par_periode_air[3], to = par_periode_air[4], color = "#E0E0E0") %>%
+   dyShading(from = par_periode_air[5], to = par_periode_air[6], color = "#C0C0C0") %>%
+  dyShading(from = par_periode_air[3], to = par_periode_air[4], color = "#E0E0E0") %>%
+      dyEvent(as.POSIXct("2021-10-03 03:15:00"), "par_air stops", labelLoc = "top", color="black",strokePattern = "dashed") %>% 
+      dyEvent(as.POSIXct("2021-12-03 11:00:00"), "cleaning", labelLoc = "top", color="red",strokePattern = "dashed") %>% 
+
+
+ # dyLegend(show = "always", width = 600)%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+dyRangeSelector(height = 30)
+```
+
+## **Logs - Informations**
+
+```{r kable log par}
+par_log <- read_excel(paste0(path_par, "Odyssey_light_metadata_vlfr.xlsx"))
+#Dont forget to change row_spec() numbers to put color on the right rows.
+kbl(par_log)%>%
+    kable_paper() %>% 
+    kable_styling(fixed_thead = T)%>%
+  row_spec(c(1:23, 47:69), bold = F, color = "white", background = "#97C7FA") %>% 
+    scroll_box(width = "100%", height = "200px")
+
+
+```
+
+# **seaFET pH**  {.tabset .tabset-pills}
+
+## **Before 2016 deployment**
+
+```{r seafet pH download and plot, echo=FALSE, warning = FALSE, message = FALSE, out.width='100%'}
+continuous_discrete <- read.table(paste0(path, "data/continuous_discrete.csv"), header=TRUE, sep=",", dec=".", as.is=TRUE)
+
+continuous_discrete$datetime <- ymd_hms(continuous_discrete$date)
+#round time into nearest hour
+continuous_discrete$datetime <-round_date(continuous_discrete$datetime,unit = "hour" )
+
+## PLOT
+sf_xts <- dplyr::select(continuous_discrete, datetime, pHT_sfint, T_seaF, pHspec_Tptb, pHcalc_ptB)
+sf_xts <- as.xts(sf_xts, order.by=sf_xts$datetime)
+
+dygraph(sf_xts, ylab = "") %>%
+  dySeries("pHT_sfint", drawPoints = TRUE, pointSize=2, label = "pH corrected")%>%
+  dySeries("pHspec_Tptb", drawPoints = TRUE, pointSize=3, color = "red", label = "pH spectro (T ptB)") %>%
+  dySeries("pHcalc_ptB", drawPoints = TRUE, pointSize=3, label = "pH calc (T ptB)") %>%
+ dySeries(axis = "y2","T_seaF", drawPoints = TRUE, pointSize=2, label = "T_seaF") %>%
+ # dyLegend(show = "always", width = 600)%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+```
+
+<!-- ## **October 2021 deployment** -->
+
+<!-- This deployement was done to check if the #0057 seaFET that have been shelded for 1 year and half is still OK. -->
+
+<!-- E0int, 25 and E0ext, 25 were calculated with a mean of 4 pH spectro measurements from the tuesdays. -->
+
+<!-- ```{r seafet pH , echo=FALSE, warning = FALSE, message = FALSE, out.width='100%'} -->
+<!-- # read deployment file -->
+<!-- file_list_sf <- list.files(path  = "../../pCloud Sync/exp176_sami/vlfr_ph_data/3_out_ph_sami_seafet/out_deployment/", pattern = "SeaFET057.*.CSV") -->
+<!-- library(lubridate) -->
+<!-- library(tidyr) -->
+<!-- if (length(file_list_sf) == 0) {stop()} # script does not run if there is no data file to read -->
+<!-- ii <- 0 -->
+<!-- for (file in file_list_sf){ -->
+<!--   ii <- ii + 1 -->
+<!--   tmp <- read.table(paste0("../../pCloud Sync/exp176_sami/vlfr_ph_data/3_out_ph_sami_seafet/out_deployment/",  file_list_sf[ii], sep = ""), header = F, dec = ".", as.is = TRUE, sep = ",", skip = 8, fill = TRUE) -->
+<!-- # YOU MUST add manually the deployement number in the title file -->
+<!-- # The following take last digit in the title file -->
+<!--   tmp$deployment <- as.numeric(substr(str_extract(file_list_sf[ii], "-[0-9][0-9]\\."),2,3)) -->
+<!--   colnames(tmp)  <- c("seafet_id_sf","date","time", "phINT_sf", "phEXT_sf","T_seaF_sf","voltINT_sf","voltEXT_sf","volt_therm_sf","volt_supply_sf", "no", "current_mA","Humidity_sf", "volt_5V","volt_mainbattery","checksum_sf","deployment_sf" ) -->
+<!--   #tmp$date <- date_decimal(tmp$date,tz="UTC") -->
+<!--    tmp$hour <-  trunc(tmp$time) -->
+<!--     tmp$minute <-  trunc((tmp$time - trunc(tmp$time))*60) -->
+<!--    tmp <- tmp%>% -->
+<!--      unite("time", hour, minute, sep=":", remove=TRUE)%>% -->
+<!--      unite("datetime",date, time, sep = " ", remove =TRUE) -->
+<!--   tmp$datetime <- as.POSIXct(tmp$datetime, format="%Y%j %H:%M") -->
+
+<!--   if (ii == 1) {ph_sf <- tmp} -->
+<!--   else {ph_sf <- rbind(ph_sf, tmp)} -->
+<!-- } -->
+<!-- ph_sf <- ph_sf%>% -->
+<!--   dplyr::filter(datetime >= "2021-09-25 00:00:00") -->
+
+<!-- ``` -->
+
+<!-- ```{r read and prepare discrete pH spectro, echo=FALSE, warning=FALSE, message=FALSE} -->
+<!-- library(seacarb) -->
+<!-- library(dplyr) -->
+
+<!-- spectro <- read.table( "../../pCloud Sync/exp176_sami/vlfr_ph_data/4_spectro_ph_seafet/spectro_oct_2021.csv", header = T, dec = ".", as.is = T, sep = ";", fill = TRUE)%>% -->
+<!--   tidyr::unite("datetime", sampling_date, sampling_hour, sep=" ", remove =T) %>% -->
+<!--   dplyr::mutate(datetime = dmy_hms(datetime, tz="Europe/Paris")) -->
+<!-- # convert local time to UTC time -->
+<!-- spectro$datetime <- with_tz(spectro$datetime, "UTC") -->
+<!-- # add the ALK -->
+<!-- spectro <- spectro%>% -->
+<!--   dplyr::mutate(at= 2560)%>% -->
+<!--     dplyr::mutate(depth= 1) -->
+<!-- # remove NA lines -->
+<!-- spectro <- spectro %>% -->
+<!--   tidyr::drop_na(pH_s_ptb_temp_lab)%>% -->
+<!--   dplyr::select(datetime, salinity_field, temp_field,at, pH_s_ptb_temp_lab, temp_lab_ptb, depth) -->
+<!-- #Convert to insitu Temp pH -->
+<!-- spectro <- spectro%>% -->
+<!--   dplyr::mutate( ph_s_sf_temp_insi = pHinsi(pH = spectro$pH_s_ptb_temp_lab, -->
+<!--                          ALK = spectro$at*1e-6, Tinsi = spectro$temp_field, -->
+<!--                          Tlab = spectro$temp_lab_ptb, Pinsi = spectro$depth/10, -->
+<!--                          S = spectro$salinity_field, Pt = 0, Sit = 0, k1k2 = "l", kf = "dg", ks="d", pHscale = "T", b="u74")) -->
+<!-- # Make mean for replicates + SD in function of watersampling (datetime) -->
+<!-- spectro_mean <- spectro %>% -->
+<!--   dplyr::group_by(datetime) %>% -->
+<!--   dplyr::summarise(ph_s_sf_temp_insi_sd = sd(ph_s_sf_temp_insi, na.rm = TRUE), -->
+<!--                    ph_s_sf_temp_insi = mean(ph_s_sf_temp_insi, na.rm = TRUE), -->
+<!--                    salinity_field = mean(salinity_field, na.rm = TRUE), -->
+<!--                    temp_field = mean(temp_field, na.rm = TRUE) -->
+<!--                     ) -->
+<!-- # add spectro T insi to seaFET data for EXTLOW -->
+<!-- ph_sf <- left_join(ph_sf, spectro_mean%>%dplyr::select(datetime,ph_s_sf_temp_insi, temp_field,salinity_field),by="datetime") -->
+<!-- ``` -->
+
+<!-- ```{r seafet calibration sf_calib, echo=FALSE, warning = FALSE, message = FALSE, out.width='100%'} -->
+<!-- ## calculation of E0INT25/E0EXT25 ## -->
+<!-- ##     new sf_calib function      ## -->
+<!-- calib_spectro<- sf_calib(calEint = ph_sf$voltINT_sf , calEext = ph_sf$voltEXT_sf, calpH = ph_sf$ph_s_sf_temp_insi, calT = ph_sf$temp_field, calSal = ph_sf$salinity_field) -->
+<!-- # put number of deployment -->
+<!-- calib_spectro$deployment_sf<- ph_sf$deployment_sf -->
+<!-- # calcule percentage -->
+<!-- #calib_spectroo<- calib_spectro%>% -->
+<!-- #   tidyr::drop_na(E0int25)%>% -->
+<!-- #   dplyr::mutate(delta_E0int_percent = (E0int25 - lag(E0int25))/E0int25)*100 -->
+
+<!-- # make the mean of E0 by period of deployement -->
+<!-- calib_spectro <- group_by(calib_spectro, deployment_sf) %>% -->
+<!--   summarise(E0int25 = mean(E0int25, na.rm = TRUE), -->
+<!--             E0ext25 = mean(E0ext25, na.rm = TRUE) -->
+<!--             ) -->
+<!-- names(calib_spectro) <- c("deployment_sf", "E0int25_sf", "E0ext25_sf") -->
+
+<!-- # add E0 mean to seaFET data per deployment -->
+<!-- ph_sf <-left_join(ph_sf, calib_spectro,by="deployment_sf" ) -->
+
+<!-- library(ggplot2) -->
+<!-- #### plot -->
+<!-- kk <- tidyr::pivot_longer(calib_spectro, cols = starts_with("E0"), names_to = "variable", values_to = "value") -->
+<!-- p_calib <- ggplot(kk) + geom_point(aes(x=deployment_sf, y=value, color=variable), size=2) + -->
+<!--   facet_grid(variable ~ ., scales="free_y") + theme_bw() + -->
+<!--   scale_colour_discrete(guide="none") -->
+<!-- print(p_calib) -->
+<!-- ``` -->
+
+<!-- ```{r seafet pH calculation sf_calc, echo=FALSE, message= FALSE, warning=FALSE} -->
+<!-- #interpolation salinity -->
+<!-- library(imputeTS) -->
+<!-- ph_sf <- ph_sf%>% -->
+<!--   dplyr::mutate( sal_int = na_interpolation(salinity_field, option = "linear") ) -->
+<!-- ## calculation of the calibrated pH ## -->
+<!-- ##       new sf_calc function       ## -->
+<!-- #### -->
+<!-- seafet_calib <- sf_calc(calEint = ph_sf$voltINT_sf, calEext = ph_sf$voltEXT_sf, E0int25 = ph_sf$E0int25_sf,  E0ext25 = ph_sf$E0ext25_sf, calT = ph_sf$T_seaF_sf, calSal = ph_sf$sal_int) -->
+
+<!-- # bind new calibrated pH data to the seafet data set. -->
+<!-- names(seafet_calib) <- c("pHint_tot_sf", "pHext_tot_sf") -->
+<!-- ph_sf <- dplyr::bind_cols(ph_sf, seafet_calib ) -->
+<!-- ``` -->
+
+<!-- ```{r plot all, echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'} -->
+<!-- ## PLOT -->
+<!-- all_xts <- dplyr::select(ph_sf, datetime, ph_s_sf_temp_insi , pHint_tot_sf, pHext_tot_sf, temp_field,T_seaF_sf) -->
+<!-- all_xts <- as.xts(all_xts, order.by=all_xts$datetime) -->
+
+<!-- dygraph(all_xts, ylab = "") %>% -->
+<!-- dySeries("pHint_tot_sf", drawPoints = TRUE, pointSize=2, label = "pH INT", color="purple")%>% -->
+<!-- dySeries("pHext_tot_sf", drawPoints = TRUE, pointSize=2, label = "pH EXT", color="#9999CC")%>% -->
+<!-- dySeries("ph_s_sf_temp_insi", drawPoints = TRUE, pointSize=6, label = "spectro", color="green")%>% -->
+<!-- dySeries(axis = "y2","temp_field", drawPoints = TRUE, pointSize=3, label = "temp ptB", color="black")%>% -->
+<!-- dySeries(axis = "y2","T_seaF_sf", drawPoints = TRUE, pointSize=2, label = "temp sf", color="grey")%>% -->
+<!-- dyOptions( -->
+<!--     drawGrid = TRUE, -->
+<!--     drawPoints = TRUE, -->
+<!--     useDataTimezone = TRUE, -->
+<!--     digitsAfterDecimal = 4) %>% -->
+<!--   dyRangeSelector(height = 30) -->
+<!-- ``` -->
+
+<!-- Quality control plots : -->
+
+<!-- - Offset between calibrated seaFET data and pH spectro. The offset must fit between -0.2/0.2 pH units. -->
+
+<!-- ```{r seaFET quality control pH, echo=FALSE, warning = FALSE, message = FALSE, out.width='100%'} -->
+<!-- #Offset between seafet pH and spec pH (Fig. 2 Kapsenberg et al.) -->
+
+<!-- ph_sf <- ph_sf%>% -->
+<!--   mutate( diff_pH = ph_s_sf_temp_insi - pHint_tot_sf) -->
+<!-- average_offset <- mean(abs(ph_sf$diff_pH), na.rm=TRUE) -->
+
+<!-- offset_xts <- dplyr::select(ph_sf%>%dplyr::filter(!is.na(diff_pH)), datetime, diff_pH) -->
+<!-- offset_xts <- as.xts(offset_xts, order.by=offset_xts$datetime) -->
+
+<!-- dygraph(offset_xts, ylab = "") %>% -->
+<!-- dySeries("diff_pH", drawPoints = TRUE, pointSize=3, label = "delta pHINT", color="green")%>% -->
+<!--     dyLimit(0,strokePattern = "dashed", color = "black") %>% -->
+<!--   dyAxis("y",valueRange = c(-0.004, 0.004))%>% -->
+<!--   dyAxis("x",valueRange = c(as.POSIXct("2021-09-28"), as.POSIXct("2021-10-19") -->
+<!-- ))%>% -->
+<!-- dyOptions( -->
+<!--     drawGrid = TRUE, -->
+<!--     strokeWidth= 0, -->
+<!--     drawPoints = TRUE, -->
+<!--     useDataTimezone = TRUE, -->
+<!--     digitsAfterDecimal = 4) %>% -->
+<!--   dyRangeSelector(height = 30) -->
+<!-- ``` -->
+
+<!-- ## **TEST Roscoff Deployment** -->
+
+<!-- New seaFET tested for few days in the pool.  -->
+<!-- No correction, Only raw data. -->
+
+<!-- ```{r test seafet pH , echo=FALSE, warning = FALSE, message = FALSE, out.width='100%'} -->
+<!-- # read deployment file -->
+<!-- file_list_rf <- list.files(path  = "../../pCloud Sync/exp176_sami/vlfr_ph_data/3_out_ph_sami_seafet/out_test/", pattern = "SeaFET2-0002276-Data-20211122.*.csv") -->
+
+<!-- if (length(file_list_rf) == 0) {stop()} # script does not run if there is no data file to read -->
+<!-- ii <- 0 -->
+<!-- for (file in file_list_rf){ -->
+<!--   ii <- ii + 1 -->
+<!--   tmp <- read.table(paste0("../../pCloud Sync/exp176_sami/vlfr_ph_data/3_out_ph_sami_seafet/out_test/",  file_list_rf[ii], sep = ""), header = F, dec = ".", as.is = TRUE, sep = ",", skip = 1, fill = TRUE) -->
+<!-- # YOU MUST add manually the deployement number in the title file -->
+<!-- # The following take last digit in the title file -->
+<!--   tmp$deployment <- as.numeric(substr(str_extract(file_list_rf[ii], "-[0-9][0-9]\\."),2,3)) -->
+<!--   colnames(tmp)  <- c("seafet_id_sf","datetime", "sample_num", "error", "phEXT_sf","phINT_sf",  "voltEXT_sf","voltINT_sf","T_seaF_sf","Humidity_sf", "T_int_sf","deployment_sf" ) -->
+<!-- tmp$datetime <- mdy_hms(tmp$datetime,tz="UTC") -->
+
+<!--   if (ii == 1) {ph_test <- tmp}  -->
+<!--   else {ph_test <- rbind(ph_test, tmp)} -->
+<!-- } -->
+
+
+<!-- ## PLOT   -->
+<!-- rf_xts <- dplyr::select(ph_test, datetime, phINT_sf , phEXT_sf,T_seaF_sf) -->
+<!-- rf_xts <- as.xts(rf_xts, order.by=rf_xts$datetime) -->
+
+<!-- dygraph(rf_xts, ylab = "") %>% -->
+<!-- dySeries("phINT_sf", drawPoints = TRUE, pointSize=2, label = "pH INT", color="purple")%>% -->
+<!-- dySeries("phEXT_sf", drawPoints = TRUE, pointSize=2, label = "pH EXT", color="#9999CC")%>% -->
+<!-- dySeries(axis = "y2","T_seaF_sf", drawPoints = TRUE, pointSize=2, label = "temp sf", color="black")%>% -->
+<!-- dyOptions( -->
+<!--     drawGrid = TRUE, -->
+<!--     drawPoints = TRUE, -->
+<!--     useDataTimezone = TRUE, -->
+<!--     digitsAfterDecimal = 4) %>% -->
+<!--   dyRangeSelector(height = 30) -->
+
+<!-- # Quality control -->
+<!-- ph_test <- ph_test%>% -->
+<!--   mutate( diff_pH = phEXT_sf - phINT_sf) -->
+<!-- average_offset <- mean(abs(ph_test$diff_pH), na.rm=TRUE) -->
+
+<!-- offset_xts <- dplyr::select(ph_test%>%dplyr::filter(!is.na(diff_pH)), datetime, diff_pH) -->
+<!-- offset_xts <- as.xts(offset_xts, order.by=offset_xts$datetime) -->
+
+<!-- dygraph(offset_xts, main = "Difference pH EXT - INT") %>% -->
+<!-- dySeries("diff_pH", drawPoints = TRUE, pointSize=3, label = "delta pHINT", color="green")%>% -->
+<!--     dyLimit(0,strokePattern = "dashed", color = "black") %>%  -->
+<!--   dyAxis("y",valueRange = c(-0.045,0.01 ))%>% -->
+<!--  # dyAxis("x",valueRange = c(as.POSIXct("2021-09-28"), as.POSIXct("2021-10-19")))%>% -->
+<!-- dyOptions( -->
+<!--     drawGrid = TRUE, -->
+<!--     strokeWidth= 1, -->
+<!--     drawPoints = TRUE, -->
+<!--     useDataTimezone = TRUE, -->
+<!--     digitsAfterDecimal = 4) %>% -->
+<!--   dyRangeSelector(height = 30) -->
+
+
+<!-- ``` -->
+
+# **SAMI pH**  {.tabset .tabset-pills}
+
+## **Deployment**
+
+```{r sami pH data, echo=FALSE, warning = FALSE, message = FALSE, out.width='100%'}
+# read deployment file
+file_list <- list.files(path  = path_sami, pattern = "Raw_SAMI.*.txt")
+
+if (length(file_list) == 0) {stop()} # script does not run if there is no data file to read
+ii <- 0
+for (file in file_list){
+  ii <- ii + 1
+  tmp <- read.table(paste(path_sami, file, sep = ""), header = F, dec = ".", as.is = TRUE, sep = "\t", skip = 5, fill = TRUE)
+# YOU MUST add manually the deployement number in the title file
+# The following take last digit in the title file
+  tmp$deployment_sami <- as.numeric(substr(str_extract(file, "-[0-9][0-9]\\."),2,3))
+  colnames(tmp)  <- c("datetime","ph_sami", "ph_error_sami", "temp_int_sami", "temp_ext_sami","flag_sami", "deployment_sami")
+  tmp$datetime <- mdy_hms(tmp$datetime, tz="UTC")
+  if (ii == 1) {sami <- tmp} 
+  else {sami <- rbind(sami, tmp)}
+}
+
+# # put the file in the processed file
+# if (length(file_list) > 0) {
+#   for (file in file_list){
+#     # move new zip files from PointB to processed PointB
+#     system(paste0("mv ../../pCloud Sync/piSami-pH/sami_data/sami_processed/Salinity_corrected/PointB/", file, " ../../pCloud Sync/piSami-pH/sami_data/sami_processed/Salinity_corrected/PointB/PointB_processed"))
+#   }
+# }
+
+# Convert datetime
+#sami$datetime <- mdy_hms(sami$datetime, tz="UTC")
+
+# supprimer les données erronées
+sami <- sami %>%
+  dplyr::filter(flag_sami == 0 & ph_sami >= 7.8 & ph_sami <= 8.4)
+# remove outliers due to end of periode (raising to the surface + lab manipulations)
+# add each periode of time to be removed
+sami <- sami %>% 
+  dplyr::filter(datetime < as.POSIXct("2021-04-04 12:00:00") | datetime > as.POSIXct("2021-04-22 10:00:00")  )
+
+#Periode from 2021-10-19 to 2021-11-26 was not taken at round time but at XX:20min.
+#We force a rounded time 
+sami$datetime <- floor_date(sami$datetime,unit = "hour" )
+save(sami, file = paste0(path, "data/sami/sami_all_eol.csv"))
+```
+
+```{r sami pH, echo=FALSE, warning = FALSE, message = FALSE, out.width='100%'}
+
+ spectro <- read.table( "../../pCloud Sync/exp153_carbonates_point_B/output_jp/output/output_somlit.csv", header = T, dec = ".", as.is = T, sep = ",", fill = TRUE) %>%
+  dplyr::filter(depth == 0)
+ spectro$datetime <- as.POSIXct(spectro$sampling_date, format="%Y-%m-%dT%H:%M:%SZ",tz="UTC" )
+# put 09:00:00 as time (local time)
+spectro <- spectro %>%
+  dplyr::mutate(time = " 09:00:00") %>%
+  dplyr::mutate(datetime = paste0(datetime, time)) 
+spectro$datetime <- ymd_hms(spectro$datetime, tz="Europe/Paris")
+
+# convert local time to UTC time
+spectro$datetime <- with_tz(spectro$datetime, "UTC")#  tidyr::unite("datetime", sampling_date, sampling_hour, sep=" ", remove =T) %>%  
+
+ #   dplyr::mutate(datetime = dmy_hms(datetime, tz="Europe/Paris")) 
+ # # convert local time to UTC time 
+ # spectro$datetime <- with_tz(spectro$datetime, "UTC") 
+ # # add the ALK 
+ # spectro <- spectro%>% 
+ #   dplyr::mutate(at= 2560)%>% 
+ #     dplyr::mutate(depth= 1) 
+ # # remove NA lines 
+ # spectro <- spectro %>%  
+ #   tidyr::drop_na(pH_s_ptb_temp_lab)%>% 
+ #   dplyr::select(datetime, salinity_field, temp_field,at, pH_s_ptb_temp_lab, temp_lab_ptb, depth) 
+ # #Convert to insitu Temp pH 
+ # spectro <- spectro%>% 
+ #   dplyr::mutate( ph_s_sf_temp_insi = pHinsi(pH = spectro$pH_s_ptb_temp_lab,  
+ #                          ALK = spectro$at*1e-6, Tinsi = spectro$temp_field,  
+ #                          Tlab = spectro$temp_lab_ptb, Pinsi = spectro$depth/10,  
+ #                          S = spectro$salinity_field, Pt = 0, Sit = 0, k1k2 = "l", kf = "dg", ks="d", pHscale = "T", b="u74")) 
+ # Make mean for replicates + SD in function of watersampling (datetime) 
+ # spectro_mean <- spectro %>% 
+ #   dplyr::group_by(datetime) %>%  
+ #   dplyr::summarise(ph_s_sf_temp_insi_sd = sd(ph_s_sf_temp_insi, na.rm = TRUE), 
+ #                    ph_s_sf_temp_insi = mean(ph_s_sf_temp_insi, na.rm = TRUE), 
+ #                    salinity_field = mean(salinity_field, na.rm = TRUE), 
+ #                    temp_field = mean(temp_field, na.rm = TRUE) 
+ #                     ) 
+ # add spectro T insi to seaFET data  
+ #ph_sf <- left_join(ph_sf, spectro_mean%>%dplyr::select(datetime,ph_s_sf_temp_insi, temp_field,salinity_field),by="datetime") 
+ # ph_sf <- left_join(ph_sf, spectro%>%dplyr::select(datetime,ph_spec_insitu, temperature ,salinity),by="datetime") 
+
+
+
+
+## add spectro to sami data
+sami <- left_join(sami, spectro%>%dplyr::select(datetime,pH_spec_insitu),by="datetime")
+## Add event periodes manually
+## Events
+sami_events <- c("2019-12-16 11:00:00", "2020-02-25 16:00:00","2020-06-17 08:00:00","2020-06-19 10:00:00","2020-07-15 10:00:00","2020-07-17 18:00:00", "2020-08-10 00:00:00", "2020-12-10 13:00:00","2020-12-17 09:00:00","2021-02-17 09:00:00","2021-03-17 12:00:00","2021-03-30 09:30:00","2021-04-22 12:00:00","2021-06-11 08:00:00","2021-07-20 07:00:00","2021-09-24 13:00:00","2021-10-19 10:00:00", "2021-11-26 08:00:00","2021-11-26 10:00:00", "2022-01-18 09:00:00", "2022-02-17 12:00:00", "2022-03-23 09:00:00","2022-05-09 09:00:00","2022-05-12 11:00:00","2022-09-02 07:00:00")
+
+## PLOT
+sami_xts <- dplyr::select(sami, datetime, ph_sami, temp_int_sami, temp_ext_sami,pH_spec_insitu)
+sami_xts <- as.xts(sami_xts, order.by=sami_xts$datetime)
+
+presAnnotation <- function(dygraph, x, text) {
+  dygraph %>%
+    dyAnnotation(x, text, attachAtBottom = TRUE, width = 100)
+}
+
+
+ dygraph(sami_xts, ylab = "") %>%
+  dySeries("ph_sami", drawPoints = TRUE, pointSize=2, label = "ph_sami")%>%
+  dySeries(axis = "y2","temp_int_sami", drawPoints = TRUE, pointSize=2, label = "temp_int_sami") %>%
+     dySeries("pH_spec_insitu", drawPoints = TRUE, pointSize=4, label = "spectro", color = "red")%>%
+
+  dySeries(axis = "y2", "temp_ext_sami", drawPoints = TRUE, pointSize=2, label = "temp_ext_sami") %>%
+
+   dyEvent(as.POSIXct("2020-07-16 12:00:00", tz="GMT"), "Reagent bag replacement", labelLoc = "bottom", color="red") %>%
+   dyEvent(as.POSIXct("2020-07-16 11:30:00", tz="GMT"), "end of TRIS calib", labelLoc = "top", color="red") %>%
+   dyEvent(as.POSIXct("2019-12-05 11:00:00", tz="GMT"), "end of TRIS calib", labelLoc = "bottom", color="red") %>%
+   dyEvent(as.POSIXct("2021-04-04 10:00:00", tz="GMT"), "SAMI stops", labelLoc = "top", color="black") %>%
+    dyEvent(as.POSIXct("2021-09-24 13:00:00", tz="GMT"), "iSAMI in use", labelLoc = "bottom", color="red") %>%
+ dyEvent(as.POSIXct("2022-01-27 19:00:00", tz="GMT"), "TRIS calib", labelLoc = "bottom", color="red") %>%
+    dyEvent(as.POSIXct("2022-02-14 10:00:00", tz="GMT"), "Battery replacement", labelLoc = "bottom", color="red") %>%
+   dyEvent(as.POSIXct("2022-09-12 08:00:00", tz="GMT"), "Reagent bag replacement", labelLoc = "bottom", color="red") %>%
+
+    dyEvent(as.POSIXct("2022-09-12 18:00:00", tz="GMT"), "TRIS calib", labelLoc = "bottom", color="red") %>%
+
+  dyShading(from = sami_events[1], to = sami_events[2], color = "#B7B7B7") %>%
+  dyShading(from = sami_events[2], to = sami_events[3], color = "#E0E0E0") %>%
+   dyShading(from = sami_events[4], to = sami_events[5], color = "#B7B7B7") %>%
+    dyShading(from = sami_events[5], to = sami_events[6], color = "#E0E0E0") %>%
+    dyShading(from = sami_events[6], to = sami_events[7], color = "#B7B7B7") %>%
+    dyShading(from = sami_events[8], to = sami_events[9], color = "#E0E0E0") %>%
+    dyShading(from = sami_events[9], to = sami_events[10], color = "#B7B7B7") %>%
+ dyShading(from = sami_events[11], to = sami_events[12], color = "#E0E0E0") %>%
+    dyShading(from = sami_events[12], to = sami_events[13], color = "#B7B7B7") %>%
+       dyShading(from = sami_events[13], to = sami_events[14], color = "#E0E0E0") %>%
+    dyShading(from = sami_events[14], to = sami_events[15], color = "#B7B7B7") %>%
+   dyShading(from = sami_events[16], to = sami_events[17], color = "#E0E0E0") %>%
+          dyShading(from = sami_events[17], to = sami_events[18], color = "#B7B7B7") %>%
+      dyShading(from = sami_events[19], to = sami_events[20], color = "#E0E0E0") %>%
+     dyShading(from = sami_events[21], to = sami_events[22], color = "#B7B7B7") %>%
+         dyShading(from = sami_events[22], to = sami_events[23], color = "#E0E0E0") %>%
+   dyShading(from = sami_events[24], to = sami_events[25], color = "#B7B7B7") %>%
+
+   dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30) 
+```
+
+```{r sami pH normalized 18C, echo=FALSE, warning = FALSE, message = FALSE, out.width='100%'}
+# ## add alkalinity data from discrete sampling
+# 
+# ## add column normalized 18°C
+# sami <- sami %>% 
+#   dplyr::mutate(ph_sami_18C = pHinsi(pH = ph_sami, ALK=ta,
+#                              Tinsi = 18,
+#                              Tlab =temp_lab_eol,
+#                              Pinsi = depth/10, S = salinity_field,
+#                              Pt = 1e-6*PO4, Sit = 1e-6*SIOH4,
+#                              k1k2 = "l", kf = "pf", ks = "d",
+#                              pHscale = "T", b = "l10"))
+```
+## **Logs - Informations**
+
+```{r kable log sami}
+sami_log <- read_excel(paste0(path_sami, "../../Sami_SeaFet_log_metadata_vlfr.xlsx"), sheet = 2)
+#replade dots with spaces in column names.
+#kable(sami_log, col.names = gsub("[.]", " ", names(sami_log)), align ="c", caption="**piSAMI logs (metadata)**")
+kbl(sami_log)%>%
+    kable_paper() %>% 
+    kable_styling(fixed_thead = T)%>%
+  row_spec(c(2:3, 7:8, 12:15, 17:19, 21:26,30:32, 35), bold = T, color = "white", background = "#97C7FA") %>%     scroll_box(width = "100%", height = "200px")
+
+```
+ 
+## **Sunburst - TRIS info**
+ 
+ Here are gathered important emails from Sunburst concerning SAMI handling (reggie@sunburstsensors.com):
+
+  +   **29/10/2019 at 18:53**
+
+**The blank signals are stable, indicating no air bubbles in the lines. Absorbances show a good curve in the expected range, indicating that the pump and valve are working properly.**
+pH measurements are extremely temperature sensitive.  In order to get best results, the following procedures must be followed:
+- the PiSAMI must be completely submersed in the sample and equilibrated to the sample temperature
+- if the sample is in a bottle, the bottle must be submersed in the same water as the PiSAMI
+- when comparing discrete pH to PiSAMI pH, the measurements must be either made at the EXACT same temperature, or corrected to the same temperature (generally seawater pH changes by -0.015 per degree C)
+- Theoretical Tris pH must be calculated at the PiSAMI Internal Temperature, as this is the temperature at which the PiSAMI measured pH
+- when processing Tris data with QC_PH, choose "Tris validation."  This actually calculates pH a bit differently (**taking an average of several measurements; whereas seawater pH is calculated by extrapolating several pH measurements vs indicator concentration**). 
+I suspect that some of the offsets you are seeing between theoretical pH or discrete pH and PiSAMI pH have to do with temperature.  For example, see the 161019 file.  If you measured discrete pH at 25C, it would differ from the SAMI pH by ~0.04-0.05 pH.  The Tris file that you sent me only has 2 samples in it, so I cannot see all of your data.  However, these two samples come out to  a difference between theoretical pH (at SAMI internal temperature) and measured pH of 0.0046 and 0.0056 (see the Diff column).  However, the pH does differ substantially from the pH of Tris at 22.118C.
+I believe that the apparently poor precision you are seeing in some of the seawater analysis also is due to temperature,  If you have a flow-through system, the temperature of the water seems to not be stable.  The instability in pH mimics the changes in water temperature, indicating that the pH of the water is also changing (see the 181019 file).
+
+## **Sunburst - Temperature Int/Ext**
+
++   **29/10/2019 at 20:10**
+
+- **<span style="color:red"> Seawater pH </span> is calculated at TempInt, then corrected to <span style="color:red"> TempExt </span> (using -0.015 pH/C)**; in this case you would compare pH of discrete samples at TempExt.
+- **<span style="color:red"> Tris pH </span> is calculated at <span style="color:red"> TempInt </span>**; in this case you would compare theoretical pH of Tris at TempInt.
+
+## **Sunburst - Tris and seawater calculations **
+ 
+ + **16/12/2019 à 20:40**
+ 
+ - **When Tris pH is calculated, the software takes an average of several measurements, whereas when seawater pH is calculated the software will extrapolate to a pH without indicator.**  We do this because seawater pH is perturbed by the indicator, whereas Tris pH is not.  
+
+With the PiSAMI there is a thermistor inside the instrument and one on the outside.  pH is calculated at the internal temperature.  
+  - **For seawater, the pH is then corrected to the external temperature. ** 
+  - **For Tris the internal temperature is used to calculate the measured and theoretical pH and the difference.**  You can see that when Tris pH is calculated from the QC program, the standard deviation is much smaller, although it seems that the average error is not much different (0.0091 +/-0.0019).  I also did a rough correction of Tris pH to the external pH, and the offset does not change.
+
+**<span style="color:red"> You could consider applying this offset to your field data, given that it is the same, or similar, both pre- and post-deployment. </span>**
+
+## **Sunburst - TRIS calculation**
+
++ **17/01/2020 à 22:36**
+
+Samir: 
+
+- Based on your comments from your last email (bellow), we have recalculated the Tris values and got the same results than you.
+- Concerning the TRIS, we do use TRIS provided by Dickson's lab. We then assume that there is no "tris offset" nor "temp offset" to add when we are using "tris validation" window: We asked Dickson's lab for TRIS offset information and they just gave to us a template to calculate TRIS according to T and S. In this template (see attached ) you can see in cell B7 a Delta pH to fill: "Adjustment if buffer is not identical to that of Del Valls & Dickson (1998)"
+ **As a result without any tris/temp offset, we ended up to the same results than you (we also removed the first line).**
+ We therefore found an offset of +0.0091 pH unit between the theoretical tris value and the one measured by the SAMI. Should we add this offset to each SAMI measurement?
+
+(@) When should tris validation be done again? What is the maximum period of time that we can deploy the SAMI without tris validation? Example: each 2 months, 3 months? <span style="color:blue">Tris validation should need to be done when you replace a reagent bag, or after 1 year.  However, during deployment if the flow path becomes fouled you will see a lot more noise in the pH measurement.  This will mean that it is time to clean the PiSAMI or send it to us for refurbishment.</span>
+
+(@) In the manual, the accuracy should be better or equal to +/- 0.006 (maximum accuracy acceptable with a tris validation). This is not the case here. We have 0.0091. What do you think is the cause for this problem?  <span style="color:blue">I am not sure what is going on.  I suspect a slight difference between your method and ours, or between Dickson Tris and ours, or both.  You could apply the offset to your samples.  If you do that, make sure that you validate the same way and apply the offset every time you deploy.</span>
+
+(@) Please, could you further explain: "the problem that occurs when we set the salinity before deployment". When we set the salinity to 38, this is not recorded and we found the default salinity of 35 when we download the data.  <span style="color:blue">This is a little confusing, but you do not need to set the salinity before deployment.  You do need to set the salinity before processing the data.  The number that salinity is set to at the time of processing will be used.</span>
+
+## **Sunburst - Copper mesh clogging**
+
++ **November 2020 from Nuria**
+
+About the Copper Mesh we have to screw for deployment:
+
+Do you feel like water is not getting through the mesh? 
+
+The mesh could be removed, if you prefer. The filter might need more frequent replacement if you used it this way though.
+It is possible that when the mesh corrodes significantly from the seawater that it becomes less porous. I'm not confident on which option is the best. If you are deploying at a sight that is cold and low fouling/low dissolved solids, you could go without the entire filter. Since every site is different, it is difficult to predict the outcome.
+
+# **EOL raw data** {.tabset .tabset-pills}
+
+Temperature (in blue, °C), salinity (in purple, PSU) and oxygen (in green, ml/l) data from the EOL ctd. We decided to filter salinity data and to take data > 35.
+
+```{r EOL data, echo=FALSE, warning = FALSE, message = FALSE, out.width='100%'}
+# url <- "http://obs-vlfr.fr/data/files/~eol/somlit/"
+# files <- httr::GET(url) %>%
+#   httr::content(as="parsed") %>%
+#   # get all links containing villefranche-eol
+#   xml2::xml_find_all("//a[contains(.,'villefranche-eol')]") %>%
+#   # in a flat vector
+#   xml2::as_list() %>%
+#   unlist()
+# urls <- str_c(url, files)
+# eol <- purrr::map_dfr(urls, read_csv, comment="#", col_types=cols(Date="c", Heure="c"))
+# eol <- dplyr::mutate(eol, datetime=str_c(Date, " ", Heure) %>% parse_datetime(format="%Y%m%d %H%M%S"))
+# 
+# # replace outliers O2 data by NA
+# eol <- dplyr::mutate(eol, O2 = case_when(O2 >= 999 ~ NA_real_ ,
+#                                        TRUE ~ O2))
+# 
+# #round time to nearest hour
+# eol$datetime_round <-round_date(eol$datetime,unit = "hour" )
+# 
+# ## PLOT 1 = all eol data S T
+# eol_xts <- dplyr::select(eol, datetime, S, T, O2)
+# eol_xts <- as.xts(eol_xts, order.by=eol_xts$datetime)
+# 
+# dygraph(eol_xts, main = "EOL S T data: all depths, raw time", ylab = "") %>%
+#   dySeries("T", drawPoints = TRUE, pointSize=2, label = "Temp")%>%
+#   dySeries("O2", drawPoints = TRUE, pointSize=2, label = "oxy")%>%
+#   dySeries(axis = "y2","S", drawPoints = TRUE, pointSize=2, label = "Sal") %>%
+#  # dyLegend(show = "always", width = 600)%>%
+#   #dyAxis("y",valueRange = c(-0.1, 0.11))%>%
+# dyOptions(
+#     drawGrid = TRUE,
+#     drawPoints = TRUE,
+#     useDataTimezone = TRUE)%>%
+#   dyRangeSelector(height = 30)
+# 
+# #make the mean with same date and rounded time + filter only surface data 1 to 3 m.
+# mean_eol <- eol %>%
+#   group_by( P, datetime_round) %>%
+#   dplyr::summarise(
+#             mean_sal_eol = mean(S, na.rm=TRUE),
+#             mean_temp_eol = mean(T, na.rm=TRUE),
+#             mean_oxy_eol = mean(O2, na.rm=TRUE)) %>%
+#   dplyr::rename(datetime = datetime_round) %>%
+#   dplyr::filter(P >=1 & P <= 3)
+# 
+# 
+# ## PLOT 2 = 0 to 2 m + rounded time to hour
+# eol_xts <- dplyr::select(mean_eol, datetime_round, mean_sal_eol, mean_temp_eol, mean_oxy_eol)
+# eol_xts <- as.xts(eol_xts, order.by=eol_xts$datetime_round)
+# 
+# dygraph(eol_xts,  main = "EOL data: 0 to 3 m depth , rounded time to nearest hour", ylab = "") %>%
+#   dySeries("mean_temp_eol", drawPoints = TRUE, pointSize=2, label = "Temp")%>%
+#   dySeries(axis = "y2","mean_sal_eol", drawPoints = TRUE, pointSize=2, label = "Sal") %>%
+#     dySeries("mean_oxy_eol", drawPoints = TRUE, pointSize=2, label = "oxy")%>%
+#  # dyLegend(show = "always", width = 600)%>%
+#   #dyAxis("y",valueRange = c(-0.1, 0.11))%>%
+# dyOptions(
+#     drawGrid = TRUE,
+#     drawPoints = TRUE,
+#     useDataTimezone = TRUE)%>%
+#   dyRangeSelector(height = 30)
+# ### SAVE
+# saveRDS(eol, file = paste0(path, "data/eol/eol_data.rds"))
+
+
+url <- "http://obs-vlfr.fr/data/files/~eol/somlit/"
+# YAERS 2013
+files <- httr::GET(url) %>%
+  httr::content(as="parsed") %>%
+  # get all links containing villefranche-eol
+  xml2::xml_find_all("//a[contains(.,'villefranche-eol-20')]") %>%
+  # in a flat vector
+  xml2::as_list() %>%
+  unlist()
+
+urls_1 <- str_c(url, files[1:800])
+urls_2 <- str_c(url, files[801:1600])
+urls_3 <- str_c(url, files[1601:2400])
+urls_4 <- str_c(url, files[2401:length(files)])
+
+eol_1 <- purrr::map_dfr(urls_1, read_csv, comment="#", col_types=cols(Date="c", Heure="c"))
+eol_2 <- purrr::map_dfr(urls_2, read_csv, comment="#", col_types=cols(Date="c", Heure="c"))
+eol_3 <- purrr::map_dfr(urls_3, read_csv, comment="#", col_types=cols(Date="c", Heure="c"))
+eol_4 <- purrr::map_dfr(urls_4, read_csv, comment="#", col_types=cols(Date="c", Heure="c"))
+
+eol <- rbind(eol_1, eol_2)
+eol <- rbind(eol, eol_3)
+eol <- rbind(eol, eol_4)
+eol <- dplyr::mutate(eol, datetime=str_c(Date, " ", Heure) %>% parse_datetime(format="%Y%m%d %H%M%S"))
+# round time to closest 30 mins
+eol$datetime <- round_date(eol$datetime, "30 mins")
+
+###backup eol
+eol1 <- eol
+eol1 <- dplyr::mutate(eol1, datetime=str_c(Date, " ", Heure) %>% parse_datetime(format="%Y%m%d %H%M%S"))
+
+# replace outliers O2 data by NA + remove O2 > 6 units
+eol <- dplyr::mutate(eol, O2 = case_when(O2 > 6 ~ NA_real_,
+                                         O2 >= 999 ~ NA_real_ ,
+                                         TRUE ~ O2
+                                        ),
+                        Turb = case_when(Turb > 999 ~ NA_real_,
+                                         TRUE ~ Turb),
+                        Fluo = case_when(Fluo > 999 ~ NA_real_,
+                                        TRUE ~ Fluo)
+)
+# filter sal > 35
+eol <- dplyr::mutate(eol, S = case_when(S < 35 ~ NA_real_,TRUE ~ S))
+# rename                                        
+eol <- eol%>%
+  dplyr::rename(temp_eol = T,
+                sal_eol = S,
+                oxy_eol = O2)
+
+# # calculate time difference bettween 2 rows
+# #options(scipen = 0) 
+# eol <- eol%>%
+# dplyr::mutate(diff_time = as.numeric(as.numeric(datetime - lag(datetime))/60))
+# 
+# diff_eol_xts <- dplyr::select(eol, datetime, diff_time)
+# diff_eol_xts <- as.xts(diff_eol_xts, order.by=diff_eol_xts$datetime)
+# dygraph(diff_eol_xts, main = "", ylab = "") %>%
+#   dySeries("diff_time", drawPoints = TRUE, pointSize=2, label = "Temp")%>%
+# dyOptions(drawGrid = TRUE,
+#     drawPoints = TRUE,
+#     useDataTimezone = TRUE)%>%
+#   dyRangeSelector(height = 30)           
+
+## PLOT 1 = all eol data S T
+eol_xts <- dplyr::select(eol, datetime, temp_eol, sal_eol, oxy_eol)
+eol_xts <- as.xts(eol_xts, order.by=eol_xts$datetime)
+
+dygraph(eol_xts, main = "EOL S T data: all depths", ylab = "") %>%
+  dySeries("temp_eol", drawPoints = TRUE, pointSize=2, label = "Temp")%>%
+  dySeries("oxy_eol", drawPoints = TRUE, pointSize=2, label = "oxy")%>%
+  dySeries(axis = "y2","sal_eol", drawPoints = TRUE, pointSize=2, label = "Sal") %>%
+  dyAxis(name = "y2", axisLineColor = "purple", axisLabelColor = "purple") %>% 
+ # dyLegend(show = "always", width = 600)%>%
+  #dyAxis("y",valueRange = c(-0.1, 0.11))%>%
+dyOptions(drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+
+
+
+### SAVE
+saveRDS(eol, file = paste0(path, "data/eol/eol_data.rds"))
+```
+
+# **Rade Hydro, SOMLIT (ctd_hydro, Point B / B+)**  {.tabset .tabset-pills}
+
+Time is not included in dataset. Thus, we decided to add a local time of 09:00, then converted in UTC.
+
+```{r ctd_hydro, echo=TRUE, warning = FALSE, message = FALSE}
+dat <-  read_delim("http://www.obs-vlfr.fr/data/files/~radehydro/radehydro_ctd.csv.gz", delim = ",", col_names = TRUE, col_types = cols(id = "c", date = "D", date_time = "T", fluo_calib = "d", fluorescence="d", oxygen_mll="d", oxygen_sat="d", oxygen_umolkg="d", par="d", v0="d", v2="d", v3="d"), na = c("NA")) %>%
+    dplyr::select(-date_time) %>%
+#  dplyr::mutate(date = dmy(date)) %>%
+  # eliminate duplicate rows
+  #dplyr::filter(id != "b18233_01_sbe25plus - Copie"	& id != "b18233_sbe25plus - Copie") %>%
+    dplyr::rename(depth = pressure)
+
+start_ts <- dat %>% # beginning of time series
+  dplyr::group_by(station) %>% 
+  dplyr::summarise(min = min(date))
+
+knitr::kable(start_ts, caption = "Starting dates of time series", col.names = c("Station", "Starting date"))
+
+# eliminate B data when B+ starts except on 2019-08-07 when B+ profile is not available
+z <- dat %>% 
+  dplyr::mutate(station = factor(station)) %>% # station as factor
+  dplyr::filter(station %in% c('B', 'B+')) %>% # only keep Point B and B+
+  dplyr::filter(station == 'B+' | (station == 'B' & date < "2004-12-21") | (station == 'B' & date == "2019-08-06")) 
+
+# add extra profiles of 2018
+# See Profiles_sonde_supplémentaires_aout_2018_point B Samir.xlsx
+
+supp1 <- read_excel(paste0(path,"data/radehydro_ctd/", "Profiles_sonde_supplementaires_aout_2018_pointB_Samir.xlsx"), sheet = 1) %>% 
+  select(station, date, depth = PrdM, temperature = Potemp090C, salinity = Sal00) %>%
+  mutate(date = ymd(date))
+supp2 <- read_excel(paste0(path,"data/radehydro_ctd/", "Profiles_sonde_supplementaires_aout_2018_pointB_Samir.xlsx"), sheet = 2) %>% 
+  mutate(date = ymd(date))
+  supp <- bind_rows(supp1, supp2)
+dat <- bind_rows(dat, supp) %>%
+  arrange(date)
+```
+
+```{r ctd_hydro 1m, echo=TRUE, warning = FALSE, message = FALSE, out.width='100%'}
+# select surface (1 m to 3 m) for B or B+ data
+# B
+rh_B_1m <- dat %>%
+  dplyr::select(station, date , depth, salinity, temperature, oxygen_mll, oxygen_umolkg) %>%
+  dplyr::filter( (depth >= 1 & depth <= 3))%>%
+  dplyr::filter( station == "B")
+
+rh_B_1m_mean <- rh_B_1m %>%
+  dplyr::group_by(date) %>%
+  dplyr::summarise(mean_sal_rhB = mean(salinity, na.rm=TRUE),
+                   mean_temp_rhB = mean(temperature, na.rm=TRUE),
+                   mean_oxy_mll_rhB = mean(oxygen_mll, na.rm=TRUE),
+                   mean_oxy_umolkg_rhB = mean(oxygen_umolkg, na.rm=TRUE))
+# B+
+rh_Bplus_1m <- dat %>%
+  dplyr::select(station, date , depth, salinity, temperature, oxygen_mll, oxygen_umolkg) %>%
+  dplyr::filter( (depth >= 1 & depth <= 3))%>%
+  dplyr::filter( station == "B+")
+
+rh_Bplus_1m_mean <- rh_Bplus_1m %>%
+  dplyr::group_by(date) %>%
+  dplyr::summarise(mean_sal_rhBplus = mean(salinity, na.rm=TRUE),
+                   mean_temp_rhBplus = mean(temperature, na.rm=TRUE),
+                   mean_oxy_mll_rhBplus = mean(oxygen_mll, na.rm=TRUE),
+                   mean_oxy_umolkg_rhBplus = mean(oxygen_umolkg, na.rm=TRUE))
+
+# bind the 2 df (B and B+)
+rh_B_Bplus_1m_mean <- full_join(rh_B_1m_mean, rh_Bplus_1m_mean, by=NULL)
+rh_B_Bplus_1m_mean$date <- as.POSIXct(rh_B_Bplus_1m_mean$date)
+
+# put 09:00:00 as time (local time)
+rh_B_Bplus_1m_mean <- rh_B_Bplus_1m_mean %>%
+  dplyr::mutate(time = " 09:00:00") %>%
+  dplyr::mutate(datetime = paste0(date, time)) 
+rh_B_Bplus_1m_mean$datetime <- ymd_hms(rh_B_Bplus_1m_mean$datetime, tz="Europe/Paris")
+
+# convert local time to UTC time
+rh_B_Bplus_1m_mean$datetime <- with_tz(rh_B_Bplus_1m_mean$datetime, "UTC")
+
+### SAVE
+saveRDS(rh_B_Bplus_1m_mean, file = paste0(path, "data/eol/rh_B_Bplus_1m_mean.rds"))
+```
+
+```{r ctd_hydro 50m, echo=TRUE, warning = FALSE, message = FALSE, out.width='100%'}
+# select deep (49 m to 51 m) for B or B+ data
+# B
+rh_B_50m <- dat %>%
+  dplyr::select(station, date , depth, salinity, temperature, oxygen_mll, oxygen_umolkg) %>%
+  dplyr::filter( (depth >= 49 & depth <= 51))%>%
+  dplyr::filter( station == "B")
+
+rh_B_50m_mean <- rh_B_50m %>%
+  dplyr::group_by(date) %>%
+  dplyr::summarise(mean_sal_rhB = mean(salinity, na.rm=TRUE),
+                   mean_temp_rhB = mean(temperature, na.rm=TRUE),
+                   mean_oxy_mll_rhB = mean(oxygen_mll, na.rm=TRUE),
+                   mean_oxy_umolkg_rhB = mean(oxygen_umolkg, na.rm=TRUE))
+# B+
+rh_Bplus_50m <- dat %>%
+  dplyr::select(station, date , depth, salinity, temperature, oxygen_mll, oxygen_umolkg) %>%
+  dplyr::filter( (depth >= 49 & depth <= 51))%>%
+  dplyr::filter( station == "B+")
+
+rh_Bplus_50m_mean <- rh_Bplus_50m %>%
+  dplyr::group_by(date) %>%
+  dplyr::summarise(mean_sal_rhBplus = mean(salinity, na.rm=TRUE),
+                   mean_temp_rhBplus = mean(temperature, na.rm=TRUE),
+                   mean_oxy_mll_rhBplus = mean(oxygen_mll, na.rm=TRUE),
+                   mean_oxy_umolkg_rhBplus = mean(oxygen_umolkg, na.rm=TRUE))
+# bind the 2 df (B and B+)
+rh_B_Bplus_50m_mean <- full_join(rh_B_50m_mean, rh_Bplus_50m_mean, by=NULL)
+rh_B_Bplus_50m_mean$date <- as.POSIXct(rh_B_Bplus_50m_mean$date)
+
+# put 09:00:00 as time (local time)
+rh_B_Bplus_50m_mean <- rh_B_Bplus_50m_mean %>%
+  dplyr::mutate(time = " 09:00:00") %>%
+  dplyr::mutate(datetime = paste0(date, time)) 
+rh_B_Bplus_50m_mean$datetime <- ymd_hms(rh_B_Bplus_50m_mean$datetime, tz="Europe/Paris")
+
+# convert local time to UTC time
+rh_B_Bplus_50m_mean$datetime <- with_tz(rh_B_Bplus_50m_mean$datetime, "UTC")
+
+### SAVE
+saveRDS(rh_B_Bplus_50m_mean, file = paste0(path, "data/eol/rh_B_Bplus_50m_mean.rds"))
+```
+
+## **Temperature**
+
+### **1 m**
+
+```{r plot ctd_hydro 1m Temp, echo=TRUE, warning = FALSE, message = FALSE, out.width='100%'}
+## Temp 1m
+rh_temp_xts <- dplyr::select(rh_B_Bplus_1m_mean, date, mean_temp_rhBplus, mean_temp_rhB)
+rh_temp_xts <- as.xts(rh_temp_xts, order.by=rh_temp_xts$date)
+
+dygraph(rh_temp_xts,  main = "Temperature 1m Rade Hydro: B / B+", ylab = "") %>%
+    dySeries("mean_temp_rhB", drawPoints = TRUE, pointSize=4, label = "Temp B", color ="blue") %>%
+   dySeries("mean_temp_rhBplus", drawPoints = TRUE, pointSize=2, label = "Temp B+", color="red")%>%
+ # dyLegend(show = "always", width = 600)%>%
+  #dyAxis("y",valueRange = c(-0.1, 0.11))%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+
+# Property plot
+titre <- "Temperature 1m Rade Hydro: B vs B+"
+fit <- lmodel2(data = rh_B_Bplus_1m_mean, mean_temp_rhBplus ~ mean_temp_rhB, nperm = 99)
+p_rh_temp <-  ggreg2(fit, "mean_temp_rhB", "mean_temp_rhBplus") +
+  geom_abline(aes(intercept = 0, slope = 1), linetype = 2) +
+  mytheme+labs(x="Temp Point B", y="Temp Point B+")
+print(p_rh_temp)
+
+# Correlation is OK
+#Take B+ as data and put B if gap.
+rh_B_Bplus_1m_mean <- rh_B_Bplus_1m_mean %>%
+dplyr::mutate(rh_B_Bplus_1m_mean, mean_temp_rhBplus_B = case_when(is.na(mean_temp_rhBplus) ~ mean_temp_rhB,
+                                                                 TRUE ~ mean_temp_rhBplus))
+### SAVE
+saveRDS(rh_B_Bplus_1m_mean, file = paste0(path, "data/eol/rh_B_Bplus_1m_mean.rds"))
+```
+
+### **50 m**
+
+```{r plot ctd_hydro 50m Temp, echo=TRUE, warning = FALSE, message = FALSE, out.width='100%'}
+## Temp 50m
+rh_temp_xts <- dplyr::select(rh_B_Bplus_50m_mean, date, mean_temp_rhBplus, mean_temp_rhB)
+rh_temp_xts <- as.xts(rh_temp_xts, order.by=rh_temp_xts$date)
+
+dygraph(rh_temp_xts,  main = "Temperature 50m Rade Hydro: B / B+", ylab = "") %>%
+    dySeries("mean_temp_rhB", drawPoints = TRUE, pointSize=4, label = "Temp B", color ="blue") %>%
+   dySeries("mean_temp_rhBplus", drawPoints = TRUE, pointSize=2, label = "Temp B+", color="red")%>%
+ # dyLegend(show = "always", width = 600)%>%
+  #dyAxis("y",valueRange = c(-0.1, 0.11))%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+# Property plot
+titre <- "Temperature 50m Rade Hydro: B vs B+"
+fit <- lmodel2(data = rh_B_Bplus_50m_mean, mean_temp_rhBplus ~ mean_temp_rhB, nperm = 99)
+p_rh_temp <-  ggreg2(fit, "mean_temp_rhB", "mean_temp_rhBplus") +
+  geom_abline(aes(intercept = 0, slope = 1), linetype = 2) +
+  mytheme+labs(x="Temp Point B", y="Temp Point B+")
+print(p_rh_temp)
+
+# Correlation is OK
+#Take B+ as data and put B if gap.
+rh_B_Bplus_50m_mean <- rh_B_Bplus_50m_mean %>%
+dplyr::mutate(rh_B_Bplus_50m_mean, mean_temp_rhBplus_B = case_when(is.na(mean_temp_rhBplus) ~ mean_temp_rhB,
+                                                                 TRUE ~ mean_temp_rhBplus))
+### SAVE
+saveRDS(rh_B_Bplus_50m_mean, file = paste0(path, "data/eol/rh_B_Bplus_50m_mean.rds"))
+```
+
+## **Salinity**
+
+### **1 m**
+```{r plot ctd_hydro 1m Sal, echo=TRUE, warning = FALSE, message = FALSE, out.width='100%'}
+## Sal 1m
+rh_sal_xts <- dplyr::select(rh_B_Bplus_1m_mean, date, mean_sal_rhBplus, mean_sal_rhB)
+rh_sal_xts <- as.xts(rh_sal_xts, order.by=rh_sal_xts$date)
+
+dygraph(rh_sal_xts,  main = "Salinity 1m Rade Hydro: B / B+", ylab = "") %>%
+    dySeries("mean_sal_rhB", drawPoints = TRUE, pointSize=4, label = "Sal B", color ="blue") %>%
+   dySeries("mean_sal_rhBplus", drawPoints = TRUE, pointSize=2, label = "Sal B+", color="red")%>%
+ # dyLegend(show = "always", width = 600)%>%
+  #dyAxis("y",valueRange = c(-0.1, 0.11))%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+
+# Property plot
+titre <- "Salinity 1m Rade Hydro: B vs B+"
+fit <- lmodel2(data = rh_B_Bplus_1m_mean, mean_sal_rhBplus ~ mean_sal_rhB, nperm = 99)
+p_rh_sal <-  ggreg2(fit, "mean_sal_rhB", "mean_sal_rhBplus") +
+  geom_abline(aes(intercept = 0, slope = 1), linetype = 2) +
+  mytheme+labs(x="Sal Point B", y="Sal Point B+")
+print(p_rh_sal)
+# Correlation is OK
+rh_B_Bplus_1m_mean <- rh_B_Bplus_1m_mean %>%
+dplyr::mutate(rh_B_Bplus_1m_mean, mean_sal_rhBplus_B = case_when(is.na(mean_sal_rhBplus) ~ mean_sal_rhB,
+                                                                 TRUE ~ mean_sal_rhBplus))
+### SAVE
+saveRDS(rh_B_Bplus_1m_mean, file = paste0(path, "data/eol/rh_B_Bplus_1m_mean.rds"))
+
+```
+
+### **50 m**
+
+```{r plot ctd_hydro 50m Sal, echo=TRUE, warning = FALSE, message = FALSE, out.width='100%'}
+## Sal
+rh_sal_xts <- dplyr::select(rh_B_Bplus_50m_mean, date, mean_sal_rhBplus, mean_sal_rhB)
+rh_sal_xts <- as.xts(rh_sal_xts, order.by=rh_sal_xts$date)
+
+dygraph(rh_sal_xts,  main = "Salinity 50m Rade Hydro: B / B+", ylab = "") %>%
+    dySeries("mean_sal_rhB", drawPoints = TRUE, pointSize=4, label = "Sal B", color ="blue") %>%
+   dySeries("mean_sal_rhBplus", drawPoints = TRUE, pointSize=2, label = "Sal B+", color="red")%>%
+ # dyLegend(show = "always", width = 600)%>%
+  #dyAxis("y",valueRange = c(-0.1, 0.11))%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+
+# Property plot
+titre <- "Salinity 50m Rade Hydro: B vs B+"
+fit <- lmodel2(data = rh_B_Bplus_50m_mean, mean_sal_rhBplus ~ mean_sal_rhB, nperm = 99)
+p_rh_sal <-  ggreg2(fit, "mean_sal_rhB", "mean_sal_rhBplus") +
+  geom_abline(aes(intercept = 0, slope = 1), linetype = 2) +
+  mytheme+labs(x="Sal Point B", y="Sal Point B+")
+print(p_rh_sal)
+# Correlation is OK
+#Take B+ as data and put B if gap.
+rh_B_Bplus_50m_mean <- rh_B_Bplus_50m_mean %>%
+dplyr::mutate(rh_B_Bplus_50m_mean, mean_sal_rhBplus_B = case_when(is.na(mean_sal_rhBplus) ~ mean_sal_rhB,
+                                                                 TRUE ~ mean_sal_rhBplus))
+### SAVE
+saveRDS(rh_B_Bplus_50m_mean, file = paste0(path, "data/eol/rh_B_Bplus_50m_mean.rds"))
+```
+
+## **Oxygen**
+
+### **1 m**
+
+```{r plot ctd_hydro 1m Oxy, echo=TRUE, warning = FALSE, message = FALSE, out.width='100%'}
+## Oxy umolkg 1m
+rh_oxymll_xts <- dplyr::select(rh_B_Bplus_1m_mean, date, mean_oxy_mll_rhBplus, mean_oxy_mll_rhB)
+rh_oxymll_xts <- as.xts(rh_oxymll_xts, order.by=rh_oxymll_xts$date)
+
+dygraph(rh_oxymll_xts,  main = "Oxygen (ml/l) 1m Rade Hydro: B / B+", ylab = "") %>%
+    dySeries("mean_oxy_mll_rhB", drawPoints = TRUE, pointSize=4, label = "Oxy_mll B", color ="red") %>%
+   dySeries("mean_oxy_mll_rhBplus", drawPoints = TRUE, pointSize=3, label = "Oxy_mll B+", color="blue")%>%
+ # dyLegend(show = "always", width = 600)%>%
+  #dyAxis("y",valueRange = c(-0.1, 0.11))%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+
+# Property plot
+titre <- "Oxygen (ml/l) 1m Rade Hydro: B vs B+"
+fit <- lmodel2(data = rh_B_Bplus_1m_mean, mean_oxy_mll_rhBplus ~ mean_oxy_mll_rhB, nperm = 99)
+p_rh_oxy_mll <-  ggreg2(fit, "mean_oxy_mll_rhB", "mean_oxy_mll_rhBplus") +
+  geom_abline(aes(intercept = 0, slope = 1), linetype = 2) +
+  mytheme+labs(x="Oxy_mll Point B", y="Oxy_mll Point B+")
+print(p_rh_oxy_mll)
+
+# Correlation is OK
+#Take B+ as data and put B if gap.
+rh_B_Bplus_1m_mean <- rh_B_Bplus_1m_mean %>%
+dplyr::mutate(rh_B_Bplus_1m_mean, mean_oxy_mll_rhBplus_B = case_when(is.na(mean_oxy_mll_rhBplus) ~ mean_oxy_mll_rhB,
+                                                                 TRUE ~ mean_oxy_mll_rhBplus))
+### SAVE
+saveRDS(rh_B_Bplus_1m_mean, file = paste0(path, "data/eol/rh_B_Bplus_1m_mean.rds"))
+```
+
+```{r oxy 1m ctd_hydro wink, echo=TRUE, warning = FALSE, message = FALSE, out.width='100%'}
+# Reading the Winkler PointB data perweek.
+#Winkler SURFACE
+winkler_surface<- tbl_df(
+  read_delim(file=paste0(path,"/data/Somlit/Somlit_Extraction_hydro_surface_1997_2022.csv"),
+delim = ";", 
+skip= 4,
+col_names = FALSE,# col_types = typ,
+na = c("NA", "999999")) )#%>%
+#dplyr::rename(ptb_oxy_wink= "O")%>%
+#tidyr::unite(col="datetime", DATE, HEURE, sep = " " ))
+colnames(winkler_surface) <- c("site","date","time", "coef_maree","maree","prof_text","prof_num" ,"nomSite","gpsLat","gpsLong","ptb_oxy_wink" ,"qO" )
+winkler_surface <- winkler_surface%>%
+  tidyr::unite(col="datetime", date, time, sep = " " ,remove=FALSE)
+winkler_surface$datetime <- ymd_hms(winkler_surface$datetime)
+
+#Winkler FOND
+winkler_fond<- tbl_df(
+  read_delim(file=paste0(path,"/data/Somlit/Somlit_Extraction_hydro_fond_1997_2022.csv"), 
+delim = ";", 
+skip= 4,
+col_names = FALSE,# col_types = typ,
+na = c("NA", "999999")) )#%>%
+#dplyr::rename(ptb_oxy_wink= "O")%>%
+#tidyr::unite(col="datetime", DATE, HEURE, sep = " " ))
+colnames(winkler_fond) <- c("site","date","time", "coef_maree","maree","prof_text","prof_num" ,"nomSite","gpsLat","gpsLong","ptb_oxy_wink" ,"qO" )
+winkler_fond <- winkler_fond%>%
+  tidyr::unite(col="datetime", date, time, sep = " " ,remove=FALSE)
+winkler_fond$datetime <- ymd_hms(winkler_fond$datetime)
+#winkler_fond$ptb_oxy_wink <- as.numeric(as.character(winkler_fond$ptb_oxy_wink))
+
+#bind 2 dataframe
+winkler <- rbind(winkler_surface, winkler_fond)
+winkler <- winkler%>%
+  dplyr::arrange(datetime)
+####
+
+# Select 1m ptb_oxy_wink data 
+wink_1m <- winkler %>%
+  dplyr::group_by(datetime) %>%
+  dplyr::select(datetime,date, time, ptb_oxy_wink,qO, prof_num )%>%
+   dplyr::filter(prof_num == 1 & ptb_oxy_wink < 20 )%>%
+  dplyr::filter(qO == 2  |qO == 6)
+# put 09:00:00 as time (local time)
+wink_1m <- wink_1m %>%
+  dplyr::mutate(time = " 09:00:00") %>%
+  dplyr::mutate(datetime = paste0(date, time)) 
+wink_1m$datetime <- ymd_hms(wink_1m$datetime, tz="Europe/Paris")
+
+# convert local time to UTC time
+wink_1m$datetime <- with_tz(wink_1m$datetime, "UTC")
+
+# Adding the Winkler PointB 1m data perweek to rh_B_Bplus_1m_mean
+# #put wink_1m as data.table
+# wink_1m <- as.data.table(wink_1m)
+# rh_B_Bplus_1m_mean <- as.data.table(rh_B_Bplus_1m_mean)
+# # set datetime column as key column, easy to bind
+# setkey( wink_1m, datetime )
+# setkey(rh_B_Bplus_1m_mean, datetime)
+# # combine
+# combined_1_B_Bplus_wink <- rh_B_Bplus_1m_mean[wink_1m, roll = "nearest" ]
+rh_B_Bplus_1m_mean <- full_join(rh_B_Bplus_1m_mean, wink_1m, by="datetime")
+
+# ###
+# ptb_wink_ctd_xts <- dplyr::select(rh_B_Bplus_1m_mean, date, mean_oxy_mll_rhBplus,mean_oxy_mll_rhB, mean_oxy_mll_rhBplus_B)
+# ptb_wink_ctd_xts <- as.xts(ptb_wink_ctd_xts, order.by=ptb_wink_ctd_xts$datetime)
+# dygraph(ptb_wink_ctd_xts,  main = "Oxygen (ml/l) 1m: PTB+ + Winkler", ylab = "") %>%
+# dySeries("mean_oxy_mll_rhBplus", drawPoints = TRUE, pointSize=4, label = "Oxy PTB+", color ="blue") %>%
+# dySeries("mean_oxy_mll_rhB", drawPoints = TRUE, pointSize=3, label = "Oxy PTB", color ="green")%>%
+#   dySeries("mean_oxy_mll_rhBplus_B", drawPoints = TRUE, pointSize=3, label = "Oxy PTB + PTB+", color ="black")%>%
+# 
+#  # dyLegend(show = "always", width = 600)%>%
+#   #dyAxis("y",valueRange = c(-0.1, 0.11))%>%
+# dyOptions(
+#     drawGrid = TRUE,
+#     drawPoints = TRUE,
+#     useDataTimezone = TRUE)%>%
+#   dyRangeSelector(height = 30)
+
+# PLOT all oxygen data as time series
+ptb_wink_ctd_xts <- dplyr::select(rh_B_Bplus_1m_mean, datetime, mean_oxy_mll_rhBplus_B, ptb_oxy_wink)
+ptb_wink_ctd_xts <- as.xts(ptb_wink_ctd_xts, order.by=ptb_wink_ctd_xts$datetime)
+
+dygraph(ptb_wink_ctd_xts,  main = "Oxygen (ml/l) 1m: PTB+ + Winkler", ylab = "") %>%
+dySeries("mean_oxy_mll_rhBplus_B", drawPoints = TRUE, pointSize=4, label = "Oxy PTB+/B", color ="blue") %>%
+dySeries("ptb_oxy_wink", drawPoints = TRUE, pointSize=3, label = "Oxy winkler PTB", color ="green")%>%
+ # dyLegend(show = "always", width = 600)%>%
+  #dyAxis("y",valueRange = c(-0.1, 0.11))%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+###
+#delta oxy
+rh_B_Bplus_1m_mean <- rh_B_Bplus_1m_mean %>% 
+  dplyr::mutate(oxy_mll_rhBplus_B_wink_detla = mean_oxy_mll_rhBplus_B - ptb_oxy_wink, 
+                oxy_mll_rhB_wink_detla = mean_oxy_mll_rhB - ptb_oxy_wink, 
+                oxy_mll_rhBplus_wink_detla = mean_oxy_mll_rhBplus - ptb_oxy_wink)
+#plot
+oxy_rhBplus_wink_xts <- dplyr::select(rh_B_Bplus_1m_mean,datetime, oxy_mll_rhBplus_B_wink_detla)
+oxy_rhBplus_wink_xts <- as.xts(oxy_rhBplus_wink_xts, order.by=oxy_rhBplus_wink_xts$datetime)
+
+dygraph(oxy_rhBplus_wink_xts,  main = "Delta Oxy ptB+ Winkler 1m", ylab = "") %>%
+     dySeries("oxy_mll_rhBplus_B_wink_detla", drawPoints = TRUE, pointSize=2, label = "delta (ml/l)", color="black")%>%
+   dyLimit(0,strokePattern = "dashed", color = "black") %>% 
+ # dyLegend(show = "always", width = 600)%>%
+ dyAxis("y",valueRange = c(-1.8, 1.3))%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+###
+titre <- "Oxygen 1m: Point B+ CTD vs Point B Winkler"
+fit <- lmodel2(data = rh_B_Bplus_1m_mean, ptb_oxy_wink ~ mean_oxy_mll_rhBplus_B, nperm = 99)
+p_Oxyptbwink_Oxyptb_1m <-  ggreg2(fit, "mean_oxy_mll_rhBplus_B", "ptb_oxy_wink") +
+  geom_abline(aes(slope= 1, intercept =0), linetype = 2) +
+  mytheme+labs(x="Oxy Point B+ CTD", y="Oxy Point B Winkler")
+print(p_Oxyptbwink_Oxyptb_1m)
+
+### SAVE
+saveRDS(rh_B_Bplus_1m_mean, file = paste0(path, "data/eol/rh_B_Bplus_1m_mean.rds"))
+```
+
+### **50 m**
+
+```{r plot ctd_hydro 50m Oxy, echo=TRUE, warning = FALSE, message = FALSE, out.width='100%'}
+## Oxy umolkg 50m
+rh_oxymll_xts <- dplyr::select(rh_B_Bplus_50m_mean, datetime, mean_oxy_mll_rhBplus,mean_oxy_mll_rhB)
+rh_oxymll_xts <- as.xts(rh_oxymll_xts, order.by=rh_oxymll_xts$datetime)
+
+dygraph(rh_oxymll_xts,  main = "Oxygen (ml/l 50m Rade Hydro: B / B+)", ylab = "") %>%
+  dySeries("mean_oxy_mll_rhB", drawPoints = TRUE, pointSize=4, label = "Oxy_mll B", color ="blue") %>%
+  dySeries("mean_oxy_mll_rhBplus", drawPoints = TRUE, pointSize=2, label = "Oxy_mll B+", color="red")%>%
+ # dyLegend(show = "always", width = 600)%>%
+  #dyAxis("y",valueRange = c(-0.1, 0.11))%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+
+# Property plot
+titre <- "Oxygen (ml/l) 50m Rade Hydro: B vs B+"
+fit <- lmodel2(data = rh_B_Bplus_50m_mean, mean_oxy_mll_rhBplus ~ mean_oxy_mll_rhB, nperm = 99)
+p_rh_oxy_mll <-  ggreg2(fit, "mean_oxy_mll_rhB", "mean_oxy_mll_rhBplus") +
+  geom_abline(aes(intercept = 0, slope = 1), linetype = 2) +
+  mytheme+labs(x="Oxy_mll Point B", y="Oxy_mll Point B+")
+print(p_rh_oxy_mll)
+
+# Correlation is OK
+#Take B+ as data and put B if gap.
+rh_B_Bplus_50m_mean <- rh_B_Bplus_50m_mean %>%
+dplyr::mutate(rh_B_Bplus_50m_mean, mean_oxy_mll_rhBplus_B = case_when(is.na(mean_oxy_mll_rhBplus) ~ mean_oxy_mll_rhB,
+                                                                 TRUE ~ mean_oxy_mll_rhBplus))
+### SAVE
+saveRDS(rh_B_Bplus_50m_mean, file = paste0(path, "data/eol/rh_B_Bplus_50m_mean.rds"))
+```
+
+```{r  oxy 50m ctd_hydro wink, echo=TRUE, warning = FALSE, message = FALSE, out.width='100%'}
+# Select 50m ptb_oxy_wink data 
+wink_50m <- winkler %>%
+  dplyr::group_by(date) %>%
+  dplyr::select(date,ptb_oxy_wink,qO, prof_num )%>%
+   dplyr::filter(prof_num == 50 & ptb_oxy_wink < 20)%>%
+  dplyr::filter(qO == 2  |qO == 6)
+# put 09:00:00 as time (local time)
+wink_50m <- wink_50m %>%
+  dplyr::mutate(time = " 09:00:00") %>%
+  dplyr::mutate(datetime = paste0(date, time)) 
+wink_50m$datetime <- ymd_hms(wink_50m$datetime, tz="Europe/Paris")
+# convert local time to UTC time
+wink_50m$datetime <- with_tz(wink_50m$datetime, "UTC")
+####
+
+# Adding the Winkler PointB 50m data perweek to rh_B_Bplus_50m_mean
+# #put data as data.table
+# wink_50m <- as.data.table(wink_50m)
+# rh_B_Bplus_50m_mean<- as.data.table(rh_B_Bplus_50m_mean)
+# # set datetime column as key column, easy to bind
+# setkey(wink_50m, datetime)
+# setkey(rh_B_Bplus_50m_mean, datetime)
+# # combine
+# combined_50_B_Bplus_wink <- rh_B_Bplus_50m_mean[wink_50m, roll = "nearest" ]
+
+rh_B_Bplus_50m_mean <- full_join(rh_B_Bplus_50m_mean, wink_50m, by="datetime")
+
+
+###
+# PLOT all oxygen data as time series
+ptb_wink_ctd_xts <- dplyr::select(rh_B_Bplus_50m_mean, datetime, mean_oxy_mll_rhBplus_B, ptb_oxy_wink)
+ptb_wink_ctd_xts <- as.xts(ptb_wink_ctd_xts, order.by=ptb_wink_ctd_xts$datetime)
+
+dygraph(ptb_wink_ctd_xts,  main = "Oxygen (ml/l) 50m: PTB+ + Winkler", ylab = "") %>%
+dySeries("mean_oxy_mll_rhBplus_B", drawPoints = TRUE, pointSize=4, label = "Oxy PTB+/B", color ="blue") %>%
+dySeries("ptb_oxy_wink", drawPoints = TRUE, pointSize=3, label = "Oxy winkler PTB", color ="green")%>%
+ # dyLegend(show = "always", width = 600)%>%
+ # dyAxis("y",valueRange = c(-1.6, 1.4))%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+###
+#delta oxy
+rh_B_Bplus_50m_mean <- rh_B_Bplus_50m_mean %>% 
+  dplyr::mutate(oxy_mll_rhBplus_wink_detla = mean_oxy_mll_rhBplus - ptb_oxy_wink, 
+                oxy_mll_rhB_wink_detla = mean_oxy_mll_rhB - ptb_oxy_wink,
+                oxy_mll_rhBplus_B_wink_detla = mean_oxy_mll_rhBplus_B - ptb_oxy_wink)
+#plot
+oxy_rhBplus_wink_xts <- dplyr::select(rh_B_Bplus_50m_mean,datetime, oxy_mll_rhBplus_B_wink_detla)
+oxy_rhBplus_wink_xts <- as.xts(oxy_rhBplus_wink_xts, order.by=oxy_rhBplus_wink_xts$datetime)
+
+dygraph(oxy_rhBplus_wink_xts,  main = "Delta Oxy ptB+ Winkler 50m", ylab = "") %>%
+     dySeries("oxy_mll_rhBplus_B_wink_detla", drawPoints = TRUE, pointSize=2, label = "delta Oxy ml/l", color="black")%>%
+   dyLimit(0,strokePattern = "dashed", color = "black") %>% 
+ # dyLegend(show = "always", width = 600)%>%
+   dyAxis("y",valueRange = c(-1.6, 1.4))%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+###
+titre <- "Oxygen 50m: Point B+/B CTD vs Point B Winkler"
+fit <- lmodel2(data = rh_B_Bplus_50m_mean, ptb_oxy_wink ~ mean_oxy_mll_rhBplus_B, nperm = 99)
+p_Oxyptbwink_Oxyptb_50m <-  ggreg2(fit, "mean_oxy_mll_rhBplus_B", "ptb_oxy_wink") +
+  geom_abline(aes(slope= 1, intercept =0), linetype = 2) +
+  mytheme+labs(x="Oxy Point B+/B CTD", y="Oxy Point B Winkler")
+print(p_Oxyptbwink_Oxyptb_50m)
+
+saveRDS(rh_B_Bplus_50m_mean, file = paste0(path, "data/eol/rh_B_Bplus_50m_mean.rds"))
+```
+
+# **Comparison EOL - SOMLIT (Point B)**  {.tabset .tabset-pills}
+
+In this section, T, S and Oxy are compared between EOL and SOMLIT data. 
+
+- SOMLIT data are filtered in the "Rade hydro, SOMLIT" section above. Data from B+ station (not B) and from 1 m to 3 m were selected. Gaps in B+ data were filled up with B data.
+Time was not available at the beginning. We decided to add 09:00:00 as a local time. It was convert to UTC time in order to make the comparison with EOL data.
+
+## **Temperature** 
+
+### **1 m**
+
+```{r eol pointb 1m Temp, echo=TRUE, warning = FALSE, message = FALSE, out.width='100%'}
+#combiine the 2 data frame by nearest time with package data.table
+#put rh_B_Bplus_1m_mean as data.table
+rh_B_Bplus_1m_mean <- as.data.table(rh_B_Bplus_1m_mean)
+eol <- as.data.table(eol)
+# set datetime column as key column, easy to bind
+setkey( eol, datetime )
+setkey( rh_B_Bplus_1m_mean, datetime)
+# combine
+combined1 <- eol[ rh_B_Bplus_1m_mean, roll = "nearest" ]
+
+# set a datetime column for eol
+combined1 <- dplyr::mutate(combined1, datetime_eol=str_c(Date, " ", Heure) %>% parse_datetime(format="%Y%m%d %H%M%S"))
+#calcul the difference between time and keep only closest time <6 hours.
+combined1 <- dplyr::mutate(combined1,delta_datetime = abs(difftime(datetime, datetime_eol, units="hours")))
+#keep only <6 hours
+combined1 <-  combined1    %>%    
+ dplyr::filter(delta_datetime <= 6)
+###
+# #Fill ptB+ gaps with ptB data
+# combined1 <- combined1 %>% 
+#   dplyr::mutate(mean_temp_rhBplus = ifelse(is.na(mean_temp_rhBplus), mean_temp_rhB, mean_temp_rhBplus),
+#                 mean_sal_rhBplus = ifelse(is.na(mean_sal_rhBplus), mean_sal_rhB, mean_sal_rhBplus),
+#                 mean_oxy_mll_rhBplus = ifelse(is.na(mean_oxy_mll_rhBplus), mean_oxy_mll_rhB, mean_oxy_mll_rhBplus),
+#                 mean_oxy_umolkg_rhBplus = ifelse(is.na(mean_oxy_umolkg_rhBplus), mean_oxy_umolkg_rhB, mean_oxy_umolkg_rhBplus))
+# ###
+
+#eol_ptb_1m
+eol_ptb_temp_xts <- dplyr::select(combined1, datetime, mean_temp_rhBplus_B, temp_eol)
+eol_ptb_temp_xts <- as.xts(eol_ptb_temp_xts, order.by=combined_1_B_Bplus_wink_eol$datetime)
+
+dygraph(eol_ptb_temp_xts,  main = "Temperature 1m: EOL - PTB", ylab = "") %>%
+dySeries("temp_eol", drawPoints = TRUE, pointSize=3, label = "Temp EOL", color ="red")%>%
+  dySeries("mean_temp_rhBplus_B", drawPoints = TRUE, pointSize=2, label = "Temp PTB+", color ="blue") %>%
+
+ # dyLegend(show = "always", width = 600)%>%
+ #dyAxis("y",valueRange = c(-0.1, 0.11))%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+
+###
+titre <- "Temperature 1m: EOL vs Point B+"
+fit <- lmodel2(data = combined1, mean_temp_rhBplus_B ~ temp_eol, nperm = 99)
+p_Tptb_Teol <-  ggreg2(fit, "temp_eol", "mean_temp_rhBplus_B") +
+  geom_abline(aes(slope= 1, intercept =0), linetype = 2) +
+  mytheme+labs(x="T EOL", y="T Point B+")
+
+print(p_Tptb_Teol)
+```
+
+## **Salinity**
+
+### **1 m**
+
+```{r eol pointb comp Sal, echo=TRUE, message=FALSE, warning=FALSE, out.width='100%'}
+# take only sal data when both mean_sal_rhBplus and sal_eol are present.
+eol_ptb_sal_xts <-  combined1%>%
+  dplyr::filter((!is.na(combined1$mean_sal_rhBplus_B)))%>%
+  dplyr::select(datetime, mean_sal_rhBplus_B, sal_eol)
+eol_ptb_sal_xts <- as.xts(eol_ptb_sal_xts, order.by=eol_ptb_sal_xts$datetime)
+
+dygraph(eol_ptb_sal_xts,  main = "Salinity comparaison: EOL - ptB+", ylab = "") %>%
+    dySeries("mean_sal_rhBplus_B", drawPoints = TRUE, pointSize=4, label = "Sal ptB+", color ="blue") %>%
+dySeries("sal_eol", drawPoints = TRUE, pointSize=2, label = "Sal EOL", color ="red")%>%
+dyEvent(as.POSIXct("2020-07-15 12:00:00"), "SBE37 #9509 IN", labelLoc = "top", color="red",strokePattern = "dashed") %>% 
+dyEvent(as.POSIXct("2021-08-18 12:00:00"), "SBE37 #9506 IN", labelLoc = "top", color="red",strokePattern = "dashed") %>% 
+  dyEvent(as.POSIXct("2020-12-09 12:00:00"), "underwater clean", labelLoc = "top", color="blue",strokePattern = "dashed") %>% 
+    dyEvent(as.POSIXct("2021-02-17 12:00:00"), "underwater clean", labelLoc = "top", color="blue",strokePattern = "dashed") %>% 
+      dyEvent(as.POSIXct("2021-03-16 12:00:00"), "outside clean", labelLoc = "top", color="green",strokePattern = "dashed") %>% 
+  dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+
+###
+titre <- "Salinity: EOL vs ptB+ 1m"
+fit <- lmodel2(data = combined1, mean_sal_rhBplus ~ sal_eol, nperm = 99)
+p_Sptb_Seol <-  ggreg2(fit, "sal_eol", "mean_sal_rhBplus_B") +
+  geom_abline(aes(slope= 1, intercept =0), linetype = 2) +
+  mytheme+labs(x="Sal EOL", y="Sal Point B+")
+print(p_Sptb_Seol)
+```
+
+## **Salinity EOL correction**
+
+### **Definition of drifting periodes**
+
+Drifting periodes have been defined according to the delta (drift) between sal Ptb+ (reference) and sal EOL data.
+Deltas out of range (± 0.3 PSU) have been considered as outliers.
+
+```{r eol pointb comp Sal delta 0.3, echo=TRUE, message=FALSE, warning=FALSE, out.width='100%'}
+#delta sal
+combined1 <- combined1 %>% 
+  dplyr::mutate(sal_eol_rhBplus_detla = mean_sal_rhBplus_B - sal_eol)
+
+### Plot with data if delta is -0.3 / +0.3
+eol_ptb_sal_delta_xts <-  combined1%>%
+  dplyr::filter((!is.na(combined1$mean_sal_rhBplus_B)))%>%
+  dplyr::filter(sal_eol_rhBplus_detla > -0.3 & sal_eol_rhBplus_detla < 0.3 )%>%
+  dplyr::select(datetime, mean_sal_rhBplus_B, sal_eol)
+eol_ptb_sal_delta_xts <- as.xts(eol_ptb_sal_delta_xts, order.by=eol_ptb_sal_delta_xts$datetime)
+
+dygraph(eol_ptb_sal_delta_xts,  main = "Salinity comparaison: EOL - ptB+, data with delta -0.3/+0.3", ylab = "") %>%
+    dySeries("mean_sal_rhBplus_B", drawPoints = TRUE, pointSize=4, label = "Sal ptB+", color ="blue") %>%
+dySeries("sal_eol", drawPoints = TRUE, pointSize=2, label = "Sal EOL", color ="red")%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+
+#### Delta with -0.3/+0.3
+# periodes 
+sal_periode <- c("2014-05-06 00:00:00","2014-10-07 23:59:00" ,"2014-10-14 00:00:00" ,"2015-06-16 23:59:00","2015-06-22 00:00:00" ,"2016-03-22 23:59:00","2017-01-10 00:00:00" ,"2017-07-04 23:59:00" ,"2017-11-07 00:00:00", "2019-03-19 23:59:00","2019-07-09 00:00:00","2020-03-10 23:59:00" ,"2020-04-23 00:00:00","2020-06-30 23:59:00","2020-07-21 00:00:00", "2020-11-17 23:59:00","2020-11-24 00:00:00","2021-03-09 23:59:00" ,"2021-06-29 00:00:00" ,"2021-08-03 23:59:00" )
+
+sal_eol_delta_xts <- dplyr::select(combined1%>%filter(sal_eol_rhBplus_detla > -0.3 & sal_eol_rhBplus_detla < 0.3 ),datetime, sal_eol_rhBplus_detla)
+sal_eol_delta_xts <- as.xts(sal_eol_delta_xts, order.by=sal_eol_delta_xts$datetime)
+
+dygraph(sal_eol_delta_xts,  main = "Delta Sal EOL / ptB+ 1m, data with delta -0.3/+0.3", ylab = "") %>%
+     dySeries("sal_eol_rhBplus_detla", drawPoints = TRUE, pointSize=2, label = "delta (PSU)", color="black")%>%
+   dyLimit(0,strokePattern = "dashed", color = "black") %>% 
+     dyLimit(0.3,strokePattern = "dashed", color = "red") %>% 
+       dyLimit(-0.3,strokePattern = "dashed", color = "red") %>% 
+dyShading(from =  sal_periode[1], to= sal_periode[2], color = "#B7B7B7") %>%
+dyShading(from =  sal_periode[3], to= sal_periode[4], color = "#B7B7B7") %>%
+dyShading(from =  sal_periode[5], to= sal_periode[6], color = "#B7B7B7") %>%
+dyShading(from =  sal_periode[7], to= sal_periode[8], color = "#B7B7B7") %>%
+dyShading(from =  sal_periode[9], to= sal_periode[10], color = "#B7B7B7") %>%
+dyShading(from =  sal_periode[11], to= sal_periode[12], color = "#B7B7B7") %>%
+  dyShading(from =  sal_periode[13], to= sal_periode[14], color = "#B7B7B7") %>%
+    dyShading(from =  sal_periode[15], to= sal_periode[16], color = "#B7B7B7") %>%
+dyShading(from =  sal_periode[17], to= sal_periode[18], color = "#B7B7B7") %>%
+  dyShading(from =  sal_periode[19], to= sal_periode[20], color = "#B7B7B7") %>%
+
+  
+dyEvent(as.POSIXct("2020-07-15 12:00:00"), "SBE37 #9509 IN", labelLoc = "top", color="red",strokePattern = "dashed") %>% 
+dyEvent(as.POSIXct("2021-08-18 12:00:00"), "SBE37 #9506 IN", labelLoc = "top", color="red",strokePattern = "dashed") %>% 
+  dyEvent(as.POSIXct("2020-12-09 12:00:00"), "underwater clean", labelLoc = "top", color="blue",strokePattern = "dashed") %>% 
+    dyEvent(as.POSIXct("2021-02-17 12:00:00"), "underwater clean", labelLoc = "top", color="blue",strokePattern = "dashed") %>% 
+      dyEvent(as.POSIXct("2021-03-16 12:00:00"), "outside clean", labelLoc = "top", color="green",strokePattern = "dashed") %>% 
+  
+  
+
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+```
+
+### **Correction of drifting periodes**
+
+Drifting periodes in grey have been selected and a trend with time has been exctracted. The parameters of the trend have been used to correct (green) EOL data  according to SOMLIT data taken as reference.
+
+
+```{r eol pointb comp Sal periodes, echo=TRUE, message=FALSE, warning=FALSE, out.width='100%'}
+######## p1 #########
+
+#Select drifting periodes
+p1 <- combined1%>%
+  dplyr::select(datetime, mean_sal_rhBplus, sal_eol,sal_eol_rhBplus_detla )%>%
+    dplyr::filter(sal_eol_rhBplus_detla > -0.3 & sal_eol_rhBplus_detla < 0.3 )%>%
+  dplyr::filter(datetime >"2014-05-06 00:00:00" & datetime <"2014-10-07 23:59:00" )
+
+## Regression lineaire avec le temps
+fit_p1 <- lm(data = p1, sal_eol_rhBplus_detla ~ unclass(datetime) )
+slope_p1 <- fit_p1$coefficients[[2]]
+intercept_p1 <- fit_p1$coefficients[[1]]
+
+p1_plot <-  ggplot(data=p1, aes(x=datetime, y=sal_eol_rhBplus_detla), col="black") +  geom_point()+ geom_line()+ geom_abline(aes(slope= slope_p1, intercept =intercept_p1), linetype = 1, col="red") +ggtitle("p1, delta Sal EOL / ptB+ 1m, data with delta -0.3/+0.3")+
+  mytheme+labs(y="delta Sal EOL/PtB", x="") + scale_x_datetime(date_breaks="month",  labels=date_format("%b %Y")) + theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust=1))
+print(p1_plot)
+
+#correction des valeurs EOL avec la regression
+p1 <- p1%>%
+  dplyr::mutate(correction = slope_p1 * unclass(datetime) + intercept_p1,
+                sal_eol_corr = sal_eol + correction )
+
+# plot
+ p1_corr_xts <-p1%>%
+   dplyr::select(datetime, mean_sal_rhBplus, sal_eol, sal_eol_corr)
+
+p1_corr_xts <- as.xts(p1_corr_xts, order.by=p1_corr_xts$datetime)
+
+dygraph(p1_corr_xts,  main = "p1, delta Sal EOL / ptB+ 1m, data with delta -0.3/+0.3", ylab = "") %>%
+     dySeries("mean_sal_rhBplus", drawPoints = TRUE, pointSize=2, label = "sal ptB+", color="blue")%>%
+       dySeries("sal_eol", drawPoints = TRUE, pointSize=2, label = "sal EOL", color="red")%>%
+       dySeries("sal_eol_corr", drawPoints = TRUE, pointSize=2, label = "sal EOL corr", color="green")%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+
+######## p8 #########
+
+#Select drifting periodes
+p8 <- combined1%>%
+  dplyr::select(datetime, mean_sal_rhBplus_B, sal_eol,sal_eol_rhBplus_detla )%>%
+    dplyr::filter(sal_eol_rhBplus_detla > -0.3 & sal_eol_rhBplus_detla < 0.3 )%>%
+  dplyr::filter(datetime >"2014-10-14 00:00:00" & datetime <"2015-06-16 23:59:00" )
+
+## Regression lineaire avec le temps
+fit_p8 <- lm(data = p8, sal_eol_rhBplus_detla ~ unclass(datetime) )
+slope_p8 <- fit_p8$coefficients[[2]]
+intercept_p8 <- fit_p8$coefficients[[1]]
+
+p8_plot <-  ggplot(data=p8, aes(x=datetime, y=sal_eol_rhBplus_detla), col="black") +  geom_point()+ geom_line()+ geom_abline(aes(slope= slope_p8, intercept =intercept_p8), linetype = 1, col="red") +ggtitle("p8, delta Sal EOL / ptB+ 1m, data with delta -0.3/+0.3")+
+  mytheme+labs(y="delta Sal EOL/PtB", x="") + scale_x_datetime(date_breaks="month",  labels=date_format("%b %Y")) + theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust=1))
+print(p8_plot)
+
+#correction des valeurs EOL avec la regression
+p8 <- p8%>%
+  dplyr::mutate(correction = slope_p8 * unclass(datetime) + intercept_p8,
+                sal_eol_corr = sal_eol + correction )
+
+# plot
+ p8_corr_xts <-p8%>%
+   dplyr::select(datetime, mean_sal_rhBplus_B, sal_eol, sal_eol_corr)
+
+p8_corr_xts <- as.xts(p8_corr_xts, order.by=p8_corr_xts$datetime)
+
+dygraph(p8_corr_xts,  main = "p8, delta Sal EOL / ptB+ 1m, data with delta -0.3/+0.3", ylab = "") %>%
+     dySeries("mean_sal_rhBplus_B", drawPoints = TRUE, pointSize=2, label = "sal ptB+", color="blue")%>%
+       dySeries("sal_eol", drawPoints = TRUE, pointSize=2, label = "sal EOL", color="red")%>%
+       dySeries("sal_eol_corr", drawPoints = TRUE, pointSize=2, label = "sal EOL corr", color="green")%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+
+#### p2 #####
+#Select drifting periodes
+p2 <- combined1%>%
+  dplyr::select(datetime, mean_sal_rhBplus_B, sal_eol,sal_eol_rhBplus_detla )%>%
+    dplyr::filter(sal_eol_rhBplus_detla > -0.3 & sal_eol_rhBplus_detla < 0.3 )%>%
+  dplyr::filter(datetime >"2015-06-22 00:00:00" & datetime <"2016-03-22 23:59:00" )
+
+## Regression lineaire avec le temps
+fit_p2 <- lm(data = p2, sal_eol_rhBplus_detla ~ unclass(datetime) )
+slope_p2 <- fit_p2$coefficients[[2]]
+intercept_p2 <- fit_p2$coefficients[[1]]
+
+p2_plot <-  ggplot(data=p2, aes(x=datetime, y=sal_eol_rhBplus_detla), col="black") +  geom_point()+ geom_line()+ geom_abline(aes(slope= slope_p2, intercept =intercept_p2), linetype = 1, col="red") +ggtitle("p2, delta Sal EOL / ptB+ 1m, data with delta -0.3/+0.3")+
+  mytheme+labs(y="delta Sal EOL/PtB", x="") + scale_x_datetime(date_breaks="month",  labels=date_format("%b %Y")) + theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust=1))
+print(p2_plot)
+
+#correction des valeurs EOL avec la regression
+p2 <- p2%>%
+  dplyr::mutate(correction = slope_p2 * unclass(datetime) + intercept_p2,
+                sal_eol_corr = sal_eol + correction )
+
+# plot
+ p2_corr_xts <-p2%>%
+   dplyr::select(datetime, mean_sal_rhBplus_B, sal_eol, sal_eol_corr)
+
+p2_corr_xts <- as.xts(p2_corr_xts, order.by=p2_corr_xts$datetime)
+
+dygraph(p2_corr_xts,  main = "p2, delta Sal EOL / ptB+ 1m, data with delta -0.3/+0.3", ylab = "") %>%
+     dySeries("mean_sal_rhBplus_B", drawPoints = TRUE, pointSize=2, label = "sal ptB+", color="blue")%>%
+       dySeries("sal_eol", drawPoints = TRUE, pointSize=2, label = "sal EOL", color="red")%>%
+       dySeries("sal_eol_corr", drawPoints = TRUE, pointSize=2, label = "sal EOL corr", color="green")%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+
+######## p3 #########
+
+#Select drifting periodes
+p3 <- combined1%>%
+  dplyr::select(datetime, mean_sal_rhBplus_B, sal_eol,sal_eol_rhBplus_detla )%>%
+    dplyr::filter(sal_eol_rhBplus_detla > -0.3 & sal_eol_rhBplus_detla < 0.3 )%>%
+  dplyr::filter(datetime >"2017-01-10 00:00:00" & datetime <"2017-07-04 23:59:00" )
+
+## Regression lineaire avec le temps
+fit_p3 <- lm(data = p3, sal_eol_rhBplus_detla ~ unclass(datetime) )
+slope_p3 <- fit_p3$coefficients[[2]]
+intercept_p3 <- fit_p3$coefficients[[1]]
+
+p3_plot <-  ggplot(data=p3, aes(x=datetime, y=sal_eol_rhBplus_detla), col="black") +  geom_point()+ geom_line()+ geom_abline(aes(slope= slope_p3, intercept =intercept_p3), linetype = 1, col="red") +ggtitle("p3, delta Sal EOL / ptB+ 1m, data with delta -0.3/+0.3")+
+  mytheme+labs(y="delta Sal EOL/PtB", x="") + scale_x_datetime(date_breaks="month",  labels=date_format("%b %Y")) + theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust=1))
+print(p3_plot)
+
+#correction des valeurs EOL avec la regression
+p3 <- p3%>%
+  dplyr::mutate(correction = slope_p3 * unclass(datetime) + intercept_p3,
+                sal_eol_corr = sal_eol + correction )
+
+# plot
+ p3_corr_xts <-p3%>%
+   dplyr::select(datetime, mean_sal_rhBplus_B, sal_eol, sal_eol_corr)
+
+p3_corr_xts <- as.xts(p3_corr_xts, order.by=p3_corr_xts$datetime)
+
+dygraph(p3_corr_xts,  main = "p3, delta Sal EOL / ptB+ 1m, data with delta -0.3/+0.3", ylab = "") %>%
+     dySeries("mean_sal_rhBplus_B", drawPoints = TRUE, pointSize=2, label = "sal ptB+", color="blue")%>%
+       dySeries("sal_eol", drawPoints = TRUE, pointSize=2, label = "sal EOL", color="red")%>%
+       dySeries("sal_eol_corr", drawPoints = TRUE, pointSize=2, label = "sal EOL corr", color="green")%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+
+######## p4 #########
+
+#Select drifting periodes
+p4 <- combined1%>%
+  dplyr::select(datetime, mean_sal_rhBplus_B, sal_eol,sal_eol_rhBplus_detla )%>%
+    dplyr::filter(sal_eol_rhBplus_detla > -0.3 & sal_eol_rhBplus_detla < 0.3 )%>%
+  dplyr::filter(datetime >"2017-11-07 00:00:00" & datetime <"2019-03-19 23:59:00 " ) 
+## Regression lineaire avec le temps
+fit_p4 <- lm(data = p4, sal_eol_rhBplus_detla ~ unclass(datetime) )
+slope_p4 <- fit_p4$coefficients[[2]]
+intercept_p4 <- fit_p4$coefficients[[1]]
+
+p4_plot <-  ggplot(data=p4, aes(x=datetime, y=sal_eol_rhBplus_detla), col="black") +  geom_point()+ geom_line()+ geom_abline(aes(slope= slope_p4, intercept =intercept_p4), linetype = 1, col="red") +ggtitle("p4, delta Sal EOL / ptB+ 1m, data with delta -0.3/+0.3")+
+  mytheme+labs(y="delta Sal EOL/PtB", x="") + scale_x_datetime(date_breaks="month",  labels=date_format("%b %Y")) + theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust=1))
+print(p4_plot)
+
+#correction des valeurs EOL avec la regression
+p4 <- p4%>%
+  dplyr::mutate(correction = slope_p4 * unclass(datetime) + intercept_p4,
+                sal_eol_corr = sal_eol + correction )
+
+# plot
+ p4_corr_xts <-p4%>%
+   dplyr::select(datetime, mean_sal_rhBplus_B, sal_eol, sal_eol_corr)
+
+p4_corr_xts <- as.xts(p4_corr_xts, order.by=p4_corr_xts$datetime)
+
+dygraph(p4_corr_xts,  main = "p4, delta Sal EOL / ptB+ 1m, data with delta -0.3/+0.3", ylab = "") %>%
+     dySeries("mean_sal_rhBplus_B", drawPoints = TRUE, pointSize=2, label = "sal ptB+", color="blue")%>%
+       dySeries("sal_eol", drawPoints = TRUE, pointSize=2, label = "sal EOL", color="red")%>%
+       dySeries("sal_eol_corr", drawPoints = TRUE, pointSize=2, label = "sal EOL corr", color="green")%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+
+######## p5 #########
+
+#Select drifting periodes
+p5 <- combined1%>%
+  dplyr::select(datetime, mean_sal_rhBplus_B, sal_eol,sal_eol_rhBplus_detla )%>%
+    dplyr::filter(sal_eol_rhBplus_detla > -0.3 & sal_eol_rhBplus_detla < 0.3 )%>%
+  dplyr::filter(datetime >"2019-07-09 00:00:00" & datetime <"2020-03-10 23:59:00" )
+
+## Regression lineaire avec le temps
+fit_p5 <- lm(data = p5, sal_eol_rhBplus_detla ~ unclass(datetime) )
+slope_p5 <- fit_p5$coefficients[[2]]
+intercept_p5 <- fit_p5$coefficients[[1]]
+
+p5_plot <-  ggplot(data=p5, aes(x=datetime, y=sal_eol_rhBplus_detla), col="black") +  geom_point()+ geom_line()+ geom_abline(aes(slope= slope_p5, intercept =intercept_p5), linetype = 1, col="red") +ggtitle("p5, delta Sal EOL / ptB+ 1m, data with delta -0.3/+0.3")+
+  mytheme+labs(y="delta Sal EOL/PtB", x="") + scale_x_datetime(date_breaks="month",  labels=date_format("%b %Y")) + theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust=1))
+print(p5_plot)
+
+#correction des valeurs EOL avec la regression
+p5 <- p5%>%
+  dplyr::mutate(correction = slope_p5 * unclass(datetime) + intercept_p5,
+                sal_eol_corr = sal_eol + correction )
+
+# plot
+ p5_corr_xts <-p5%>%
+   dplyr::select(datetime, mean_sal_rhBplus_B, sal_eol, sal_eol_corr)
+
+p5_corr_xts <- as.xts(p5_corr_xts, order.by=p5_corr_xts$datetime)
+
+dygraph(p5_corr_xts,  main = "p5, delta Sal EOL / ptB+ 1m, data with delta -0.3/+0.3", ylab = "") %>%
+     dySeries("mean_sal_rhBplus_B", drawPoints = TRUE, pointSize=2, label = "sal ptB+", color="blue")%>%
+       dySeries("sal_eol", drawPoints = TRUE, pointSize=2, label = "sal EOL", color="red")%>%
+       dySeries("sal_eol_corr", drawPoints = TRUE, pointSize=2, label = "sal EOL corr", color="green")%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+
+######## p6 #########
+
+#Select drifting periodes
+p6 <- combined1%>%
+  dplyr::select(datetime, mean_sal_rhBplus_B, sal_eol,sal_eol_rhBplus_detla )%>%
+    dplyr::filter(sal_eol_rhBplus_detla > -0.3 & sal_eol_rhBplus_detla < 0.3 )%>%
+  dplyr::filter(datetime >"2020-04-23 00:00:00" & datetime <"2020-06-30 23:59:00" )
+## Regression lineaire avec le temps
+fit_p6 <- lm(data = p6, sal_eol_rhBplus_detla ~ unclass(datetime) )
+slope_p6 <- fit_p6$coefficients[[2]]
+intercept_p6 <- fit_p6$coefficients[[1]]
+
+p6_plot <-  ggplot(data=p6, aes(x=datetime, y=sal_eol_rhBplus_detla), col="black") +  geom_point()+ geom_line()+ geom_abline(aes(slope= slope_p6, intercept =intercept_p6), linetype = 1, col="red") +ggtitle("p6, delta Sal EOL / ptB+ 1m, data with delta -0.3/+0.3")+
+  mytheme+labs(y="delta Sal EOL/PtB", x="") + scale_x_datetime(date_breaks="month",  labels=date_format("%b %Y")) + theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust=1))
+print(p6_plot)
+
+#correction des valeurs EOL avec la regression
+p6 <- p6%>%
+  dplyr::mutate(correction = slope_p6 * unclass(datetime) + intercept_p6,
+                sal_eol_corr = sal_eol + correction )
+
+# plot
+ p6_corr_xts <-p6%>%
+   dplyr::select(datetime, mean_sal_rhBplus_B, sal_eol, sal_eol_corr)
+
+p6_corr_xts <- as.xts(p6_corr_xts, order.by=p6_corr_xts$datetime)
+
+dygraph(p6_corr_xts,  main = "p6, delta Sal EOL / ptB+ 1m, data with delta -0.3/+0.3", ylab = "") %>%
+     dySeries("mean_sal_rhBplus_B", drawPoints = TRUE, pointSize=2, label = "sal ptB+", color="blue")%>%
+       dySeries("sal_eol", drawPoints = TRUE, pointSize=2, label = "sal EOL", color="red")%>%
+       dySeries("sal_eol_corr", drawPoints = TRUE, pointSize=2, label = "sal EOL corr", color="green")%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+
+######## p7 #########
+
+#Select drifting periodes
+p7 <- combined1%>%
+  dplyr::select(datetime, mean_sal_rhBplus_B, sal_eol,sal_eol_rhBplus_detla )%>%
+    dplyr::filter(sal_eol_rhBplus_detla > -0.3 & sal_eol_rhBplus_detla < 0.3 )%>%
+  dplyr::filter(datetime >"2020-07-21 00:00:00" & datetime <"2020-11-17 23:59:00" )
+
+## Regression lineaire avec le temps
+fit_p7 <- lm(data = p7, sal_eol_rhBplus_detla ~ unclass(datetime) )
+slope_p7 <- fit_p7$coefficients[[2]]
+intercept_p7 <- fit_p7$coefficients[[1]]
+
+
+p7_plot <-  ggplot(data=p7, aes(x=datetime, y=sal_eol_rhBplus_detla), col="black") +  geom_point()+ geom_line()+ geom_abline(aes(slope= slope_p7, intercept =intercept_p7), linetype = 1, col="red") + ggtitle("p7, delta Sal EOL / ptB+ 1m, data with delta -0.3/+0.3")+
+  mytheme+labs(y="delta Sal EOL/PtB", x="") + scale_x_datetime(date_breaks="month",  labels=date_format("%b %Y")) + theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust=1))
+print(p7_plot)
+
+#correction des valeurs EOL avec la regression
+p7 <- p7%>%
+  dplyr::mutate(correction = slope_p7 * unclass(datetime) + intercept_p7,
+                sal_eol_corr = sal_eol + correction )
+
+# plot
+ p7_corr_xts <-p7%>%
+   dplyr::select(datetime, mean_sal_rhBplus_B, sal_eol, sal_eol_corr)
+
+p7_corr_xts <- as.xts(p7_corr_xts, order.by=p7_corr_xts$datetime)
+
+dygraph(p7_corr_xts,  main = "p7, delta Sal EOL / ptB+ 1m, data with delta -0.3/+0.3", ylab = "") %>%
+     dySeries("mean_sal_rhBplus_B", drawPoints = TRUE, pointSize=2, label = "sal ptB+", color="blue")%>%
+       dySeries("sal_eol", drawPoints = TRUE, pointSize=2, label = "sal EOL", color="red")%>%
+       dySeries("sal_eol_corr", drawPoints = TRUE, pointSize=2, label = "sal EOL corr", color="green")%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+
+######## p9 #########
+
+#Select drifting periodes
+p9 <- combined1%>%
+  dplyr::select(datetime, mean_sal_rhBplus_B, sal_eol,sal_eol_rhBplus_detla )%>%
+    dplyr::filter(sal_eol_rhBplus_detla > -0.3 & sal_eol_rhBplus_detla < 0.3 )%>%
+  dplyr::filter(datetime >"2020-11-24 00:00:00" & datetime <"2021-03-09 23:59:00" )
+
+## Regression lineaire avec le temps
+fit_p9 <- lm(data = p9, sal_eol_rhBplus_detla ~ unclass(datetime) )
+slope_p9 <- fit_p9$coefficients[[2]]
+intercept_p9 <- fit_p9$coefficients[[1]]
+
+
+p9_plot <-  ggplot(data=p9, aes(x=datetime, y=sal_eol_rhBplus_detla), col="black") +  geom_point()+ geom_line()+ geom_abline(aes(slope= slope_p9, intercept =intercept_p9), linetype = 1, col="red") + ggtitle("p9, delta Sal EOL / ptB+ 1m, data with delta -0.3/+0.3")+
+  mytheme+labs(y="delta Sal EOL/PtB", x="") + scale_x_datetime(date_breaks="month",  labels=date_format("%b %Y")) + theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust=1))
+print(p9_plot)
+
+#correction des valeurs EOL avec la regression
+p9 <- p9%>%
+  dplyr::mutate(correction = slope_p9 * unclass(datetime) + intercept_p9,
+                sal_eol_corr = sal_eol + correction )
+
+# plot
+ p9_corr_xts <-p9%>%
+   dplyr::select(datetime, mean_sal_rhBplus_B, sal_eol, sal_eol_corr)
+
+p9_corr_xts <- as.xts(p9_corr_xts, order.by=p9_corr_xts$datetime)
+
+dygraph(p9_corr_xts,  main = "p9, delta Sal EOL / ptB+ 1m, data with delta -0.3/+0.3", ylab = "") %>%
+     dySeries("mean_sal_rhBplus_B", drawPoints = TRUE, pointSize=2, label = "sal ptB+", color="blue")%>%
+       dySeries("sal_eol", drawPoints = TRUE, pointSize=2, label = "sal EOL", color="red")%>%
+       dySeries("sal_eol_corr", drawPoints = TRUE, pointSize=2, label = "sal EOL corr", color="green")%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+
+######## p10 #########
+
+#Select drifting periodes
+p10 <- combined1%>%
+  dplyr::select(datetime, mean_sal_rhBplus_B, sal_eol,sal_eol_rhBplus_detla )%>%
+    dplyr::filter(sal_eol_rhBplus_detla > -0.3 & sal_eol_rhBplus_detla < 0.3 )%>%
+  dplyr::filter(datetime >"2021-06-29 00:00:00" & datetime <"2021-08-03 23:59:00" )
+
+## Regression lineaire avec le temps
+fit_p10 <- lm(data = p10, sal_eol_rhBplus_detla ~ unclass(datetime) )
+slope_p10 <- fit_p10$coefficients[[2]]
+intercept_p10 <- fit_p10$coefficients[[1]]
+
+
+p10_plot <-  ggplot(data=p10, aes(x=datetime, y=sal_eol_rhBplus_detla), col="black") +  geom_point()+ geom_line()+ geom_abline(aes(slope= slope_p10, intercept =intercept_p10), linetype = 1, col="red") + ggtitle("p10, delta Sal EOL / ptB+ 1m, data with delta -0.3/+0.3")+
+  mytheme+labs(y="delta Sal EOL/PtB", x="") + scale_x_datetime(date_breaks="month",  labels=date_format("%b %Y")) + theme(axis.text.x = element_text(angle = 100, vjust = 1, hjust=1))
+print(p10_plot)
+
+#correction des valeurs EOL avec la regression
+p10 <- p10%>%
+  dplyr::mutate(correction = slope_p10 * unclass(datetime) + intercept_p10,
+                sal_eol_corr = sal_eol + correction )
+
+# plot
+ p10_corr_xts <-p10%>%
+   dplyr::select(datetime, mean_sal_rhBplus_B, sal_eol, sal_eol_corr)
+
+p10_corr_xts <- as.xts(p10_corr_xts, order.by=p10_corr_xts$datetime)
+
+dygraph(p10_corr_xts,  main = "p10, delta Sal EOL / ptB+ 1m, data with delta -0.3/+0.3", ylab = "") %>%
+     dySeries("mean_sal_rhBplus_B", drawPoints = TRUE, pointSize=2, label = "sal ptB+", color="blue")%>%
+       dySeries("sal_eol", drawPoints = TRUE, pointSize=2, label = "sal EOL", color="red")%>%
+       dySeries("sal_eol_corr", drawPoints = TRUE, pointSize=2, label = "sal EOL corr", color="green")%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+#-------
+
+combined1 <- combined1%>%
+  dplyr::mutate(correction_sal = case_when(datetime >"2014-05-06 00:00:00" & datetime <"2014-10-07 23:59:00" ~ slope_p1 * unclass(datetime) + intercept_p1, 
+                                       datetime >"2015-06-22 00:00:00" & datetime <"2016-03-22 23:59:00" ~ slope_p2 * unclass(datetime) + intercept_p2,
+                                       datetime >"2017-01-10 00:00:00" & datetime <"2017-07-04 23:59:00" ~ slope_p3 * unclass(datetime) + intercept_p3,
+                                       datetime >"2017-11-07 00:00:00" & datetime <"2019-03-19 23:59:00" ~ slope_p4 * unclass(datetime) + intercept_p4,
+                                       datetime >"2019-07-09 00:00:00" & datetime <"2020-03-10 23:59:00" ~ slope_p5 * unclass(datetime) + intercept_p5,
+                                       datetime >"2020-04-23 00:00:00" & datetime <"2020-06-30 23:59:00" ~ slope_p6 * unclass(datetime) + intercept_p6,
+                                       datetime >"2020-07-21 00:00:00" & datetime <"2020-11-17 23:59:00" ~ slope_p7 * unclass(datetime) + intercept_p7,
+                                       datetime >"2014-10-14 00:00:00" & datetime <"2015-06-16 23:59:00" ~ slope_p8 * unclass(datetime) + intercept_p8,
+                                       datetime >"2020-11-24 00:00:00" & datetime <"2021-03-09 23:59:00" ~ slope_p9 * unclass(datetime) + intercept_p9,
+                                       datetime >"2021-06-29 00:00:00" & datetime <"2021-08-03 23:59:00" ~ slope_p10 * unclass(datetime) + intercept_p10,TRUE ~ 0),
+                slope_sal = case_when(datetime >"2014-05-06 00:00:00" & datetime <"2014-10-07 23:59:00" ~ slope_p1 , 
+                                       datetime >"2015-06-22 00:00:00" & datetime <"2016-03-22 23:59:00" ~ slope_p2 ,
+                                       datetime >"2017-01-10 00:00:00" & datetime <"2017-07-04 23:59:00" ~ slope_p3 ,
+                                       datetime >"2017-11-07 00:00:00" & datetime <"2019-03-19 23:59:00" ~ slope_p4 ,
+                                       datetime >"2019-07-09 00:00:00" & datetime <"2020-03-10 23:59:00" ~ slope_p5 ,
+                                       datetime >"2020-04-23 00:00:00" & datetime <"2020-06-30 23:59:00" ~ slope_p6 ,
+                                       datetime >"2020-07-21 00:00:00" & datetime <"2020-11-17 23:59:00" ~ slope_p7 ,
+                                       datetime >"2014-10-14 00:00:00" & datetime <"2015-06-16 23:59:00" ~ slope_p8 ,
+                                       datetime >"2020-11-24 00:00:00" & datetime <"2021-03-09 23:59:00" ~ slope_p9 ,
+                                       datetime >"2021-06-29 00:00:00" & datetime <"2021-08-03 23:59:00" ~ slope_p10 ,TRUE ~ NA_real_),
+                 intercept_sal = case_when(datetime >"2014-05-06 00:00:00" & datetime <"2014-10-07 23:59:00" ~ intercept_p1 , 
+                                       datetime >"2015-06-22 00:00:00" & datetime <"2016-03-22 23:59:00" ~ intercept_p2 ,
+                                       datetime >"2017-01-10 00:00:00" & datetime <"2017-07-04 23:59:00" ~ intercept_p3 ,
+                                       datetime >"2017-11-07 00:00:00" & datetime <"2019-03-19 23:59:00" ~ intercept_p4 ,
+                                       datetime >"2019-07-09 00:00:00" & datetime <"2020-03-10 23:59:00" ~ intercept_p5 ,
+                                       datetime >"2020-04-23 00:00:00" & datetime <"2020-06-30 23:59:00" ~ intercept_p6 ,
+                                       datetime >"2020-07-21 00:00:00" & datetime <"2020-11-17 23:59:00" ~ intercept_p7 ,
+                                       datetime >"2014-10-14 00:00:00" & datetime <"2015-06-16 23:59:00" ~ intercept_p8 ,
+                                       datetime >"2020-11-24 00:00:00" & datetime <"2021-03-09 23:59:00" ~ intercept_p9 ,
+                                       datetime >"2021-06-29 00:00:00" & datetime <"2021-08-03 23:59:00" ~ intercept_p10 ,TRUE ~ NA_real_),
+                 periode_sal = case_when(datetime >"2014-05-06 00:00:00" & datetime <"2014-10-07 23:59:00" ~ "p1" , 
+                                       datetime >"2015-06-22 00:00:00" & datetime <"2016-03-22 23:59:00" ~ "p3" ,
+                                       datetime >"2017-01-10 00:00:00" & datetime <"2017-07-04 23:59:00" ~ "p4" ,
+                                       datetime >"2017-11-07 00:00:00" & datetime <"2019-03-19 23:59:00" ~ "p5" ,
+                                       datetime >"2019-07-09 00:00:00" & datetime <"2020-03-10 23:59:00" ~ "p6" ,
+                                       datetime >"2020-04-23 00:00:00" & datetime <"2020-06-30 23:59:00" ~ "p7" ,
+                                       datetime >"2020-07-21 00:00:00" & datetime <"2020-11-17 23:59:00" ~ "p8" ,
+                                       datetime >"2014-10-14 00:00:00" & datetime <"2015-06-16 23:59:00" ~ "p2" ,
+                                       datetime >"2020-11-24 00:00:00" & datetime <"2021-03-09 23:59:00" ~ "p9" ,
+                                       datetime >"2021-06-29 00:00:00" & datetime <"2021-08-03 23:59:00" ~ "p10" ,TRUE ~ NA_character_),
+                sal_eol_corr = sal_eol + correction_sal)
+### SAVE
+saveRDS(combined1, file = paste0(path, "data/eol/combined_eol_rh_data.rds"))
+
+## PLOT LOW FREQUENCY
+eol_corr_xts <- dplyr::select(combined1, datetime, sal_eol, sal_eol_corr)
+eol_corr_xts <- as.xts(eol_corr_xts, order.by=eol_corr_xts$datetime)
+
+dygraph(eol_corr_xts, main = "EOL sal (LOW Frequency)", ylab = "") %>%
+  dySeries("sal_eol_corr", drawPoints = TRUE, pointSize=2,  color = "green", label = "sal EOL corr")%>%
+  dySeries("sal_eol", drawPoints = TRUE, pointSize=2, color = "blue",label = "sal EOL") %>%
+dyShading(from =  sal_periode[1], to= sal_periode[2], color = "#B7B7B7") %>%
+dyShading(from =  sal_periode[3], to= sal_periode[4], color = "#B7B7B7") %>%
+dyShading(from =  sal_periode[5], to= sal_periode[6], color = "#B7B7B7") %>%
+dyShading(from =  sal_periode[7], to= sal_periode[8], color = "#B7B7B7") %>%
+dyShading(from =  sal_periode[9], to= sal_periode[10], color = "#B7B7B7") %>%
+dyShading(from =  sal_periode[11], to= sal_periode[12], color = "#B7B7B7") %>%
+  dyShading(from =  sal_periode[13], to= sal_periode[14], color = "#B7B7B7") %>%
+    dyShading(from =  sal_periode[15], to= sal_periode[16], color = "#B7B7B7") %>%
+  dyShading(from =  sal_periode[17], to= sal_periode[18], color = "#B7B7B7") %>%
+    dyShading(from =  sal_periode[19], to= sal_periode[20], color = "#B7B7B7") %>%
+dyEvent(as.POSIXct("2020-07-15 12:00:00"), "SBE37 #9509 IN", labelLoc = "bottom", color="red",strokePattern = "dashed") %>% 
+dyEvent(as.POSIXct("2021-08-18 12:00:00"), "SBE37 #9506 IN", labelLoc = "bottom", color="red",strokePattern = "dashed") %>% 
+  dyEvent(as.POSIXct("2020-12-09 12:00:00"), "underwater clean", labelLoc = "bottom", color="blue",strokePattern = "dashed") %>% 
+    dyEvent(as.POSIXct("2021-02-17 12:00:00"), "underwater clean", labelLoc = "bottom", color="blue",strokePattern = "dashed") %>% 
+      dyEvent(as.POSIXct("2021-03-16 12:00:00"), "outside clean", labelLoc = "bottom", color="green",strokePattern = "dashed") %>% 
+  dyOptions(drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+
+```
+
+## **Correction of High Frequency salinity data**
+
+Parameters from drifting periodes found in Low Frequency dataset have been applied to same periodes in High Frequency dataset.
+
+```{r eol pointb comp correction EOL HF, echo=TRUE, warning = FALSE, message = FALSE, out.width='100%'}
+#add slope and intercpt from each LowFrequency data to eol data  HighFrequency.
+eol <- eol%>%
+  dplyr::mutate(correction_sal = case_when(datetime >"2014-05-06 00:00:00" & datetime <"2014-10-07 23:59:00" ~ slope_p1 * unclass(datetime) + intercept_p1, 
+                                       datetime >"2015-06-22 00:00:00" & datetime <"2016-03-22 23:59:00" ~ slope_p2 * unclass(datetime) + intercept_p2,
+                                       datetime >"2017-01-10 00:00:00" & datetime <"2017-07-04 23:59:00" ~ slope_p3 * unclass(datetime) + intercept_p3,
+                                       datetime >"2017-11-07 00:00:00" & datetime <"2019-03-19 23:59:00" ~ slope_p4 * unclass(datetime) + intercept_p4,
+                                       datetime >"2019-07-09 00:00:00" & datetime <"2020-03-10 23:59:00" ~ slope_p5 * unclass(datetime) + intercept_p5,
+                                       datetime >"2020-04-23 00:00:00" & datetime <"2020-06-30 23:59:00" ~ slope_p6 * unclass(datetime) + intercept_p6,
+                                       datetime >"2020-07-21 00:00:00" & datetime <"2020-11-17 23:59:00" ~ slope_p7 * unclass(datetime) + intercept_p7,
+                                       datetime >"2014-10-14 00:00:00" & datetime <"2015-06-16 23:59:00" ~ slope_p8 * unclass(datetime) + intercept_p8,
+                                       datetime >"2020-11-24 00:00:00" & datetime <"2021-03-09 23:59:00" ~ slope_p9 * unclass(datetime) + intercept_p9,
+                                       datetime >"2021-06-29 00:00:00" & datetime <"2021-08-03 23:59:00" ~ slope_p10 * unclass(datetime) + intercept_p10,TRUE ~ 0),
+                slope_sal = case_when(datetime >"2014-05-06 00:00:00" & datetime <"2014-10-07 23:59:00" ~ slope_p1 , 
+                                       datetime >"2015-06-22 00:00:00" & datetime <"2016-03-22 23:59:00" ~ slope_p2 ,
+                                       datetime >"2017-01-10 00:00:00" & datetime <"2017-07-04 23:59:00" ~ slope_p3 ,
+                                       datetime >"2017-11-07 00:00:00" & datetime <"2019-03-19 23:59:00" ~ slope_p4 ,
+                                       datetime >"2019-07-09 00:00:00" & datetime <"2020-03-10 23:59:00" ~ slope_p5 ,
+                                       datetime >"2020-04-23 00:00:00" & datetime <"2020-06-30 23:59:00" ~ slope_p6 ,
+                                       datetime >"2020-07-21 00:00:00" & datetime <"2020-11-17 23:59:00" ~ slope_p7 ,
+                                       datetime >"2014-10-14 00:00:00" & datetime <"2015-06-16 23:59:00" ~ slope_p8 ,
+                                       datetime >"2020-11-24 00:00:00" & datetime <"2021-03-09 23:59:00" ~ slope_p9 ,
+                                       datetime >"2021-06-29 00:00:00" & datetime <"2021-08-03 23:59:00" ~ slope_p10 ,TRUE ~ NA_real_),
+                 intercept_sal = case_when(datetime >"2014-05-06 00:00:00" & datetime <"2014-10-07 23:59:00" ~ intercept_p1 , 
+                                       datetime >"2015-06-22 00:00:00" & datetime <"2016-03-22 23:59:00" ~ intercept_p2 ,
+                                       datetime >"2017-01-10 00:00:00" & datetime <"2017-07-04 23:59:00" ~ intercept_p3 ,
+                                       datetime >"2017-11-07 00:00:00" & datetime <"2019-03-19 23:59:00" ~ intercept_p4 ,
+                                       datetime >"2019-07-09 00:00:00" & datetime <"2020-03-10 23:59:00" ~ intercept_p5 ,
+                                       datetime >"2020-04-23 00:00:00" & datetime <"2020-06-30 23:59:00" ~ intercept_p6 ,
+                                       datetime >"2020-07-21 00:00:00" & datetime <"2020-11-17 23:59:00" ~ intercept_p7 ,
+                                       datetime >"2014-10-14 00:00:00" & datetime <"2015-06-16 23:59:00" ~ intercept_p8 ,
+                                       datetime >"2020-11-24 00:00:00" & datetime <"2021-03-09 23:59:00" ~ intercept_p9 ,
+                                       datetime >"2021-06-29 00:00:00" & datetime <"2021-08-03 23:59:00" ~ intercept_p10 ,TRUE ~ NA_real_),
+                 periode_sal = case_when(datetime >"2014-05-06 00:00:00" & datetime <"2014-10-07 23:59:00" ~ "p1" , 
+                                       datetime >"2015-06-22 00:00:00" & datetime <"2016-03-22 23:59:00" ~ "p3" ,
+                                       datetime >"2017-01-10 00:00:00" & datetime <"2017-07-04 23:59:00" ~ "p4" ,
+                                       datetime >"2017-11-07 00:00:00" & datetime <"2019-03-19 23:59:00" ~ "p5" ,
+                                       datetime >"2019-07-09 00:00:00" & datetime <"2020-03-10 23:59:00" ~ "p6" ,
+                                       datetime >"2020-04-23 00:00:00" & datetime <"2020-06-30 23:59:00" ~ "p7" ,
+                                       datetime >"2020-07-21 00:00:00" & datetime <"2020-11-17 23:59:00" ~ "p8" ,
+                                       datetime >"2014-10-14 00:00:00" & datetime <"2015-06-16 23:59:00" ~ "p2" ,
+                                       datetime >"2020-11-24 00:00:00" & datetime <"2021-03-09 23:59:00" ~ "p9" ,
+                                       datetime >"2021-06-29 00:00:00" & datetime <"2021-08-03 23:59:00" ~ "p10" ,TRUE ~ NA_character_),
+                sal_eol_corr = sal_eol + correction_sal)
+### SAVE
+saveRDS(eol, file = paste0(path, "data/eol/eol_data.rds"))
+
+## PLOT HIGH FREQUENCY
+eol_corr_xts <- dplyr::select(eol, datetime, sal_eol, sal_eol_corr)
+eol_corr_xts <- as.xts(eol_corr_xts, order.by=eol_corr_xts$datetime)
+
+dygraph(eol_corr_xts, main = "EOL sal (HIGH FREQUENCY)", ylab = "") %>%
+  dySeries("sal_eol_corr", drawPoints = TRUE, pointSize=2,  color = "green", label = "sal EOL corr")%>%
+  dySeries("sal_eol", drawPoints = TRUE, pointSize=2, color = "blue",label = "sal EOL") %>%
+dyShading(from =  sal_periode[1], to= sal_periode[2], color = "#B7B7B7") %>%
+dyShading(from =  sal_periode[3], to= sal_periode[4], color = "#B7B7B7") %>%
+dyShading(from =  sal_periode[5], to= sal_periode[6], color = "#B7B7B7") %>%
+dyShading(from =  sal_periode[7], to= sal_periode[8], color = "#B7B7B7") %>%
+dyShading(from =  sal_periode[9], to= sal_periode[10], color = "#B7B7B7") %>%
+dyShading(from =  sal_periode[11], to= sal_periode[12], color = "#B7B7B7") %>%
+  dyShading(from =  sal_periode[13], to= sal_periode[14], color = "#B7B7B7") %>%
+    dyShading(from =  sal_periode[15], to= sal_periode[16], color = "#B7B7B7") %>%
+  dyShading(from =  sal_periode[17], to= sal_periode[18], color = "#B7B7B7") %>%
+    dyShading(from =  sal_periode[19], to= sal_periode[20], color = "#B7B7B7") %>%
+dyEvent(as.POSIXct("2020-07-15 12:00:00"), "SBE37 #9509 IN", labelLoc = "bottom", color="red",strokePattern = "dashed") %>% 
+dyEvent(as.POSIXct("2021-08-18 12:00:00"), "SBE37 #9506 IN", labelLoc = "bottom", color="red",strokePattern = "dashed") %>% 
+  dyEvent(as.POSIXct("2020-12-09 12:00:00"), "underwater clean", labelLoc = "bottom", color="blue",strokePattern = "dashed") %>% 
+    dyEvent(as.POSIXct("2021-02-17 12:00:00"), "underwater clean", labelLoc = "bottom", color="blue",strokePattern = "dashed") %>% 
+      dyEvent(as.POSIXct("2021-03-16 12:00:00"), "outside clean", labelLoc = "bottom", color="green",strokePattern = "dashed") %>% 
+  dyOptions(drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+```
+
+## **Oxygen**
+
+###  **1 m**
+
+```{r eol pointb Oxy 1m, echo=TRUE, warning = FALSE, message = FALSE, out.width='100%'}
+# # Reading the combined ptb + Winkler dataframe created before = combined_1_B_Bplus_wink.
+# #put wink_1m as data.table
+# combined_1_B_Bplus_wink <- as.data.table(combined_1_B_Bplus_wink)
+# # set datetime column as key column, easy to bind
+# setkey( combined_1_B_Bplus_wink, datetime )
+# # combine to eol
+# combined_1_B_Bplus_wink_eol <- eol[ combined_1_B_Bplus_wink, roll = "nearest" ]
+# # set a datetime column for eol
+# combined_1_B_Bplus_wink_eol <- dplyr::mutate(combined_1_B_Bplus_wink_eol, datetime_eol=str_c(Date, " ", Heure) %>% parse_datetime(format="%Y%m%d %H%M%S"))
+# #calculate the difference between time and keep only closest time <6 hours.
+# combined_1_B_Bplus_wink_eol <- dplyr::mutate(combined_1_B_Bplus_wink_eol,delta_datetime = abs(difftime(datetime, datetime_eol, units="hours")))
+# #keep only <6 hours
+# combined_1_B_Bplus_wink_eol <-  combined_1_B_Bplus_wink_eol    %>%    
+#  dplyr::filter(delta_datetime <= 6)
+
+###
+# PLOT all oxygen data as time series
+eol_ptb_oxy_xts <- dplyr::select(combined1, datetime, mean_oxy_mll_rhBplus_B, oxy_eol, ptb_oxy_wink)
+eol_ptb_oxy_xts <- as.xts(eol_ptb_oxy_xts, order.by=eol_ptb_oxy_xts$datetime)
+
+dygraph(eol_ptb_oxy_xts,  main = "Oxygen (ml/l) 1m: EOL - ptB+ - Winkler ptB)", ylab = "") %>%
+dySeries("mean_oxy_mll_rhBplus_B", drawPoints = TRUE, pointSize=4, label = "Oxy ptB+", color ="blue") %>%
+dySeries("oxy_eol", drawPoints = TRUE, pointSize=2, label = "Oxy EOL", color ="red")%>%
+dySeries("ptb_oxy_wink", drawPoints = TRUE, pointSize=2, label = "Oxy winkler PTB", color ="green")%>%
+dyOptions(connectSeparatedPoints = TRUE,
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+
+# Regression lineaire entre EOL/WINK
+titre <- "Oxygen 1m: EOL vs Point B Winkler"
+fit <- lmodel2(data = combined1, oxy_eol ~ ptb_oxy_wink, nperm = 99)
+p_Oxyptbwink_Oxyeol <-  ggreg2(fit, "ptb_oxy_wink", "oxy_eol") +
+  geom_abline(aes(slope= 1, intercept =0), linetype = 2) +
+  mytheme+labs(y="Oxy EOL", x="Oxy Point B Winkler")
+print(p_Oxyptbwink_Oxyeol)
+```
+
+## **Oxygen EOL correction**
+
+### **Definition of drifting periodes**
+
+Drifting periodes have been defined according to the delta (drift) between: Winkler (reference) and EOL data.
+
+```{r eol pointb Oxy 1m correction, echo=TRUE, warning = FALSE, message = FALSE, out.width='100%'}
+### Take WINKLER as reference
+#delta oxy
+combined1 <- combined1 %>% 
+  dplyr::mutate(oxy_mll_Bplus_wink_detla = ptb_oxy_wink - mean_oxy_mll_rhBplus_B,
+                oxy_mll_eol_wink_detla =   ptb_oxy_wink - oxy_eol)
+
+oxy_periode <- c("2017-07-11 00:00:00","2021-07-06 23:59:00","2021-07-13 00:00:00","2022-06-21 23:59:00")
+
+#plot
+oxy_eol_wink_xts <- dplyr::select(combined1,datetime, oxy_mll_eol_wink_detla)
+oxy_eol_wink_xts <- as.xts(oxy_eol_wink_xts, order.by=oxy_eol_wink_xts$datetime)
+
+dygraph(oxy_eol_wink_xts,  main = "Delta Winkler / EOL 1m", ylab = "") %>%
+     dySeries("oxy_mll_eol_wink_detla", drawPoints = TRUE, pointSize=2, label = "delta (ml/l)", color="black")%>%
+dyShading(from =  oxy_periode[1], to= oxy_periode[2], color = "#B7B7B7") %>%
+dyShading(from =  oxy_periode[3], to= oxy_periode[4], color = "#B7B7B7") %>%
+dyShading(from =  oxy_periode[5], to= oxy_periode[6], color = "#B7B7B7") %>%
+
+   dyLimit(0,strokePattern = "dashed", color = "black") %>% 
+ # dyLegend(show = "always", width = 600)%>%
+  #dyAxis("y",valueRange = c(-0.1, 0.11))%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+
+```
+
+### **Correction of drifting periodes**
+
+Drifting periodes in grey have been selected and a trend with time has been exctracted. The parameters of the trend have been used to correct (orange) EOL data (red) according to SOMLIT Winkler data taken as reference (green).
+
+```{r eol pointb comp Oxy periodes, echo=TRUE, message=FALSE, warning=FALSE, out.width='100%'}
+##### p1 wink ####
+#Select drifting periodes
+p1wink <- combined1%>%
+  dplyr::select(datetime, mean_oxy_mll_rhBplus_B, oxy_eol, oxy_mll_eol_wink_detla ,ptb_oxy_wink )%>%
+    #dplyr::filter(oxy_mll_eol_wink_detla > -0.3 & oxy_mll_eol_wink_detla < 0.3 )%>%
+  dplyr::filter(datetime >"2017-07-01 00:00:00" & datetime <"2021-07-06 23:59:00" )
+
+## Regression lineaire avec le temps
+fit_wink_p1 <- lm(data = p1wink, oxy_mll_eol_wink_detla ~ unclass(datetime) )
+slope_wink_p1 <- fit_wink_p1$coefficients[[2]]
+intercept_wink_p1 <- fit_wink_p1$coefficients[[1]]
+
+lims_wink_p1 <- as.POSIXct(strptime(c("2017-07-01 00:00:00","2021-07-06 23:00:00"), format = "%Y-%m-%d %H:%M:%S"))    
+wink_plot_p1 <-  ggplot(data=combined1, aes(x=datetime, y=oxy_mll_eol_wink_detla), col="black") +  geom_point()+ geom_line()+ geom_abline(aes(slope= slope_wink_p1, intercept =intercept_wink_p1), linetype = 1, col="red") + mytheme+labs(y="delta oxy EOL/Wink", x="") + scale_x_datetime(date_breaks="3 months",  labels=date_format("%b %Y"), limits =lims_wink_p1) + theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust=1))
+print(wink_plot_p1)
+
+#correction des valeurs EOL avec la regression
+p1wink <- p1wink%>%
+  dplyr::mutate(correction_oxy = slope_wink_p1 * unclass(datetime) + intercept_wink_p1,
+                oxy_eol_corr = oxy_eol + correction_oxy )
+# plot
+ p1wink_corr_xts <-p1wink%>%
+   dplyr::select(datetime, mean_oxy_mll_rhBplus_B, ptb_oxy_wink, oxy_eol, oxy_eol_corr)
+
+p1wink_corr_xts <- as.xts(p1wink_corr_xts, order.by=p1wink_corr_xts$datetime)
+
+dygraph(p1wink_corr_xts,  main = "p1, EOL - ptB+ - Winkler ptB", ylab = "") %>%
+     dySeries("mean_oxy_mll_rhBplus_B", drawPoints = TRUE, pointSize=2, label = "oxy ptB+", color="blue")%>%
+       dySeries("ptb_oxy_wink", drawPoints = TRUE, pointSize=2, label = "oxy winkler PTB", color="green")%>%
+       dySeries("oxy_eol_corr", drawPoints = TRUE, pointSize=2, label = "oxy EOL corr", color="orange")%>%
+         dySeries("oxy_eol", drawPoints = TRUE, pointSize=2, label = "oxy EOL", color="red")%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+
+##### p2 wink ####
+#Select drifting periodes
+p2wink <- combined1%>%
+  dplyr::select(datetime, mean_oxy_mll_rhBplus_B, oxy_eol, oxy_mll_eol_wink_detla ,ptb_oxy_wink )%>%
+    #dplyr::filter(oxy_mll_eol_wink_detla > -0.3 & oxy_mll_eol_wink_detla < 0.3 )%>%
+  dplyr::filter(datetime >"2021-07-13 00:00:00" & datetime <"2022-06-21 23:59:00" )
+
+## Regression lineaire avec le temps
+fit_wink_p2 <- lm(data = p2wink, oxy_mll_eol_wink_detla ~ unclass(datetime) )
+slope_wink_p2 <- fit_wink_p2$coefficients[[2]]
+intercept_wink_p2 <- fit_wink_p2$coefficients[[1]]
+
+lims_wink_p2 <- as.POSIXct(strptime(c("2021-07-13 00:00:00","2022-06-21 23:59:00"), format = "%Y-%m-%d %H:%M:%S"))    
+wink_plot_p2 <-  ggplot(data=combined1, aes(x=datetime, y=oxy_mll_eol_wink_detla), col="black") +  geom_point()+ geom_line()+ geom_abline(aes(slope= slope_wink_p2, intercept =intercept_wink_p2), linetype = 1, col="red") + mytheme+labs(y="delta oxy EOL/Wink", x="") + scale_x_datetime(date_breaks="1 month",  labels=date_format("%b %Y"), limits =lims_wink_p2) + theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust=1))
+print(wink_plot_p2)
+
+#correction des valeurs EOL avec la regression
+p2wink <- p2wink%>%
+  dplyr::mutate(correction_oxy = slope_wink_p2 * unclass(datetime) + intercept_wink_p2,
+                oxy_eol_corr = oxy_eol + correction_oxy )
+# plot
+ p2wink_corr_xts <-p2wink%>%
+   dplyr::select(datetime, mean_oxy_mll_rhBplus_B, ptb_oxy_wink, oxy_eol, oxy_eol_corr)
+
+p2wink_corr_xts <- as.xts(p2wink_corr_xts, order.by=p2wink_corr_xts$datetime)
+
+dygraph(p2wink_corr_xts,  main = "p2, EOL corr - EOL - ptB+ - Winkler ptB", ylab = "") %>%
+     dySeries("mean_oxy_mll_rhBplus_B", drawPoints = TRUE, pointSize=2, label = "oxy ptB+", color="blue")%>%
+       dySeries("ptb_oxy_wink", drawPoints = TRUE, pointSize=2, label = "oxy winkler PTB", color="green")%>%
+       dySeries("oxy_eol_corr", drawPoints = TRUE, pointSize=2, label = "oxy EOL corr", color="orange")%>%
+         dySeries("oxy_eol", drawPoints = TRUE, pointSize=2, label = "oxy EOL", color="red")%>%
+dyOptions(
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+#-------
+
+#correction des valeurs EOL avec la regression temps (low frequency)
+combined1 <- combined1%>%
+  dplyr::mutate(correction_oxy = case_when(datetime >"2017-07-11 00:00:00" & datetime < "2021-07-06 23:59:00" ~ slope_wink_p1 * unclass(datetime) + intercept_wink_p1, 
+                                           datetime >"2021-07-13 00:00:00" & datetime <"2022-06-21 23:59:00"  ~ slope_wink_p2 * unclass(datetime) + intercept_wink_p2 , TRUE ~ 0),
+                slope_oxy = case_when(datetime >"2017-07-11 00:00:00" & datetime < "2021-07-06 23:59:00" ~ slope_wink_p1,
+                                      datetime >"2021-07-13 00:00:00" & datetime <"2022-06-21 23:59:00" ~ slope_wink_p2,
+                                          TRUE ~ NA_real_),
+                intercept_oxy = case_when(datetime >"2017-07-11 00:00:00" & datetime < "2021-07-06 23:59:00" ~  intercept_wink_p1, 
+                                          datetime >"2021-07-13 00:00:00" & datetime <"2022-06-21 23:59:00" ~ intercept_wink_p2,
+                                          TRUE ~ NA_real_),
+                oxy_eol_corr = oxy_eol + correction_oxy )
+### SAVE
+saveRDS(combined1, file = paste0(path, "data/eol/combined_eol_rh_data.rds"))
+
+## Plot LOW FREQUENCY 
+eol_ptb_oxy_xts <- dplyr::select(combined1 , datetime, mean_oxy_mll_rhBplus_B, oxy_eol, ptb_oxy_wink, oxy_eol_corr)
+#eol_ptb_oxy_xts <- dplyr::select(combined_1_B_Bplus_wink_eol, datetime, mean_oxy_mll_rhBplus, oxy_eol, ptb_oxy_wink, oxy_eol_corr)
+eol_ptb_oxy_xts <- as.xts(eol_ptb_oxy_xts, order.by=eol_ptb_oxy_xts$datetime)
+
+dygraph(eol_ptb_oxy_xts,  main = "Oxygen (ml/l) 1m: EOL - ptB+ - Winkler ptB (LOW FREQUENCY)", ylab = "") %>%
+dySeries("mean_oxy_mll_rhBplus_B", drawPoints = TRUE, pointSize=4, label = "Oxy ptB+", color ="blue") %>%
+dySeries("oxy_eol", drawPoints = TRUE, pointSize=2, label = "Oxy EOL", color ="red")%>%
+dySeries("oxy_eol_corr", drawPoints = TRUE, pointSize=2, label = "Oxy EOL corr", color ="orange")%>%
+dySeries("ptb_oxy_wink", drawPoints = TRUE, pointSize=2, label = "Oxy winkler PTB", color ="green")%>%
+  dyShading(from =  oxy_periode[1], to= oxy_periode[2], color = "#C7C7C7") %>%
+    dyShading(from =  oxy_periode[3], to= oxy_periode[4], color = "#C7C7C7") %>%
+
+dyOptions(connectSeparatedPoints = TRUE,
+    drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+```
+
+## **Correction of High Frequency data**
+
+Parameters from the drifting periode has been applied to same periode in high frequency dataset. Data have been saved in "data/eol/eol_data.rds".
+
+```{r eol pointb Oxy correction EOL HF, echo=TRUE, warning = FALSE, message = FALSE, out.width='100%'}
+#add slope and intercpt from each LowFrequency data to eol data  HighFrequency.
+eol <- eol%>%
+  dplyr::mutate(correction_oxy = case_when(datetime >"2017-07-11 00:00:00" & datetime <"2021-05-25 23:59:00" ~ slope_wink_p1 * unclass(datetime) + intercept_wink_p1, 
+                                           datetime >"2021-07-13 00:00:00" & datetime <"2022-06-21 23:59:00"  ~ slope_wink_p2 * unclass(datetime) + intercept_wink_p2, 
+                                           TRUE ~ 0),
+                oxy_eol_corr = oxy_eol + correction_oxy)
+
+## PLOT
+eol_corr_xts <- dplyr::select(eol, datetime, oxy_eol, oxy_eol_corr)
+eol_corr_xts <- as.xts(eol_corr_xts, order.by=eol_corr_xts$datetime)
+
+dygraph(eol_corr_xts, main = "EOL oxy (HIGH FREQUENCY)", ylab = "") %>%
+    dySeries("oxy_eol", drawPoints = TRUE, pointSize=2, color = "blue",label = "oxy EOL") %>%
+  dySeries("oxy_eol_corr", drawPoints = TRUE, pointSize=2,  color = "green", label = "oxy EOL corr")%>%
+dyShading(from =  oxy_periode[1], to= oxy_periode[2], color = "#B7B7B7") %>%
+  dyShading(from =  oxy_periode[3], to= oxy_periode[4], color = "#C7C7C7") %>%
+dyEvent(as.POSIXct("2020-07-15 12:00:00"), "SBE37 #9509 IN", labelLoc = "bottom", color="red",strokePattern = "dashed") %>% 
+dyEvent(as.POSIXct("2021-08-18 12:00:00"), "SBE37 #9506 IN", labelLoc = "bottom", color="red",strokePattern = "dashed") %>% 
+  dyEvent(as.POSIXct("2020-12-09 12:00:00"), "underwater clean", labelLoc = "bottom", color="blue",strokePattern = "dashed") %>% 
+    dyEvent(as.POSIXct("2021-02-17 12:00:00"), "underwater clean", labelLoc = "bottom", color="blue",strokePattern = "dashed") %>% 
+      dyEvent(as.POSIXct("2021-03-16 12:00:00"), "outside clean", labelLoc = "bottom", color="green",strokePattern = "dashed") %>% 
+  dyOptions(drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30  )%>%
+  dyLegend(labelsDiv  =)
+
+### SAVE
+saveRDS(eol, file = paste0(path, "data/eol/eol_data.rds"))
+```
+
+# **EOL corrected data**  {.tabset .tabset-pills}
+
+Final EOL corrected data: 
+
+```{r eol corrected all HF, echo=TRUE, warning = FALSE, message = FALSE, out.width='100%'}
+
+## PLOT all (low freq)
+eol_corr_xts <- dplyr::select(combined1, datetime, temp_eol, sal_eol_corr, oxy_eol_corr)
+eol_corr_xts <- as.xts(eol_corr_xts, order.by=eol_corr_xts$datetime)
+
+dygraph(eol_corr_xts, main = "EOL S T O data corrected LOW FREQUENCY", ylab = "") %>%
+    dySeries("oxy_eol_corr", drawPoints = TRUE, pointSize=2,label = "oxy")%>%
+  dySeries(axis = "y2","sal_eol_corr", drawPoints = TRUE, pointSize=2, label = "Sal") %>%
+    dyAxis(name = "y2", axisLineColor = "purple", axisLabelColor = "purple") %>% 
+  dySeries("temp_eol", drawPoints = TRUE, pointSize=2, label = "Temp")%>%
+ # dyLegend(show = "always", width = 600)%>%
+  #dyAxis("y",valueRange = c(-0.1, 0.11))%>%
+dyOptions(drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+
+## PLOT all (low freq)
+eol_corr_high_xts <- dplyr::select(eol, datetime, temp_eol, sal_eol_corr, oxy_eol_corr)
+eol_corr_high_xts <- as.xts(eol_corr_high_xts, order.by=eol_corr_high_xts$datetime)
+
+dygraph(eol_corr_high_xts, main = "EOL S T O data corrected HIGH FREQUENCY", ylab = "") %>%
+    dySeries("oxy_eol_corr", drawPoints = TRUE, pointSize=2,label = "oxy")%>%
+  dySeries(axis = "y2","sal_eol_corr", drawPoints = TRUE, pointSize=2, label = "Sal") %>%
+    dyAxis(name = "y2", axisLineColor = "purple", axisLabelColor = "purple") %>% 
+  dySeries("temp_eol", drawPoints = TRUE, pointSize=2, label = "Temp")%>%
+ # dyLegend(show = "always", width = 600)%>%
+  #dyAxis("y",valueRange = c(-0.1, 0.11))%>%
+dyOptions(drawGrid = TRUE,
+    drawPoints = TRUE,
+    useDataTimezone = TRUE)%>%
+  dyRangeSelector(height = 30)
+```
+
+# **Heatwaves**  {.tabset .tabset-pills}
+
+```{r heatwave, echo=TRUE, warning = FALSE, message = FALSE, out.width='100%'}
+library(heatwaveR)
+
+hw <- eol%>%
+  dplyr::select(datetime, temp_eol )
+
+hwmean <- hw%>%
+  dplyr::mutate(t = as.Date(datetime)) %>% 
+  dplyr::group_by(t) %>% 
+  dplyr::summarise(temp = mean(temp_eol, na.rm=TRUE)) %>% 
+  heatwaveR::ts2clm(climatologyPeriod = c("2013-09-24", "2021-09-23"),maxPadLength = 5) %>% 
+  heatwaveR::detect_event()
+
+hwresults <- hwmean$event
+
+saveRDS(hwmean, file = paste0(path, "data/eol/hwmean_robert.rds"))
+
+# plot the greatest even
+event_line(hwmean, spread = 180, metric = "intensity_cumulative", start_date = "1982-01-01", end_date = "2021-04-30")
+#plot all the event
+lolli_plot(hwmean, metric = "duration")
+
+MHW_cat <- category(hwmean, S = FALSE, name = "EOL")
+
+event_line(hwmean, spread = 200, start_date = "2010-11-01", end_date = "2021-04-30",metric = "intensity_max", category = TRUE)
+```
+
+```{r coldwave, echo=TRUE, warning = FALSE, message = FALSE, out.width='100%'}
+
+cwmean <- hw%>%
+  dplyr::mutate(t = as.Date(datetime)) %>% 
+  dplyr::group_by(t) %>% 
+  dplyr::summarise(temp = mean(temp_eol, na.rm=TRUE)) %>% 
+  heatwaveR::ts2clm(climatologyPeriod = c("2013-09-24", "2021-09-23"),pctile = 10) %>% 
+  heatwaveR::detect_event(coldSpells = TRUE)
+
+cwresults <- cwmean$event
+
+saveRDS(cwmean, file = paste0(path, "data/eol/cwmean_robert.rds"))
+
+# plot the greatest even
+event_line(cwmean, spread = 180, metric = "intensity_max", start_date = "1982-01-01", end_date = "2021-04-30")
+#plot all the event
+lolli_plot(cwmean, metric = "duration")
+
+MCW_cat <- category(cwmean, S = FALSE, name = "EOL")
+
+event_line(cwmean, spread = 200, start_date = "2010-11-01", end_date = "2021-04-30",metric = "intensity_max", category = TRUE)
+```
