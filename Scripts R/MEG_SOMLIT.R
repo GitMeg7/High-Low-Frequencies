@@ -67,14 +67,14 @@ statsNA(SOMLIT_1m$temp_B) #nombre de NA (82) + gaps
 ggplot_na_gapsize(SOMLIT_1m$temp_B, orientation="vertical")
 
 #plot nb NA par années (temperature)
-SOMLIT_na <- SOMLIT_1m %>% 
+SOMLIT_na_temp <- SOMLIT_1m %>% 
   dplyr::mutate(Year = format(datetime, format="%Y"),
                 Month = format(datetime, format="%m-%d")) %>% 
   dplyr::group_by(Year, Month) 
 
-SOMLIT_na$temp_B[is.na(SOMLIT_na$temp_B)] <- "NA"
+SOMLIT_na_temp$temp_B[is.na(SOMLIT_na_temp$temp_B)] <- "NA"
 
-SOMLIT_na %>% 
+SOMLIT_na_temp %>% 
   dplyr::filter(temp_B == "NA") %>% 
   dplyr::group_by(Year) %>% 
   dplyr::summarise(number_of_NA = n()) %>% 
@@ -102,7 +102,7 @@ ggplot_na_distribution(SOMLIT_1m$sal_B)
 statsNA(SOMLIT_1m$sal_B) #nombre de NA (103) + gaps
 ggplot_na_gapsize(SOMLIT_1m$sal_B, orientation="vertical")
 
-#plot nb NA par années (salinité)
+#plot nb NA par années (salinite)
 SOMLIT_na_sal <- SOMLIT_1m %>% 
   dplyr::mutate(Year = format(datetime, format="%Y"),
                 Month = format(datetime, format="%m-%d")) %>% 
@@ -397,7 +397,7 @@ max(Fourier, 5)
 
 
 ##########################################################################################
-### Jerem
+### Temperatures max et min par dates
 
 SOMLIT_1m_wX_NA <- SOMLIT_1m[!(is.na(SOMLIT_1m$temp_B)), ]
 
@@ -413,6 +413,31 @@ SOMLIT_1m_split <- SOMLIT_1m_wX_NA %>%
 # init loop
 summary_min_max_temp$date_temp_max = structure(rep(NA_real_, 30), class="Date")
 summary_min_max_temp$date_temp_min = structure(rep(NA_real_, 30), class="Date")
+
+#plot des mois les plus chauds par annee
+
+summary_min_max_temp %>%
+  mutate(Months = format(date_temp_max, format="%m")) %>%
+  group_by(Year) %>% 
+  ggplot() +
+  aes(x=Year, y=Months, fill=Months) +
+  geom_bar(stat="identity", color="black") +
+  scale_fill_manual(values = c("#66FFCC", "#FFCC99", "#FF9999"))
+
+#pas vraiment de changements au cours des annees
+  
+
+#plot des mois les plus froids par annee
+
+summary_min_max_temp %>%
+  mutate(Months = format(date_temp_min, format="%m")) %>%
+  group_by(Year) %>% 
+  ggplot() +
+  aes(x=Year, y=Months, fill=Months) +
+  geom_bar(stat="identity", color="black") +
+  scale_fill_manual(values = c("#99FFFF", "#FFFFCC", "#FFCCCC", "#99CCCC"))
+
+#evolution, on passe de decembre à fevrier
 
 for (i in 1:30) {
   summary_min_max_temp$date_temp_max[i] = 
@@ -439,13 +464,14 @@ summary_min_max_temp <- summary_min_max_temp %>% dplyr::filter(Year != 1994, Yea
                                                                Year != 2022)
 
 # Barplot dataset + ggplot
+#temperature max et min par annees
 data.frame(Year = rep(summary_min_max_temp$Year, 2),
            Temp = c(summary_min_max_temp$max_Temp, 
                     summary_min_max_temp$min_Temp),
            Temperature = c(rep("Max", 28), rep("Min", 28))) %>%
   ggplot(aes(x=Year, y=Temp, fill=Temperature)) +
   geom_bar(stat="identity", position="dodge", color = "black") +
-  scale_y_continuous("Temperature (T?C)", breaks = seq(0,28,1)) +
+  scale_y_continuous("Temperature (°C)", breaks = seq(0,28,1)) +
   theme_classic() +
   scale_fill_manual(values = c("#FF4040", "#63B8FF"))
 
