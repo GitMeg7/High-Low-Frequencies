@@ -37,6 +37,17 @@ SOMLIT_1m <- SOMLIT_1m %>%
 ########################################################################################
 #comparaison T par annee
 
+#Annee 2018
+SOMLIT_1m %>%
+  mutate(Year = format(datetime, format="%Y"),
+         Month = format(datetime, format="%m-%d")) %>% 
+  dplyr::filter(Year ==2018) %>% 
+  ggplot() +
+  aes(x=datetime, y=temp_B) +
+  geom_line()
+
+#toutes les années réunies
+
 SOMLIT_1m %>% ggplot() +
   geom_line(aes(x= as.Date(yday(datetime), "1970-01-01"), 
                 y=temp_B, 
@@ -47,20 +58,32 @@ SOMLIT_1m %>% ggplot() +
   scale_x_date(date_breaks="months", date_labels="%b", name = "") +
   labs(x="Month",colour="") +
   theme_bw() +
-  scale_y_continuous(name = "Temperature (?C)") 
+  scale_y_continuous(name = "Temperature (°C)") 
 
-#Annee 2018
-SOMLIT_1m %>%
-  mutate(Year = format(datetime, format="%Y"),
-         Month = format(datetime, format="%m-%d")) %>% 
-  dplyr::filter(Year ==2018) %>% 
+#Annual cycle of SST averaged for 1992 - 2022
+
+SOMLIT_1m_mean <- SOMLIT_1m %>%
+  dplyr::mutate(Year = format(datetime, format="%Y"),
+                Month = format(datetime, format="%m")) %>% 
+  dplyr::group_by(Year, Month) %>% 
+  dplyr::summarise(Mean1 = mean(temp_B)) %>% 
+  dplyr::filter(!is.na(Mean1)) %>% 
+  dplyr::group_by(Month) %>% 
+  dplyr::mutate(Mean2 = mean(Mean1))
+
+#plot
+SOMLIT_1m_mean %>% 
   ggplot() +
-  aes(x=datetime, y=temp_B) +
-  geom_line()
+  ggtitle("Annual cycle of SST averaged for 1992 - 2022") +
+  aes(x=Month, y=Mean2, group=1) +
+  geom_point(size = 3, shape=9) +
+  geom_line () +
+  scale_y_continuous(name = "Temperature (°C)")
+
 
 
 #################################################################################
-###NA values
+###NA values - interpolations
 #interpolation variable temperature
 ggplot_na_distribution(SOMLIT_1m$temp_B)
 statsNA(SOMLIT_1m$temp_B) #nombre de NA (82) + gaps
@@ -205,8 +228,9 @@ plot(decomp_temp)
 
 #plot tendance + valeurs observees
 
-plot(manual_temp_trend, col='red', ylim=c(10,30), type='l')
+plot(manual_temp_trend, col='red', ylim=c(10,30), type='p')
 lines(DF_temp$Temp, col='grey')
+#tendance legerement croissante
 
 ####################################################################################
 ##linear model temperature
@@ -216,6 +240,8 @@ model_temp <- lm(manual_temp_trend ~ DF_temp$Date)
 #plot tendance + valeurs observees + regression
 lines(model_temp$fitted.values, col='blue')
 legend(x=150, y=29.8, "T° = 6.62e-10*x + 1.78e01", cex=0.85, box.lty=0)
+#augmentation de 6.62e-10 degrés par semaine
+
 
 
 #visualisation de la regression
@@ -414,30 +440,7 @@ SOMLIT_1m_split <- SOMLIT_1m_wX_NA %>%
 summary_min_max_temp$date_temp_max = structure(rep(NA_real_, 30), class="Date")
 summary_min_max_temp$date_temp_min = structure(rep(NA_real_, 30), class="Date")
 
-#plot des mois les plus chauds par annee
 
-summary_min_max_temp %>%
-  mutate(Months = format(date_temp_max, format="%m")) %>%
-  group_by(Year) %>% 
-  ggplot() +
-  aes(x=Year, y=Months, fill=Months) +
-  geom_bar(stat="identity", color="black") +
-  scale_fill_manual(values = c("#66FFCC", "#FFCC99", "#FF9999"))
-
-#pas vraiment de changements au cours des annees
-  
-
-#plot des mois les plus froids par annee
-
-summary_min_max_temp %>%
-  mutate(Months = format(date_temp_min, format="%m")) %>%
-  group_by(Year) %>% 
-  ggplot() +
-  aes(x=Year, y=Months, fill=Months) +
-  geom_bar(stat="identity", color="black") +
-  scale_fill_manual(values = c("#99FFFF", "#FFFFCC", "#FFCCCC", "#99CCCC"))
-
-#evolution, on passe de decembre à fevrier
 
 for (i in 1:30) {
   summary_min_max_temp$date_temp_max[i] = 
@@ -475,20 +478,199 @@ data.frame(Year = rep(summary_min_max_temp$Year, 2),
   theme_classic() +
   scale_fill_manual(values = c("#FF4040", "#63B8FF"))
 
+####
+
+#plot des mois les plus chauds par annee
+
+summary_min_max_temp %>%
+  mutate(Months = format(date_temp_max, format="%m")) %>%
+  group_by(Year) %>% 
+  ggplot() +
+  aes(x=Year, y=Months, fill=Months) +
+  geom_bar(stat="identity", color="black") +
+  scale_fill_manual(values = c("#66FFCC", "#FFCC99", "#FF9999"))
+
+#pas vraiment de changements au cours des annees
+
+
+#plot des mois les plus froids par annee
+
+summary_min_max_temp %>%
+  mutate(Months = format(date_temp_min, format="%m")) %>%
+  group_by(Year) %>% 
+  ggplot() +
+  aes(x=Year, y=Months, fill=Months) +
+  geom_bar(stat="identity", color="black") +
+  scale_fill_manual(values = c("#99FFFF", "#FFFFCC", "#FFCCCC", "#99CCCC"))
+
+#evolution, on passe de decembre à fevrier
+
+### mm chose pour les jours
+##jours les plus chauds de l'annee
+
+summary_min_max_temp %>%
+  mutate(Months = format(date_temp_max, format="%m"),
+         Days = format(date_temp_max, format="%d")) %>% 
+  group_by(Year, Months) %>% 
+  ggplot() +
+  ggtitle("Hottest days per year") +
+  aes(x=Year, y=Days, fill=Months) +
+  geom_bar(stat="identity", color="black") +
+  scale_fill_manual(values = c("#66FFCC", "#FFCC99", "#FF9999"))
+
+##jours les plus froids de l'annee
+
+summary_min_max_temp %>%
+  mutate(Months = format(date_temp_min, format="%m"),
+         Days = format(date_temp_min, format="%d")) %>% 
+  group_by(Year, Months) %>% 
+  ggplot() +
+  ggtitle("Coldest days per year") +
+  aes(x=Year, y=Days, fill=Months) +
+  geom_bar(stat="identity", color="black") +
+  scale_fill_manual(values = c("#99FFFF", "#FFFFCC", "#FFCCCC", "#99CCCC"))
 
 #########################################################################################
 #Heatwaves Robert
 
-DF_temp2 <- DF_temp %>% 
+Exc_DF_temp <- DF_temp %>% 
   mutate(t = as.Date(Date)) %>% 
   rename(temp = Temp)
-DF_exceedance <- exceedance(DF_temp2, threshold = 25, maxPadLength = 6)
- 
-DF_exceedance_E <- DF_exceedance$exceedance
+Exc_25 <- exceedance(Exc_DF_temp, threshold = 25, maxPadLength = 6)
 
-#reunion Laurent jeudi 14h 
+DF_exceedance_25 <- DF_exceedance$exceedance
 
-#tendance pluriannuelle ? significative 
+#visualising exceedances
+exc_25_thresh <- Exc_25$threshold %>% slice(3875:4239)
 
-#demander Carla les derni?res donn?es SOMLIT 2022
-#travailler les r?sidus ? pas accept? en s?rie temporelle 
+ggplot(data = exc_25_thresh, aes(x = t)) +
+  geom_flame(aes(y = temp, y2 = thresh, fill = "all"), show.legend = F) +
+  geom_line(aes(y = temp, colour = "temp")) +
+  geom_line(aes(y = thresh, colour = "thresh"), size = 1.0) +
+  scale_colour_manual(name = "Line Colour",
+                      values = c("temp" = "black", "thresh" =  "forestgreen")) +
+  scale_fill_manual(name = "Event Colour", values = c("all" = "salmon")) +
+  guides(colour = guide_legend(override.aes = list(fill = NA))) +
+  scale_x_date(date_labels = "%b %Y", breaks="1 month") +
+  labs(y = expression(paste("Temperature [", degree, "C]")), x = NULL)
+
+
+#########################################################################################
+
+#évolution du nombre de mois les plus chauds (>24 °C)
+
+DF_temp %>% 
+  mutate(Year = format(Date, format="%Y"),
+         Month = format(Date, format="%m")) %>% 
+  group_by(Year, Month) %>% 
+  summarise(mean = mean(Temp)) %>% 
+  filter(mean > 24) %>% 
+  summarise(nb = n()) %>% 
+  ggplot() +
+  aes(x=Year, y=nb, group=1) +
+  scale_y_continuous(limits=c(0,5)) +
+  geom_point() +
+  geom_line()
+  
+
+
+
+
+####################################################
+#oxygen : avant 2000, oxygene trop haut : enlever ses valeurs car certainement une autre methode dechantillonnage
+#ou : 
+#convertir en micromol par kg  ##fait
+
+#calculer l'augmentation en degres tendance T°, voir si je trouve la mm chose que 
+#l'article ##chercher article sur Zotero
+
+#demander Carla les dernieres donnees SOMLIT annee 2022
+#faire Markdown
+
+#pH recuperer donnees pangea
+#donnees meteo Laurent (T air)
+#article de carlo flux de CO2 (italie)
+#article pierre poelsenae arcachon
+
+
+#rapport Laurent sur les valeurs, pour les tendances saisonniere, interannuelles
+#regression sur les residus ?
+#faire a partir de 1995 pour voir si ya une dif
+
+#plus tard :
+#jours les plus chaud/froids
+#T nuits tropicales (nuit avec EOL)
+#predictif sur les 5 prochaines annees
+
+####################################################################################
+#Travail sur oxygen
+
+#visualisation données brutes
+plot(SOMLIT_1m$datetime, SOMLIT_1m$O2_B, pch=4)
+#200 premieres valeurs manquantes
+
+#visualisation donnees brutes - 200 premieres valeurs
+RAW_O2_WX_200 <- SOMLIT_1m$O2_B[-seq(0,200,1)]
+DATETIME_WX_200 <- SOMLIT_1m$datetime[-seq(0,200,1)]
+DF_O2_WX_200 <- data.frame(Date = DATETIME_WX_200, O2 = RAW_O2_WX_200)
+plot(DF_O2_WX_200)
+#outliers au dessus de 6 ?
+
+#detection outliers avec boxplot
+DF_O2_WX_200 %>% 
+  ggplot() +
+  aes(x=Date, y=O2) +
+  geom_jitter(width=0.25) +
+  geom_boxplot() + 
+  xlab(label = "") +
+  ylab(label = "O2 (ml/l)") +
+  theme(legend.position="none")+
+  ggtitle("Oxygen boxplot (outliers)") 
+
+#points = outliers
+#recuperation des donnees outliers ($out) :
+outliers_O2 <- boxplot.stats(DF_O2_WX_200$O2)
+#valeur max de la moustache : 6.178710
+
+#recuperation des dates des outliers :
+outliers_O2_index <- which(DF_O2_WX_200$O2 %in% c(outliers_O2$out))
+
+outliers_O2_dates <- DF_O2_WX_200[outliers_O2_dates,]
+#principalement les annees 2000-2001
+#causes ? changement de methode ?
+#plot des annees/mois où ont lieu les anomalies, voir si ca peut etre expliqué par un phenomene particulier
+
+#donc filtration des donnees au dessus de 6.178710
+#plot des donnees oxygen sans outliers
+O2_WX_outliers <- DF_O2 %>% 
+  dplyr::filter(O2  <= 6.178710)
+
+plot(O2_WX_outliers, ylim=c(3,7.5))
+#visiblement une saisonnalité ?
+
+#regression lineaire sur donnees oxygen sans outliers
+reg_O2_WX_outliers <- lm(O2_WX_outliers$O2 ~ O2_WX_outliers$Date)
+summary (reg_O2_WX_outliers) #tendance decroissante (slope negative)
+
+plot(reg_O2_WX_outliers$fitted.values) #visualisation regression lineaire
+
+#plot data + regression oxygen sans outliers
+reg_O2_WX_outliers_DF <- data.frame(x=O2_WX_outliers$Date, y=reg_O2_WX_outliers$fitted.values)
+
+plot(reg_O2_WX_outliers_DF$x, reg_O2_WX_outliers_DF$y, ylim=c(3,7.5), type='l', 
+     col='#18391E', main="Oxygen (ml/l) without outliers plot + trend")
+lines(O2_WX_outliers, col='#85C17E')
+
+#conversion des valeurs ml/l en umol/kg
+# *44.66 -> mmol/m3 ou umol/l
+# densite eau de mer = 1030 kg/m3 = 1.030 kg/l
+# 44.66/1.030 = 43.36
+# ml/l * 43.36 -> umol/kg
+
+O2_WX_outliers %>% 
+  mutate(O2_umol_kg = format(O2*43.36, scientific=TRUE)) %>% 
+  ggplot() +
+  aes(x=Date, y=O2_umol_kg) +
+  geom_point() 
+
+
