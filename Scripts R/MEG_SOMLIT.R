@@ -217,13 +217,60 @@ manual_temp_trend <- stats::filter(DF_temp$Temp, rep(1/52.14,52.14), sides=2)
 
 ####################################################################################
 ##decomposition serie temporelle (temperature)
-#fonction decompose (idem)
+
+#creation serie tempo + plot
+
+ts_temp <- ts(DF_temp$Temp, start=1992,22, frequency=52.14, end=2022,19)
+plot.ts(ts_temp)
+
+##decompose + plot :
 #tendance
 #saisonnalite
 #randoms
 
-decomp_temp <- decompose(ts(DF_temp$Temp, start=1992,1, frequency=52.14, end=2022,1))
+decomp_temp <- decompose(ts_temp) #type additive
 plot(decomp_temp)
+autoplot(decomp_temp)
+
+#plot tendance + valeurs observees
+
+plot(decomp_temp$trend, ylim=c(10,30), main="Temperature 1992-2022 : Observations + trend")
+lines(decomp_temp$x, col='grey')
+
+#plot residus
+
+plot(decomp_temp$random, type='p', pch=19, cex = 0.40, col='blue', ylim=c(-20,20),
+     main = "Temperature : residus", ylab="Temp. (°C)")
+
+#regression sur les residus
+residus <- data.frame(x=c(1:1561), y=decomp_temp$random)
+residus_lm <- lm(residus$y ~ residus$x)
+plot(residus_lm$fitted.values, ylim=c(-1,1), type='l')
+summary(residus_lm)
+
+#slope + SE : 2.89e-05 +- 2.17e-04
+#pas significatif
+
+
+#plot residus + regression
+plot.new() 
+par(mar=c(4,4,3,5)) 
+plot(decomp_temp$random, type='p',col="blue",
+     pch=19, cex=0.40,axes=F,xlab="",ylab="", ylim=c(-20,20),
+     main="Temperature : Residus + trend")
+axis(2, ylim=c(-20,20),col="black",col.axis="black",at=seq(-20, 20, by=4)) 
+axis(1, ylim=c(1992,2022),col="black",col.axis="black",at=seq(1992, 2022, by=5))
+mtext("Residus",side=2,line=2.5,col="blue") 
+
+par(new = T)
+plot(residus_lm$fitted.values,col="red", type='l',axes=F,xlab="",ylab="",ylim=c(-10,10)) 
+mtext("Anomaly trend",side=4,line=2.5,col="red")
+
+
+
+
+
+
 
 
 #plot tendance + valeurs observees
@@ -473,6 +520,7 @@ data.frame(Year = rep(summary_min_max_temp$Year, 2),
                     summary_min_max_temp$min_Temp),
            Temperature = c(rep("Max", 28), rep("Min", 28))) %>%
   ggplot(aes(x=Year, y=Temp, fill=Temperature)) +
+  ggtitle("Min and max temperatures (°C) per year") +
   geom_bar(stat="identity", position="dodge", color = "black") +
   scale_y_continuous("Temperature (°C)", breaks = seq(0,28,1)) +
   theme_classic() +
@@ -486,6 +534,7 @@ summary_min_max_temp %>%
   mutate(Months = format(date_temp_max, format="%m")) %>%
   group_by(Year) %>% 
   ggplot() +
+  ggtitle("Hottest months per year") +
   aes(x=Year, y=Months, fill=Months) +
   geom_bar(stat="identity", color="black") +
   scale_fill_manual(values = c("#66FFCC", "#FFCC99", "#FF9999"))
@@ -499,6 +548,7 @@ summary_min_max_temp %>%
   mutate(Months = format(date_temp_min, format="%m")) %>%
   group_by(Year) %>% 
   ggplot() +
+  ggtitle("Coldest months per year") +
   aes(x=Year, y=Months, fill=Months) +
   geom_bar(stat="identity", color="black") +
   scale_fill_manual(values = c("#99FFFF", "#FFFFCC", "#FFCCCC", "#99CCCC"))
@@ -581,8 +631,11 @@ DF_temp %>%
 #ou : 
 #convertir en micromol par kg  ##fait
 
-#calculer l'augmentation en degres tendance T°, voir si je trouve la mm chose que 
+#calculer l'augmentation en degres tendance T° sur les residus
+#voir si je trouve la mm chose que 
 #l'article ##chercher article sur Zotero
+
+#jours les plus chaud/froids  #fait
 
 #demander Carla les dernieres donnees SOMLIT annee 2022
 #faire Markdown
@@ -598,7 +651,7 @@ DF_temp %>%
 #faire a partir de 1995 pour voir si ya une dif
 
 #plus tard :
-#jours les plus chaud/froids
+
 #T nuits tropicales (nuit avec EOL)
 #predictif sur les 5 prochaines annees
 
@@ -673,4 +726,22 @@ O2_WX_outliers %>%
   aes(x=Date, y=O2_umol_kg) +
   geom_point() 
 
+
+####################################################################################
+#travail sur T° et residus
+
+##donnees T° brutes
+plot(SOMLIT_1m$datetime, SOMLIT_1m$temp_B, pch=19, ylim=c(5,40))
+#donnees manquantes
+#enlever le format date des x
+
+#temperature sans NA : SOMLIT_1m_wX_NA
+SOMLIT_temp <- data.frame(x = c(1:1295), temp = SOMLIT_1m_wX_NA$temp_B)
+plot(SOMLIT_temp, pch=19, ylim=c(5,40))
+
+#regression lineaire sur SOMLIT_1m_wX_NA
+reg_temp_raw <- lm(SOMLIT_temp$temp ~ SOMLIT_temp$x)
+summary(reg_temp_raw)
+lines(reg_temp_raw$fitted.values)
+plot(reg_temp_raw$residuals)
 
