@@ -631,23 +631,24 @@ DF_temp %>%
 #ou : 
 #convertir en micromol par kg  ##fait
 
+#trouver les anomalies avec methode internet
+
 #calculer l'augmentation en degres tendance T° sur les residus
 #voir si je trouve la mm chose que 
-#l'article ##chercher article sur Zotero
+#l'article ## fait : non, analyse des residus pas ouf
 
 #jours les plus chaud/froids  #fait
 
-#demander Carla les dernieres donnees SOMLIT annee 2022
+#demander Carla les dernieres donnees SOMLIT annee 2022 #fait, envoyees par Fred
 #faire Markdown
 
-#pH recuperer donnees pangea
+#pH recuperer donnees pangea #fait, favoris
 #donnees meteo Laurent (T air)
 #article de carlo flux de CO2 (italie)
 #article pierre poelsenae arcachon
 
 
 #rapport Laurent sur les valeurs, pour les tendances saisonniere, interannuelles
-#regression sur les residus ?
 #faire a partir de 1995 pour voir si ya une dif
 
 #plus tard :
@@ -728,20 +729,26 @@ O2_WX_outliers %>%
 
 
 ####################################################################################
-#travail sur T° et residus
+#predictif sur les 5 prochaines annees
 
-##donnees T° brutes
-plot(SOMLIT_1m$datetime, SOMLIT_1m$temp_B, pch=19, ylim=c(5,40))
-#donnees manquantes
-#enlever le format date des x
+#lissage exponentiel simple
 
-#temperature sans NA : SOMLIT_1m_wX_NA
-SOMLIT_temp <- data.frame(x = c(1:1295), temp = SOMLIT_1m_wX_NA$temp_B)
-plot(SOMLIT_temp, pch=19, ylim=c(5,40))
+lis_exp_simpl <- ets(decomp_temp$x, model="ANN")
+lis_exp_simpl_pred <- predict(lis_exp_simpl, 52)
+plot(lis_exp_simpl_pred)
 
-#regression lineaire sur SOMLIT_1m_wX_NA
-reg_temp_raw <- lm(SOMLIT_temp$temp ~ SOMLIT_temp$x)
-summary(reg_temp_raw)
-lines(reg_temp_raw$fitted.values)
-plot(reg_temp_raw$residuals)
+#lissage exponentiel double
+
+lis_exp_doub <- ets(decomp_temp$x, model="MMN")
+lis_exp_doub_pred <- predict(lis_exp_doub, 52)
+plot(lis_exp_doub_pred)
+
+#methode de holt-winters
+#frequency too high
+
+lis_hw <- ets(ts_temp_0, model="MMM")
+lis_hw_pred <- predict(lis_hw, 12)
+plot(lis_hw_pred)
+
+
 
