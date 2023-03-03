@@ -776,9 +776,24 @@ data_ph <- data_ph %>% drop_na()
 data_ph %>% 
   ggplot() +
   ggtitle("SOMLIT surface : Données de pH") +
-  aes(x=date, y=ph, xlab="", ylab="pH") + 
-  geom_point(size=0.1) + 
+  aes(x=date, y=ph) + 
+  labs(x="", y="pH") +
   geom_line() + 
   scale_y_continuous(limits=c(7.9,8.2))
 
+#saisonnalité
+#baisse ?
 
+#creation serie temporelle pH
+
+ts_ph <- ts(data_ph$ph, frequency=52.14)
+decomp_ph <- decompose(ts_ph)
+plot(decomp_ph)
+
+#faire plot observations ph+trend+regression lineaire
+plot(decomp_ph$trend)
+lines(data_ph$ph)
+
+
+###################################################################################
+#faire analyse avec T° air
