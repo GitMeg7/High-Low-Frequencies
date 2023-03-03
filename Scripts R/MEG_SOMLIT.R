@@ -1,4 +1,5 @@
 #Libraries
+library("readr")
 library("viridis")
 library("scales")
 library("lubridate")
@@ -654,7 +655,7 @@ DF_temp %>%
 #plus tard :
 
 #T nuits tropicales (nuit avec EOL)
-#predictif sur les 5 prochaines annees
+#predictif sur les 5 prochaines annees #essai peu concluant
 
 ####################################################################################
 #Travail sur oxygen
@@ -750,5 +751,34 @@ lis_hw <- ets(ts_temp_0, model="MMM")
 lis_hw_pred <- predict(lis_hw, 12)
 plot(lis_hw_pred)
 
+
+###################################################################################
+
+#Data pH
+#a partir de decembre 2014 jusqu'a juin 2020
+SOMLIT_raw_PH <- read_delim("Point_B_ph_modif.txt", delim = "\t", 
+                            escape_double = FALSE, trim_ws = TRUE)
+
+#visualisation pH
+
+plot.ts(SOMLIT_raw_PH %>% dplyr::select(pH))
+#bcp de donnees manquantes
+
+
+#creation nouvelle data frame
+
+data_ph <- data.frame(date = SOMLIT_raw_PH$`Sampling date`, ph = SOMLIT_raw_PH$pH)
+data_ph <- data_ph[-c(1:820),]
+data_ph <- data_ph %>% drop_na()
+
+#plot des donnees de pH
+
+data_ph %>% 
+  ggplot() +
+  ggtitle("SOMLIT surface : Données de pH") +
+  aes(x=date, y=ph, xlab="", ylab="pH") + 
+  geom_point(size=0.1) + 
+  geom_line() + 
+  scale_y_continuous(limits=c(7.9,8.2))
 
 
