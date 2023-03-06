@@ -722,11 +722,12 @@ lines(O2_WX_outliers, col='#85C17E')
 # 44.66/1.030 = 43.36
 # ml/l * 43.36 -> umol/kg
 
-O2_WX_outliers %>% 
-  mutate(O2_umol_kg = format(O2*43.36, scientific=TRUE)) %>% 
-  ggplot() +
-  aes(x=Date, y=O2_umol_kg) +
-  geom_point() 
+O2_WX_outliers <- O2_WX_outliers %>% 
+  mutate(O2_umol_kg = format(O2*43.36, scientific=TRUE))
+
+#plot oxygen en umol/kg  
+plot(O2_WX_outliers$Date, O2_WX_outliers$O2_umol_kg, type='l', ylim=c(100,300),
+     main="Time serie of oxygen (umol/kg)", xlab="", ylab="Oxygen (umol/kg)")
 
 
 ####################################################################################
@@ -771,7 +772,7 @@ data_ph <- data.frame(date = SOMLIT_raw_PH$`Sampling date`, ph = SOMLIT_raw_PH$p
 data_ph <- data_ph[-c(1:820),]
 data_ph <- data_ph %>% drop_na()
 
-#plot des donnees de pH
+#plot des donnees de pH (2014-2020)
 
 data_ph %>% 
   ggplot() +
@@ -784,15 +785,97 @@ data_ph %>%
 #saisonnalité
 #baisse ?
 
+#plot que sur une annee
+data_ph %>% 
+  mutate(Year = format(date, format="%Y")) %>% 
+  filter(Year==2018) %>% 
+  ggplot() +
+  ggtitle("SOMLIT surface : Données de pH") +
+  aes(x=date, y=ph) + 
+  labs(x="", y="pH") +
+  geom_line() + 
+  scale_y_continuous(limits=c(7.9,8.2))
+
+#plot toutes les annees reunies
+data_ph %>% ggplot() +
+  geom_line(aes(x= as.Date(yday(date), "1970-01-01"), 
+                y=ph, 
+                group = factor(year(date)), 
+                color = factor(year(date))), 
+            size = 0.75) +
+  scale_colour_viridis_d() +
+  scale_x_date(date_breaks="months", date_labels="%b", name = "") +
+  labs(x="Month",colour="") +
+  theme_bw() +
+  scale_y_continuous(name = "pH") 
+
+#annual cycle of pH (2014-2022)
+
+data_ph_mean <- data_ph %>%
+  dplyr::mutate(Year = format(date, format="%Y"),
+                Month = format(date, format="%m")) %>% 
+  dplyr::group_by(Year, Month) %>% 
+  dplyr::summarise(Mean = mean(ph)) %>% 
+  dplyr::filter(!is.na(Mean)) %>% 
+  dplyr::group_by(Month) %>% 
+  dplyr::mutate(Mean2 = mean(Mean))
+
+#plot
+data_ph_mean %>% 
+  ggplot() +
+  ggtitle("Annual cycle of pH averaged for 2014 - 2020") +
+  aes(x=Month, y=Mean2, group=1) +
+  geom_point(size = 3, shape=9) +
+  geom_line () +
+  scale_y_continuous(name = "pH")
+
+#trier les valeurs de pH et T° par mois croissants
+data_ph_mean <- data_ph_mean %>% arrange(Month)
+SOMLIT_1m_mean <- SOMLIT_1m_mean %>% arrange(Month)
+
+
+#plot comparaison relation temperature/pH
+
+plot.new() 
+par(mar=c(4,4,3,5)) 
+plot(data_ph_mean$Month, data_ph_mean$Mean2, type='p',col="blue",
+     pch=19, cex=0.40,axes=F,xlab="",ylab="", ylim=c(8,8.16), xlim=c(01,12),
+     main="Annual cycle of Temperature vs pH averaged")
+axis(2, ylim=c(8,8.16),col="black",col.axis="black",at=seq(8, 8.16, by=0.02)) 
+axis(1, ylim=c(01,12),col="black",col.axis="black",at=seq(01, 13, by=1))
+mtext("pH averaged",side=2,line=2.5,col="blue") 
+
+par(new = T)
+plot(SOMLIT_1m_mean$Month, SOMLIT_1m_mean$Mean2,col="red", type='l',axes=F,xlab="",ylab="",
+     ylim=c(12,26), xlim=c(01,12)) 
+axis(4, ylim=c(12,26),col="black",col.axis="black",at=seq(12, 28, by=4))
+mtext("Temperature (°C)",side=4,line=2.5,col="red")
+
+#anti-correlation des 2 variables ?
+
 #creation serie temporelle pH
 
 ts_ph <- ts(data_ph$ph, frequency=52.14)
 decomp_ph <- decompose(ts_ph)
 plot(decomp_ph)
 
-#faire plot observations ph+trend+regression lineaire
-plot(decomp_ph$trend)
-lines(data_ph$ph)
+#baisse dans le temps ?
+
+#plot observations ph + trend 
+plot(decomp_ph$x, col='grey')
+lines(decomp_ph$trend, col='#C4698F')
+
+
+#regression lineaire pH
+reg_ph <- lm(decomp_ph$trend ~ data_ph$date)
+summary(reg_ph) #significatif 
+plot(reg_ph$fitted.values) #baisse
+
+#plot
+plot(decomp_ph$x, col='grey')
+lines(decomp_ph$trend, col='#C4698F')
+lines(reg_ph$fitted.values, col='red')
+#baisse du pH (acidification) au cours des annees, qualifier cette baisse
 
 
 ###################################################################################
