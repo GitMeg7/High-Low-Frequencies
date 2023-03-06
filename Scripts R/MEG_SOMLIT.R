@@ -872,9 +872,18 @@ summary(reg_ph) #significatif
 plot(reg_ph$fitted.values) #baisse
 
 #plot
-plot(decomp_ph$x, col='grey')
-lines(decomp_ph$trend, col='#C4698F')
-lines(reg_ph$fitted.values, col='red')
+plot(data_ph$date, decomp_ph$x, type='l', col='grey', xlab="", ylab="pH", 
+     main="Time serie of pH (2014-2020) + trend")
+lines(data_ph$date, decomp_ph$trend, col='#C4698F')
+
+data_modif <- data_ph$date[26:393]
+ph_trend_df <- data.frame(x=data_modif, y=reg_ph$fitted.values)
+
+par(new = T)
+plot(ph_trend_df$x, ph_trend_df$y, col="red", type='l',axes=F,xlab="",ylab="",
+     ylim=c(7.95,8.15), xlim=as.POSIXct(c("2014-12-02","2020-06-09"))) #a voir
+
+
 #baisse du pH (acidification) au cours des annees, qualifier cette baisse
 
 
