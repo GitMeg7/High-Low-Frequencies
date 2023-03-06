@@ -883,8 +883,41 @@ par(new = T)
 plot(ph_trend_df$x, ph_trend_df$y, col="red", type='l',axes=F,xlab="",ylab="",
      ylim=c(7.95,8.15), xlim=as.POSIXct(c("2014-12-02","2020-06-09"))) #a voir
 
-
 #baisse du pH (acidification) au cours des annees, qualifier cette baisse
+
+###################################################################################
+#importation data point B 2022
+Data_TS_2022 <- read_delim("PtB_data_TS_2022.csv", delim = ";", 
+                           escape_double = FALSE, 
+                           col_types = cols(Date = col_date(format = "%d/%m/%Y")), 
+                           trim_ws = TRUE)
+#select depth = 1m
+#46 observations
+#3 NA
+Data_TS_2022 <- Data_TS_2022 %>% 
+  dplyr::filter(Data_TS_2022$Depth == 1)
+#select date, T et S
+Data_TS_2022 <- Data_TS_2022 %>%
+  dplyr::select(Date, T, S)
+
+#fusionner les 2 datasets
+#creation d'une 4e colonne
+Data_TS_2022 <- data.frame(datetime = Data_TS_2022$Date, 
+                           temp_B = Data_TS_2022$T,
+                           sal_B = Data_TS_2022$S,
+                           O2_B = NA)
+#remplacer les 999999 par NA
+Data_TS_2022 <- dplyr::mutate(Data_TS_2022, 
+                              temp_B = case_when(temp_B >= 999 ~ NA_real_ ,TRUE ~ temp_B),
+                              sal_B = case_when(sal_B >= 999 ~ NA_real_ ,TRUE ~ sal_B))
+
+
+SOMLIT_1m_fusion <- rbind(SOMLIT_1m, Data_TS_2022)
+
+###################################################################################
+
+
+
 
 
 ###################################################################################
