@@ -26,7 +26,8 @@ SOMLIT_1m <- RAW_SOMLIT_1m %>%
 
 SOMLIT_1m = SOMLIT_1m %>% arrange(datetime)
 
-###visualisation globale des donn?es
+
+###visualisation globale des donnees
 plot.ts(SOMLIT_1m %>% dplyr::select(-datetime))
 
 ####Rename
@@ -34,6 +35,45 @@ SOMLIT_1m <- SOMLIT_1m %>%
   dplyr::rename(temp_B = mean_temp_rhBplus_B,
                 sal_B = mean_sal_rhBplus_B,
                 O2_B = mean_oxy_mll_rhBplus_B)
+
+###################################################################################
+#importation data point B 2022
+Data_TS_2022 <- read_delim("PtB_data_TS_2022.csv", delim = ";", 
+                           escape_double = FALSE, 
+                           col_types = cols(Date = col_date(format = "%d/%m/%Y")), 
+                           trim_ws = TRUE)
+#select depth = 1m
+#46 observations
+#3 NA
+Data_TS_2022 <- Data_TS_2022 %>% 
+  dplyr::filter(Data_TS_2022$Depth == 1)
+
+
+#select date, T et S
+Data_TS_2022 <- Data_TS_2022 %>%
+  dplyr::select(Date, T, S)
+
+#select salinity > 35 (SAMIR)
+Data_TS_2022 <- dplyr::mutate(Data_TS_2022, S = case_when(S <= 35 ~ NA_real_ ,
+                                                          TRUE ~ S))
+#valeurs de salinite tres faibles en juillet/aout
+#enlever outliers ?
+
+#fusionner les 2 datasets
+#creation d'une 4e colonne
+Data_TS_2022 <- data.frame(datetime = Data_TS_2022$Date, 
+                           temp_B = Data_TS_2022$T,
+                           sal_B = Data_TS_2022$S,
+                           O2_B = NA)
+#remplacer les 999999 par NA
+Data_TS_2022 <- dplyr::mutate(Data_TS_2022, 
+                              temp_B = case_when(temp_B >= 999 ~ NA_real_ ,TRUE ~ temp_B),
+                              sal_B = case_when(sal_B >= 999 ~ NA_real_ ,TRUE ~ sal_B))
+
+
+SOMLIT_1m_fusion <- rbind(SOMLIT_1m, Data_TS_2022)
+
+###################################################################################
 
 ########################################################################################
 #comparaison T par annee
@@ -49,7 +89,7 @@ SOMLIT_1m %>%
 
 #toutes les années réunies
 
-SOMLIT_1m %>% ggplot() +
+SOMLIT_1m_fusion %>% ggplot() +
   geom_line(aes(x= as.Date(yday(datetime), "1970-01-01"), 
                 y=temp_B, 
                 group = factor(year(datetime)), 
@@ -63,7 +103,7 @@ SOMLIT_1m %>% ggplot() +
 
 #Annual cycle of SST averaged for 1992 - 2022
 
-SOMLIT_1m_mean <- SOMLIT_1m %>%
+SOMLIT_1m_mean <- SOMLIT_1m_fusion %>%
   dplyr::mutate(Year = format(datetime, format="%Y"),
                 Month = format(datetime, format="%m")) %>% 
   dplyr::group_by(Year, Month) %>% 
@@ -86,12 +126,12 @@ SOMLIT_1m_mean %>%
 #################################################################################
 ###NA values - interpolations
 #interpolation variable temperature
-ggplot_na_distribution(SOMLIT_1m$temp_B)
-statsNA(SOMLIT_1m$temp_B) #nombre de NA (82) + gaps
-ggplot_na_gapsize(SOMLIT_1m$temp_B, orientation="vertical")
+ggplot_na_distribution(SOMLIT_1m_fusion$temp_B)
+statsNA(SOMLIT_1m_fusion$temp_B) #nombre de NA (82) + gaps
+ggplot_na_gapsize(SOMLIT_1m_fusion$temp_B, orientation="vertical")
 
 #plot nb NA par années (temperature)
-SOMLIT_na_temp <- SOMLIT_1m %>% 
+SOMLIT_na_temp <- SOMLIT_1m_fusion %>% 
   dplyr::mutate(Year = format(datetime, format="%Y"),
                 Month = format(datetime, format="%m-%d")) %>% 
   dplyr::group_by(Year, Month) 
@@ -111,12 +151,12 @@ SOMLIT_na_temp %>%
   scale_y_continuous(name = "NA occurences", limits = c(0,10), breaks = seq(0, 10, 1))
   
 
-temp_interpol <- na_interpolation(SOMLIT_1m$temp_B)
+temp_interpol <- na_interpolation(SOMLIT_1m_fusion$temp_B)
 
-ggplot_na_imputations(x_with_na = SOMLIT_1m$temp_B, x_with_imputations = temp_interpol)
+ggplot_na_imputations(x_with_na = SOMLIT_1m_fusion$temp_B, x_with_imputations = temp_interpol)
 
 ####Creation data frame temperature interpolee
-DF_temp <- data.frame(Date=SOMLIT_1m$datetime, Temp=temp_interpol)
+DF_temp <- data.frame(Date=SOMLIT_1m_fusion$datetime, Temp=temp_interpol)
 
 
 
@@ -433,7 +473,7 @@ DF_temp %>%
   aes(x=Year, y=mean) +
   geom_bar(stat="identity", fill='#CC6666') +
   geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2)
-#1996 et 2022 : donnees d'hiver seulement donc T plus faible
+#1996 : donnees d'hiver seulement donc T plus faible
 
 DF_sal %>% 
   mutate(Year = format(Date, format="%Y")) %>% 
@@ -473,7 +513,7 @@ max(Fourier, 5)
 ##########################################################################################
 ### Temperatures max et min par dates
 
-SOMLIT_1m_wX_NA <- SOMLIT_1m[!(is.na(SOMLIT_1m$temp_B)), ]
+SOMLIT_1m_wX_NA <- SOMLIT_1m_fusion[!(is.na(SOMLIT_1m_fusion$temp_B)), ]
 
 summary_min_max_temp <- 
   SOMLIT_1m_wX_NA %>% mutate(Year = format(datetime, format="%Y")) %>% 
@@ -497,7 +537,7 @@ for (i in 1:30) {
     SOMLIT_1m_split[[i]]$datetime[SOMLIT_1m_split[[i]]$temp_B == min(SOMLIT_1m_split[[i]]$temp_B)]
 }
 
-# 1994 missing
+# 1994 missing : rajout d'une ligne 1994 avec NA
 summary_min_max_temp <- rbind(summary_min_max_temp[c(1:2),],
       data.frame(Year = 1994,
            max_Temp = NA, 
@@ -510,22 +550,23 @@ summary_min_max_temp$nb_jr_decrease =
 abs(difftime(summary_min_max_temp$date_temp_max, summary_min_max_temp$date_temp_min))
 summary_min_max_temp$nb_jr_increase = 365 - summary_min_max_temp$nb_jr_decrease
 
-# incomplete monitoring
-summary_min_max_temp <- summary_min_max_temp %>% dplyr::filter(Year != 1994, Year != 1996,
-                                                               Year != 2022)
+# incomplete monitoring : 1994 = NA et 1996 = valeurs d'hiver uniquement
+summary_min_max_temp <- summary_min_max_temp %>% dplyr::filter(Year != 1994, Year != 1996)
 
 # Barplot dataset + ggplot
 #temperature max et min par annees
 data.frame(Year = rep(summary_min_max_temp$Year, 2),
            Temp = c(summary_min_max_temp$max_Temp, 
                     summary_min_max_temp$min_Temp),
-           Temperature = c(rep("Max", 28), rep("Min", 28))) %>%
+           Temperature = c(rep("Max", 29), rep("Min", 29))) %>%
   ggplot(aes(x=Year, y=Temp, fill=Temperature)) +
   ggtitle("Min and max temperatures (°C) per year") +
   geom_bar(stat="identity", position="dodge", color = "black") +
-  scale_y_continuous("Temperature (°C)", breaks = seq(0,28,1)) +
+  scale_y_continuous("Temperature (°C)", breaks = seq(0,29,1)) +
   theme_classic() +
   scale_fill_manual(values = c("#FF4040", "#63B8FF"))
+
+#annee 2022 la plus chaude
 
 ####
 
@@ -540,7 +581,7 @@ summary_min_max_temp %>%
   geom_bar(stat="identity", color="black") +
   scale_fill_manual(values = c("#66FFCC", "#FFCC99", "#FF9999"))
 
-#pas vraiment de changements au cours des annees
+#pas vraiment de changements au cours des annees : soit aout, soit juillet
 
 
 #plot des mois les plus froids par annee
@@ -584,15 +625,18 @@ summary_min_max_temp %>%
 #########################################################################################
 #Heatwaves Robert
 
+#creation
 Exc_DF_temp <- DF_temp %>% 
   mutate(t = as.Date(Date)) %>% 
   rename(temp = Temp)
 Exc_25 <- exceedance(Exc_DF_temp, threshold = 25, maxPadLength = 6)
 
-DF_exceedance_25 <- DF_exceedance$exceedance
+DF_exceedance_25 <- Exc_25$exceedance
+
+####
 
 #visualising exceedances
-exc_25_thresh <- Exc_25$threshold %>% slice(3875:4239)
+exc_25_thresh <- Exc_25$threshold
 
 ggplot(data = exc_25_thresh, aes(x = t)) +
   geom_flame(aes(y = temp, y2 = thresh, fill = "all"), show.legend = F) +
@@ -604,6 +648,59 @@ ggplot(data = exc_25_thresh, aes(x = t)) +
   guides(colour = guide_legend(override.aes = list(fill = NA))) +
   scale_x_date(date_labels = "%b %Y", breaks="1 month") +
   labs(y = expression(paste("Temperature [", degree, "C]")), x = NULL)
+#on remarque globalement une augmentation du nombre de jours >25, surtout ces dernieres annees
+
+####
+
+#visualising exceedances since 2000s
+exc_25_thresh_2000 <- Exc_25$threshold %>% slice(2779:11185)
+
+ggplot(data = exc_25_thresh_2000, aes(x = t)) +
+  geom_flame(aes(y = temp, y2 = thresh, fill = "all"), show.legend = F) +
+  geom_line(aes(y = temp, colour = "temp")) +
+  geom_line(aes(y = thresh, colour = "thresh"), size = 1.0) +
+  scale_colour_manual(name = "Line Colour",
+                      values = c("temp" = "black", "thresh" =  "forestgreen")) +
+  scale_fill_manual(name = "Event Colour", values = c("all" = "salmon")) +
+  guides(colour = guide_legend(override.aes = list(fill = NA))) +
+  scale_x_date(date_labels = "%b %Y", breaks="1 month") +
+  labs(y = expression(paste("Temperature [", degree, "C]")), x = NULL)
+
+####
+
+#visualising exceedances since 2010
+exc_25_thresh_2010 <- Exc_25$threshold %>% slice(3654:11185)
+
+ggplot(data = exc_25_thresh_2010, aes(x = t)) +
+  geom_flame(aes(y = temp, y2 = thresh, fill = "all"), show.legend = F) +
+  geom_line(aes(y = temp, colour = "temp")) +
+  geom_line(aes(y = thresh, colour = "thresh"), size = 1.0) +
+  scale_colour_manual(name = "Line Colour",
+                      values = c("temp" = "black", "thresh" =  "forestgreen")) +
+  scale_fill_manual(name = "Event Colour", values = c("all" = "salmon")) +
+  guides(colour = guide_legend(override.aes = list(fill = NA))) +
+  scale_x_date(date_labels = "%b %Y", breaks="1 month") +
+  labs(y = expression(paste("Temperature [", degree, "C]")), x = NULL)
+
+####
+
+#visualising exceedances since 2018
+exc_25_thresh_2018 <- Exc_25$threshold %>% slice(6576:11185)
+
+ggplot(data = exc_25_thresh_2018, aes(x = t)) +
+  geom_flame(aes(y = temp, y2 = thresh, fill = "all"), show.legend = F) +
+  geom_line(aes(y = temp, colour = "temp")) +
+  geom_line(aes(y = thresh, colour = "thresh"), size = 1.0) +
+  scale_colour_manual(name = "Line Colour",
+                      values = c("temp" = "black", "thresh" =  "forestgreen")) +
+  scale_fill_manual(name = "Event Colour", values = c("all" = "salmon")) +
+  guides(colour = guide_legend(override.aes = list(fill = NA))) +
+  scale_x_date(date_labels = "%b %Y", breaks="1 month") +
+  labs(y = expression(paste("Temperature [", degree, "C]")), x = NULL)
+
+#en 2022 : T est montee plus haut et pendant plus longtemps
+
+
 
 
 #########################################################################################
@@ -885,36 +982,6 @@ plot(ph_trend_df$x, ph_trend_df$y, col="red", type='l',axes=F,xlab="",ylab="",
 
 #baisse du pH (acidification) au cours des annees, qualifier cette baisse
 
-###################################################################################
-#importation data point B 2022
-Data_TS_2022 <- read_delim("PtB_data_TS_2022.csv", delim = ";", 
-                           escape_double = FALSE, 
-                           col_types = cols(Date = col_date(format = "%d/%m/%Y")), 
-                           trim_ws = TRUE)
-#select depth = 1m
-#46 observations
-#3 NA
-Data_TS_2022 <- Data_TS_2022 %>% 
-  dplyr::filter(Data_TS_2022$Depth == 1)
-#select date, T et S
-Data_TS_2022 <- Data_TS_2022 %>%
-  dplyr::select(Date, T, S)
-
-#fusionner les 2 datasets
-#creation d'une 4e colonne
-Data_TS_2022 <- data.frame(datetime = Data_TS_2022$Date, 
-                           temp_B = Data_TS_2022$T,
-                           sal_B = Data_TS_2022$S,
-                           O2_B = NA)
-#remplacer les 999999 par NA
-Data_TS_2022 <- dplyr::mutate(Data_TS_2022, 
-                              temp_B = case_when(temp_B >= 999 ~ NA_real_ ,TRUE ~ temp_B),
-                              sal_B = case_when(sal_B >= 999 ~ NA_real_ ,TRUE ~ sal_B))
-
-
-SOMLIT_1m_fusion <- rbind(SOMLIT_1m, Data_TS_2022)
-
-###################################################################################
 
 
 
