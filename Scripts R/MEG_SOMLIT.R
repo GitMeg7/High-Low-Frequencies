@@ -103,7 +103,7 @@ SOMLIT_1m_fusion %>% ggplot() +
 
 #Annual cycle of SST averaged for 1992 - 2022
 
-SOMLIT_1m_mean <- SOMLIT_1m_fusion %>%
+SOMLIT_1m_monthly_mean <- SOMLIT_1m_fusion %>%
   dplyr::mutate(Year = format(datetime, format="%Y"),
                 Month = format(datetime, format="%m")) %>% 
   dplyr::group_by(Year, Month) %>% 
@@ -113,7 +113,7 @@ SOMLIT_1m_mean <- SOMLIT_1m_fusion %>%
   dplyr::mutate(Mean2 = mean(Mean1))
 
 #plot
-SOMLIT_1m_mean %>% 
+SOMLIT_1m_monthly_mean %>% 
   ggplot() +
   ggtitle("Annual cycle of SST averaged for 1992 - 2022") +
   aes(x=Month, y=Mean2, group=1) +
@@ -1010,6 +1010,50 @@ legend(as.POSIXct("2015-11-24"), 7.98, legend=("-0.0020 units pH/yr"))
 
 
 ###################################################################################
-#faire analyse avec T° air
+#Climatological monthly means TEMPERATURE (SOMLIT - periode 1992-2022)
+
+#on reprends :
+#Annual cycle of SST averaged for 1992 - 2022
+
+SOMLIT_1m_monthly_mean <- SOMLIT_1m_fusion %>%
+  dplyr::mutate(Year = format(datetime, format="%Y"),
+                Month = format(datetime, format="%m")) %>% 
+  dplyr::group_by(Year, Month) %>% 
+  dplyr::summarise(Mean1 = mean(temp_B), sd1 = sd(temp_B)) %>% 
+  dplyr::filter(!is.na(Mean1)) %>% 
+  dplyr::group_by(Month) %>% 
+  dplyr::mutate(Mean2 = mean(Mean1), sd2 = sd(Mean1))
+
+#plot
+SOMLIT_1m_monthly_mean %>% 
+  ggplot() +
+  ggtitle("Annual cycle of SST averaged for 1992 - 2022") +
+  aes(x=Month, y=Mean2, group=1) +
+  geom_point(size = 3, shape=9) +
+  geom_line () +
+  scale_y_continuous(name = "Temperature (°C)")
+
+#creation data frame climatological monthly means :
+
+climato_monthly_means <- data.frame(Months=SOMLIT_1m_monthly_mean$Month,
+                                    Temp_means=SOMLIT_1m_monthly_mean$Mean2,
+                                    sd=SOMLIT_1m_monthly_mean$sd2)
+climato_monthly_means <- climato_monthly_means %>% arrange(Months)
+climato_monthly_means <- distinct(climato_monthly_means)
+
+###
+#plot climato monthly means + sd
+#(table 2 word)
+climato_monthly_means %>% 
+  ggplot() +
+  ggtitle("Climatological monthly means : plot") +
+  aes(x=Months, y=Temp_means) + 
+  scale_y_continuous(limits=c(10,30), name="Monthly temperature means (°C)") +
+  scale_x_discrete(name="") +
+  geom_point() +
+  geom_errorbar(aes(ymin=Temp_means-sd, ymax=Temp_means+sd), width=.2)
+
+###################################################################################
+
 
 
