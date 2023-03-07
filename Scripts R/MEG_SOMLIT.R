@@ -103,7 +103,7 @@ SOMLIT_1m_fusion %>% ggplot() +
 
 #Annual cycle of SST averaged for 1992 - 2022
 
-SOMLIT_1m_monthly_mean <- SOMLIT_1m_fusion %>%
+SOMLIT_1m_monthly_mean_T <- SOMLIT_1m_fusion %>%
   dplyr::mutate(Year = format(datetime, format="%Y"),
                 Month = format(datetime, format="%m")) %>% 
   dplyr::group_by(Year, Month) %>% 
@@ -113,7 +113,7 @@ SOMLIT_1m_monthly_mean <- SOMLIT_1m_fusion %>%
   dplyr::mutate(Mean2 = mean(Mean1))
 
 #plot
-SOMLIT_1m_monthly_mean %>% 
+SOMLIT_1m_monthly_mean_T %>% 
   ggplot() +
   ggtitle("Annual cycle of SST averaged for 1992 - 2022") +
   aes(x=Month, y=Mean2, group=1) +
@@ -1015,7 +1015,7 @@ legend(as.POSIXct("2015-11-24"), 7.98, legend=("-0.0020 units pH/yr"))
 #on reprends :
 #Annual cycle of SST averaged for 1992 - 2022
 
-SOMLIT_1m_monthly_mean <- SOMLIT_1m_fusion %>%
+SOMLIT_1m_monthly_mean_T <- SOMLIT_1m_fusion %>%
   dplyr::mutate(Year = format(datetime, format="%Y"),
                 Month = format(datetime, format="%m")) %>% 
   dplyr::group_by(Year, Month) %>% 
@@ -1025,7 +1025,7 @@ SOMLIT_1m_monthly_mean <- SOMLIT_1m_fusion %>%
   dplyr::mutate(Mean2 = mean(Mean1), sd2 = sd(Mean1))
 
 #plot
-SOMLIT_1m_monthly_mean %>% 
+SOMLIT_1m_monthly_mean_T %>% 
   ggplot() +
   ggtitle("Annual cycle of SST averaged for 1992 - 2022") +
   aes(x=Month, y=Mean2, group=1) +
@@ -1035,16 +1035,16 @@ SOMLIT_1m_monthly_mean %>%
 
 #creation data frame climatological monthly means :
 
-climato_monthly_means <- data.frame(Months=SOMLIT_1m_monthly_mean$Month,
-                                    Temp_means=SOMLIT_1m_monthly_mean$Mean2,
-                                    sd=SOMLIT_1m_monthly_mean$sd2)
-climato_monthly_means <- climato_monthly_means %>% arrange(Months)
-climato_monthly_means <- distinct(climato_monthly_means)
+climato_monthly_means_T <- data.frame(Months=SOMLIT_1m_monthly_mean_T$Month,
+                                    Temp_means=SOMLIT_1m_monthly_mean_T$Mean2,
+                                    sd=SOMLIT_1m_monthly_mean_T$sd2)
+climato_monthly_means_T <- climato_monthly_means_T %>% arrange(Months)
+climato_monthly_means_T <- distinct(climato_monthly_means_T)
 
 ###
 #plot climato monthly means + sd
 #(table 2 word)
-climato_monthly_means %>% 
+climato_monthly_means_T %>% 
   ggplot() +
   ggtitle("Climatological monthly means : plot") +
   aes(x=Months, y=Temp_means) + 
@@ -1054,6 +1054,23 @@ climato_monthly_means %>%
   geom_errorbar(aes(ymin=Temp_means-sd, ymax=Temp_means+sd), width=.2)
 
 ###################################################################################
+#Detrending TEMPERATURE time serie by substracting 
+#the respective climatological monthly means for the period 1992-2022
+#result : residuals (anomalies)
 
+#TEMPERATURE time serie :
+SOMLIT_1m_fusion
+
+#TEMPERATURE climatological monthly means :
+climato_monthly_means_T
+
+#pour tous les mois de janvier :
+ytest_m1 <- climato_monthly_means_T %>% 
+  filter(Months == "01")
+
+xtest_m1 <- SOMLIT_1m_fusion %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "01") %>% #il manque 4 annees
+  dplyr::reframe(datetime=datetime, detrend_m1 = temp_B - ytest_m1$Temp_means)
 
 
