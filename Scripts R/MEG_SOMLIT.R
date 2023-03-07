@@ -1073,4 +1073,137 @@ xtest_m1 <- SOMLIT_1m_fusion %>%
   dplyr::filter(Month == "01") %>% #il manque 4 annees
   dplyr::reframe(datetime=datetime, detrend_m1 = temp_B - ytest_m1$Temp_means)
 
+plot(xtest_m1)
+###
 
+#pour tous les mois de février :
+ytest_m2 <- climato_monthly_means_T %>% 
+  filter(Months == "02")
+
+xtest_m2 <- SOMLIT_1m_fusion %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "02") %>% 
+  dplyr::reframe(datetime=datetime, detrend_m2 = temp_B - ytest_m2$Temp_means)
+
+plot(xtest_m2)
+###
+
+#pour tous les mois de mars :
+ytest_m3 <- climato_monthly_means_T %>% 
+  filter(Months == "03")
+
+xtest_m3 <- SOMLIT_1m_fusion %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "03") %>% 
+  dplyr::reframe(datetime=datetime, detrend_m3 = temp_B - ytest_m3$Temp_means)
+
+plot(xtest_m3)
+###
+
+#pour tous les mois de avril :
+ytest_m4 <- climato_monthly_means_T %>% 
+  filter(Months == "04")
+
+xtest_m4 <- SOMLIT_1m_fusion %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "04") %>% 
+  dplyr::reframe(datetime=datetime, detrend_m4 = temp_B - ytest_m4$Temp_means)
+
+plot(xtest_m4)
+###
+
+#pour tous les mois de mai :
+ytest_m5 <- climato_monthly_means_T %>% 
+  filter(Months == "05")
+
+xtest_m5 <- SOMLIT_1m_fusion %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "05") %>% 
+  dplyr::reframe(datetime=datetime, detrend_m5 = temp_B - ytest_m5$Temp_means)
+
+plot(xtest_m5)
+###
+
+#pour tous les mois de juin :
+ytest_m6 <- climato_monthly_means_T %>% 
+  filter(Months == "06")
+
+xtest_m6 <- SOMLIT_1m_fusion %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "06") %>% 
+  dplyr::reframe(datetime=datetime, detrend_m6 = temp_B - ytest_m6$Temp_means)
+
+plot(xtest_m6)
+###
+
+#pour tous les mois de juillet :
+ytest_m7 <- climato_monthly_means_T %>% 
+  filter(Months == "07")
+
+xtest_m7 <- SOMLIT_1m_fusion %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "07") %>% 
+  dplyr::reframe(datetime=datetime, detrend_m7 = temp_B - ytest_m7$Temp_means)
+
+plot(xtest_m7)
+###
+
+#pour tous les mois de aout :
+ytest_m8 <- climato_monthly_means_T %>% 
+  filter(Months == "08")
+
+xtest_m8 <- SOMLIT_1m_fusion %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "08") %>% 
+  dplyr::reframe(datetime=datetime, detrend_m8 = temp_B - ytest_m8$Temp_means)
+
+plot(xtest_m8)
+###
+
+#pour tous les mois de septembre :
+ytest_m9 <- climato_monthly_means_T %>% 
+  filter(Months == "09")
+
+xtest_m9 <- SOMLIT_1m_fusion %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "09") %>% 
+  dplyr::reframe(datetime=datetime, detrend_m9 = temp_B - ytest_m9$Temp_means)
+
+plot(xtest_m9)
+###
+
+#pour tous les mois de octobre :
+ytest_m10 <- climato_monthly_means_T %>% 
+  filter(Months == "10")
+
+xtest_m10 <- SOMLIT_1m_fusion %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "10") %>% 
+  dplyr::reframe(datetime=datetime, detrend_m10 = temp_B - ytest_m10$Temp_means)
+
+plot(xtest_m10)
+###
+
+#pour tous les mois de novembre :
+ytest_m11 <- climato_monthly_means_T %>% 
+  filter(Months == "11")
+
+xtest_m11 <- SOMLIT_1m_fusion %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "11") %>% 
+  dplyr::reframe(datetime=datetime, detrend_m11 = temp_B - ytest_m11$Temp_means)
+
+plot(xtest_m11)
+###
+
+#pour tous les mois de decembre :
+ytest_m12 <- climato_monthly_means_T %>% 
+  filter(Months == "12")
+
+xtest_m12 <- SOMLIT_1m_fusion %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "12") %>% 
+  dplyr::reframe(datetime=datetime, detrend_m12 = temp_B - ytest_m12$Temp_means)
+
+plot(xtest_m12)
+###
