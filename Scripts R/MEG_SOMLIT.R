@@ -78,11 +78,11 @@ SOMLIT_1m_fusion <- rbind(SOMLIT_1m, Data_TS_2022)
 ########################################################################################
 #comparaison T par annee
 
-#Annee 2018
-SOMLIT_1m %>%
+#Annee 2022
+SOMLIT_1m_fusion %>%
   mutate(Year = format(datetime, format="%Y"),
          Month = format(datetime, format="%m-%d")) %>% 
-  dplyr::filter(Year ==2018) %>% 
+  dplyr::filter(Year ==2022) %>% 
   ggplot() +
   aes(x=datetime, y=temp_B) +
   geom_line()
@@ -261,8 +261,10 @@ manual_temp_trend <- stats::filter(DF_temp$Temp, rep(1/52.14,52.14), sides=2)
 
 #creation serie tempo + plot
 
-ts_temp <- ts(DF_temp$Temp, start=1992,22, frequency=52.14, end=2022,19)
+ts_temp <- ts(DF_temp$Temp, start=1992,22, frequency=52.14, end=2022,51)
 plot.ts(ts_temp)
+
+#on voit que les pics max augmentent
 
 ##decompose + plot :
 #tendance
@@ -277,6 +279,9 @@ autoplot(decomp_temp)
 
 plot(decomp_temp$trend, ylim=c(10,30), main="Temperature 1992-2022 : Observations + trend")
 lines(decomp_temp$x, col='grey')
+
+plot(SOMLIT_1m_fusion$temp_B, type='l')
+lines(manual_temp_trend)
 
 #plot residus
 
@@ -327,9 +332,9 @@ model_temp <- lm(manual_temp_trend ~ DF_temp$Date)
 
 #plot tendance + valeurs observees + regression
 lines(model_temp$fitted.values, col='blue')
-legend(x=150, y=29.8, "T° = 6.62e-10*x + 1.78e01", cex=0.85, box.lty=0)
+legend(x=150, y=29.8, "0.0201 °C/yr", cex=0.85, box.lty=0)
 #augmentation de 6.62e-10 degrés par semaine
-
+View(model_temp$fitted.values[1025:1351])
 
 
 #visualisation de la regression
@@ -757,74 +762,90 @@ DF_temp %>%
 ####################################################################################
 #Travail sur oxygen
 
-#visualisation données brutes
-plot(SOMLIT_1m$datetime, SOMLIT_1m$O2_B, pch=4)
+#conversion des valeurs ml/l en umol/kg (voire protocole oxygene SOMLIT)
+# *44.66 -> mmol/m3 ou umol/l
+# densite eau de mer = 1030 kg/m3 = 1.030 kg/l
+#ici, utilisation de rho, package seacarb pour calcul de la densité
+#rho/1000 pour avoir en kg/l
+# 44.66/rho = convert_o2
+# ml/l * convert_o2 -> umol/kg
+
+#creation des 2 variables
+SW_density <- rho(S = SOMLIT_1m$sal_B, T=SOMLIT_1m$temp_B, P=0)/1000
+Conver_o2 <- 44.66/SW_density
+
+#creation colonne o2 converti
+SOMLIT_1m_o2_convert <- SOMLIT_1m %>% 
+  mutate(O2_umol_kg = O2_B*Conver_o2)
+
+####
+
+#visualisation données brutes o2
+plot(SOMLIT_1m_o2_convert$datetime, SOMLIT_1m_o2_convert$O2_B, pch=4)
 #200 premieres valeurs manquantes
 
-#visualisation donnees brutes - 200 premieres valeurs
-RAW_O2_WX_200 <- SOMLIT_1m$O2_B[-seq(0,200,1)]
-DATETIME_WX_200 <- SOMLIT_1m$datetime[-seq(0,200,1)]
-DF_O2_WX_200 <- data.frame(Date = DATETIME_WX_200, O2 = RAW_O2_WX_200)
-plot(DF_O2_WX_200)
+#on retire les 200 premieres valeurs du dataset + visualisation o2 brut
+SOMLIT_1m_o2_convert <- SOMLIT_1m_o2_convert[-c(0:200),]
+plot(SOMLIT_1m_o2_convert$datetime, SOMLIT_1m_o2_convert$O2_B)
 #outliers au dessus de 6 ?
 
+
 #detection outliers avec boxplot
-DF_O2_WX_200 %>% 
+SOMLIT_1m_o2_convert %>% 
   ggplot() +
-  aes(x=Date, y=O2) +
-  geom_jitter(width=0.25) +
+  aes(x=datetime, y=O2_B) +
   geom_boxplot() + 
   xlab(label = "") +
   ylab(label = "O2 (ml/l)") +
   theme(legend.position="none")+
   ggtitle("Oxygen boxplot (outliers)") 
 
+#pareil avec colonne umol :
+SOMLIT_1m_o2_convert %>% 
+  ggplot() +
+  aes(x=datetime, y=O2_umol_kg) +
+  geom_boxplot() + 
+  xlab(label = "") +
+  ylab(label = "O2 (umol/kg)") +
+  theme(legend.position="none")+
+  ggtitle("Oxygen boxplot (outliers)") 
+
 #points = outliers
-#recuperation des donnees outliers ($out) :
-outliers_O2 <- boxplot.stats(DF_O2_WX_200$O2)
+#recuperation des donnees outliers ($out) a partir de o2 brut:
+outliers_O2 <- boxplot.stats(SOMLIT_1m_o2_convert$O2_B)
 #valeur max de la moustache : 6.178710
 
 #recuperation des dates des outliers :
-outliers_O2_index <- which(DF_O2_WX_200$O2 %in% c(outliers_O2$out))
+outliers_O2_index <- which(SOMLIT_1m_o2_convert$O2_B %in% c(outliers_O2$out))
+outliers_O2_dates <- SOMLIT_1m_o2_convert$datetime[outliers_O2_index]
 
-outliers_O2_dates <- DF_O2_WX_200[outliers_O2_dates,]
 #principalement les annees 2000-2001
 #causes ? changement de methode ?
 #plot des annees/mois où ont lieu les anomalies, voir si ca peut etre expliqué par un phenomene particulier
 
-#donc filtration des donnees au dessus de 6.178710
-#plot des donnees oxygen sans outliers
-O2_WX_outliers <- DF_O2 %>% 
-  dplyr::filter(O2  <= 6.178710)
 
-plot(O2_WX_outliers, ylim=c(3,7.5))
-#visiblement une saisonnalité ?
+#Donc on retire les outliers du dataset (-56 outliers) :
+SOMLIT_1m_o2_convert_wX_outliers = SOMLIT_1m_o2_convert[-outliers_O2_index,]
+
+plot(SOMLIT_1m_o2_convert_wX_outliers$datetime, 
+     SOMLIT_1m_o2_convert_wX_outliers$O2_umol_kg, ylim=c(120,300))
+
+#visiblement :une saisonnalité ? une baisse au cours du temps ?
+
+
 
 #regression lineaire sur donnees oxygen sans outliers
-reg_O2_WX_outliers <- lm(O2_WX_outliers$O2 ~ O2_WX_outliers$Date)
-summary (reg_O2_WX_outliers) #tendance decroissante (slope negative)
+reg_O2_WX_outliers <- lm(SOMLIT_1m_o2_convert_wX_outliers$O2_B ~ SOMLIT_1m_o2_convert_wX_outliers$datetime)
+summary (reg_O2_WX_outliers) #tendance decroissante (slope negative), significatif
 
-plot(reg_O2_WX_outliers$fitted.values) #visualisation regression lineaire
+plot(reg_O2_WX_outliers$fitted.values, type='l') #visualisation regression lineaire
 
-#plot data + regression oxygen sans outliers
-reg_O2_WX_outliers_DF <- data.frame(x=O2_WX_outliers$Date, y=reg_O2_WX_outliers$fitted.values)
+#plot data + regression oxygen without outliers
 
-plot(reg_O2_WX_outliers_DF$x, reg_O2_WX_outliers_DF$y, ylim=c(3,7.5), type='l', 
-     col='#18391E', main="Oxygen (ml/l) without outliers plot + trend")
-lines(O2_WX_outliers, col='#85C17E')
+plot(SOMLIT_1m_o2_convert_wX_outliers$O2_B, type='l', col='#85C17E', ylim=c(3,7),
+     main="Oxygen (ml/l) without outliers plot + trend")
+lines(reg_O2_WX_outliers$fitted.values, col='#18391E')
 
-#conversion des valeurs ml/l en umol/kg
-# *44.66 -> mmol/m3 ou umol/l
-# densite eau de mer = 1030 kg/m3 = 1.030 kg/l
-# 44.66/1.030 = 43.36
-# ml/l * 43.36 -> umol/kg
-
-O2_WX_outliers <- O2_WX_outliers %>% 
-  mutate(O2_umol_kg = format(O2*43.36, scientific=TRUE))
-
-#plot oxygen en umol/kg  
-plot(O2_WX_outliers$Date, O2_WX_outliers$O2_umol_kg, type='l', ylim=c(100,300),
-     main="Time serie of oxygen (umol/kg)", xlab="", ylab="Oxygen (umol/kg)")
 
 
 ####################################################################################
@@ -946,9 +967,11 @@ par(new = T)
 plot(SOMLIT_1m_mean$Month, SOMLIT_1m_mean$Mean2,col="red", type='l',axes=F,xlab="",ylab="",
      ylim=c(12,26), xlim=c(01,12)) 
 axis(4, ylim=c(12,26),col="black",col.axis="black",at=seq(12, 28, by=4))
-mtext("Temperature (°C)",side=4,line=2.5,col="red")
+mtext("Temperature averaged (°C)",side=4,line=2.5,col="red")
 
 #anti-correlation des 2 variables ?
+
+####
 
 #creation serie temporelle pH
 
@@ -978,14 +1001,15 @@ ph_trend_df <- data.frame(x=data_modif, y=reg_ph$fitted.values)
 
 par(new = T)
 plot(ph_trend_df$x, ph_trend_df$y, col="red", type='l',axes=F,xlab="",ylab="",
-     ylim=c(7.95,8.15), xlim=as.POSIXct(c("2014-12-02","2020-06-09"))) #a voir
+     ylim=c(7.95,8.15), xlim=as.POSIXct(c("2014-12-02","2020-06-09"))) 
+legend(as.POSIXct("2015-11-24"), 7.98, legend=("-0.0020 units pH/yr"))
 
 #baisse du pH (acidification) au cours des annees, qualifier cette baisse
 
 
 
 
-
-
 ###################################################################################
 #faire analyse avec T° air
+
+
