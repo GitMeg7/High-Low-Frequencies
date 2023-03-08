@@ -16,6 +16,8 @@ library("tseries")
 library("forecast")
 library("tsDyn")
 library("tsoutliers")
+library("seacarb")
+library("lmodel2")
 
 
 ####Data filled SAMIR (B > B+ quand B+ empty), mean profondeur 1 ? 3m
@@ -1071,7 +1073,7 @@ ytest_m1 <- climato_monthly_means_T %>%
 xtest_m1 <- SOMLIT_1m_fusion %>% 
   dplyr::mutate(Month = format(datetime, format="%m")) %>%
   dplyr::filter(Month == "01") %>% #il manque 4 annees
-  dplyr::reframe(datetime=datetime, detrend_m1 = temp_B - ytest_m1$Temp_means)
+  dplyr::reframe(datetime=datetime, detrend = temp_B - ytest_m1$Temp_means)
 
 plot(xtest_m1)
 ###
@@ -1083,7 +1085,7 @@ ytest_m2 <- climato_monthly_means_T %>%
 xtest_m2 <- SOMLIT_1m_fusion %>% 
   dplyr::mutate(Month = format(datetime, format="%m")) %>%
   dplyr::filter(Month == "02") %>% 
-  dplyr::reframe(datetime=datetime, detrend_m2 = temp_B - ytest_m2$Temp_means)
+  dplyr::reframe(datetime=datetime, detrend = temp_B - ytest_m2$Temp_means)
 
 plot(xtest_m2)
 ###
@@ -1095,7 +1097,7 @@ ytest_m3 <- climato_monthly_means_T %>%
 xtest_m3 <- SOMLIT_1m_fusion %>% 
   dplyr::mutate(Month = format(datetime, format="%m")) %>%
   dplyr::filter(Month == "03") %>% 
-  dplyr::reframe(datetime=datetime, detrend_m3 = temp_B - ytest_m3$Temp_means)
+  dplyr::reframe(datetime=datetime, detrend = temp_B - ytest_m3$Temp_means)
 
 plot(xtest_m3)
 ###
@@ -1107,7 +1109,7 @@ ytest_m4 <- climato_monthly_means_T %>%
 xtest_m4 <- SOMLIT_1m_fusion %>% 
   dplyr::mutate(Month = format(datetime, format="%m")) %>%
   dplyr::filter(Month == "04") %>% 
-  dplyr::reframe(datetime=datetime, detrend_m4 = temp_B - ytest_m4$Temp_means)
+  dplyr::reframe(datetime=datetime, detrend = temp_B - ytest_m4$Temp_means)
 
 plot(xtest_m4)
 ###
@@ -1119,7 +1121,7 @@ ytest_m5 <- climato_monthly_means_T %>%
 xtest_m5 <- SOMLIT_1m_fusion %>% 
   dplyr::mutate(Month = format(datetime, format="%m")) %>%
   dplyr::filter(Month == "05") %>% 
-  dplyr::reframe(datetime=datetime, detrend_m5 = temp_B - ytest_m5$Temp_means)
+  dplyr::reframe(datetime=datetime, detrend = temp_B - ytest_m5$Temp_means)
 
 plot(xtest_m5)
 ###
@@ -1131,7 +1133,7 @@ ytest_m6 <- climato_monthly_means_T %>%
 xtest_m6 <- SOMLIT_1m_fusion %>% 
   dplyr::mutate(Month = format(datetime, format="%m")) %>%
   dplyr::filter(Month == "06") %>% 
-  dplyr::reframe(datetime=datetime, detrend_m6 = temp_B - ytest_m6$Temp_means)
+  dplyr::reframe(datetime=datetime, detrend = temp_B - ytest_m6$Temp_means)
 
 plot(xtest_m6)
 ###
@@ -1143,7 +1145,7 @@ ytest_m7 <- climato_monthly_means_T %>%
 xtest_m7 <- SOMLIT_1m_fusion %>% 
   dplyr::mutate(Month = format(datetime, format="%m")) %>%
   dplyr::filter(Month == "07") %>% 
-  dplyr::reframe(datetime=datetime, detrend_m7 = temp_B - ytest_m7$Temp_means)
+  dplyr::reframe(datetime=datetime, detrend = temp_B - ytest_m7$Temp_means)
 
 plot(xtest_m7)
 ###
@@ -1155,7 +1157,7 @@ ytest_m8 <- climato_monthly_means_T %>%
 xtest_m8 <- SOMLIT_1m_fusion %>% 
   dplyr::mutate(Month = format(datetime, format="%m")) %>%
   dplyr::filter(Month == "08") %>% 
-  dplyr::reframe(datetime=datetime, detrend_m8 = temp_B - ytest_m8$Temp_means)
+  dplyr::reframe(datetime=datetime, detrend = temp_B - ytest_m8$Temp_means)
 
 plot(xtest_m8)
 ###
@@ -1167,7 +1169,7 @@ ytest_m9 <- climato_monthly_means_T %>%
 xtest_m9 <- SOMLIT_1m_fusion %>% 
   dplyr::mutate(Month = format(datetime, format="%m")) %>%
   dplyr::filter(Month == "09") %>% 
-  dplyr::reframe(datetime=datetime, detrend_m9 = temp_B - ytest_m9$Temp_means)
+  dplyr::reframe(datetime=datetime, detrend = temp_B - ytest_m9$Temp_means)
 
 plot(xtest_m9)
 ###
@@ -1179,7 +1181,7 @@ ytest_m10 <- climato_monthly_means_T %>%
 xtest_m10 <- SOMLIT_1m_fusion %>% 
   dplyr::mutate(Month = format(datetime, format="%m")) %>%
   dplyr::filter(Month == "10") %>% 
-  dplyr::reframe(datetime=datetime, detrend_m10 = temp_B - ytest_m10$Temp_means)
+  dplyr::reframe(datetime=datetime, detrend = temp_B - ytest_m10$Temp_means)
 
 plot(xtest_m10)
 ###
@@ -1191,7 +1193,7 @@ ytest_m11 <- climato_monthly_means_T %>%
 xtest_m11 <- SOMLIT_1m_fusion %>% 
   dplyr::mutate(Month = format(datetime, format="%m")) %>%
   dplyr::filter(Month == "11") %>% 
-  dplyr::reframe(datetime=datetime, detrend_m11 = temp_B - ytest_m11$Temp_means)
+  dplyr::reframe(datetime=datetime, detrend = temp_B - ytest_m11$Temp_means)
 
 plot(xtest_m11)
 ###
@@ -1203,7 +1205,86 @@ ytest_m12 <- climato_monthly_means_T %>%
 xtest_m12 <- SOMLIT_1m_fusion %>% 
   dplyr::mutate(Month = format(datetime, format="%m")) %>%
   dplyr::filter(Month == "12") %>% 
-  dplyr::reframe(datetime=datetime, detrend_m12 = temp_B - ytest_m12$Temp_means)
+  dplyr::reframe(datetime=datetime, detrend = temp_B - ytest_m12$Temp_means)
 
 plot(xtest_m12)
 ###
+
+#fusion des 12 tab : residuals_anomaly_T
+#1423 obs, comme SOMLIT_1m_fusion (T)
+
+ll1 <- merge(xtest_m1, xtest_m2, all=TRUE)
+ll2 <- merge(ll1, xtest_m3, all=TRUE)
+ll3 <- merge(ll2, xtest_m4, all=TRUE)
+ll4 <- merge(ll3, xtest_m5, all=TRUE)
+ll5 <- merge(ll4, xtest_m6, all=TRUE)
+ll6 <- merge(ll5, xtest_m7, all=TRUE)
+ll7 <- merge(ll6, xtest_m8, all=TRUE)
+ll8 <- merge(ll7, xtest_m9, all=TRUE)
+ll9 <- merge(ll8, xtest_m10, all=TRUE)
+ll10 <- merge(ll9, xtest_m11, all=TRUE)
+residuals_anomaly_T <- merge(ll10, xtest_m12, all=TRUE)
+
+####
+
+#plot anomalies TEMPERATURE 1992-2022
+
+residuals_anomaly_T %>% 
+  ggplot() +
+  ggtitle("TEMPERATURE : plot of anomalies (1992-2022)") + 
+  aes(x=datetime, y=detrend) +
+  scale_x_datetime(name="", breaks=date_breaks("5 years"), labels=date_format("%Y")) +
+  scale_y_continuous(name="Temp. (°C)") +
+  geom_point(size=0.8)
+
+#regression lineaire 1992-2022
+
+fit_9222 <- lm(data = residuals_anomaly_T, detrend ~ unclass(datetime))
+slope_9222 <- fit_9222$coefficients[[2]]
+intercept_9222 <- fit_9222$coefficients[[1]]
+
+
+
+
+#plot anomalies TEMPERATURE 09 jan. 2007 - 22 dec. 2022 (papier Kapsenberg)
+
+res_0715 <- residuals_anomaly_T %>% 
+  dplyr::mutate(Year = format(datetime, format="%Y")) %>% 
+  dplyr::filter(Year >= "2007" & Year <= "2015")
+
+#pour afficher l'equation de la regression :
+
+lm_eqn <- function(res_0715){
+  m <- lm(detrend ~ unclass(datetime), res_0715);
+  eq <- substitute(italic(y) == a + b %.% italic(x)*","~~italic(r)^2~"="~r2, 
+                   list(a = format(unname(coef(m)[1]), digits = 2),
+                        b = format(unname(coef(m)[2]), digits = 2),
+                        r2 = format(summary(m)$r.squared, digits = 3)))
+  as.character(as.expression(eq));
+}
+
+#puis ajout de geom_text dans ggplot :
+
+res_0715 %>% 
+  ggplot() +
+  ggtitle("TEMPERATURE : plot of anomalies (2007-2015)") + 
+  aes(x=datetime, y=detrend) +
+  scale_x_datetime(name="", breaks=date_breaks("3 years"), labels=date_format("%Y")) +
+  scale_y_continuous(name="Temp. (°C)") +
+  geom_point(size=0.8) +
+  geom_smooth(method="lm", formula=y~x, se=TRUE) +
+  geom_text(x = as.POSIXct("2008-03-11"), y = 3, label = lm_eqn(res_0715), parse = TRUE)
+
+#on obtient le même graphe
+
+
+#regression lineaire 2007-2015
+
+fit_0715 <- lm(data = res_0715, detrend ~ unclass(datetime))
+slope_0715 <- (fit_0715$coefficients[[2]]*(473/9))*9
+intercept_0715 <- fit_0715$coefficients[[1]]
+
+
+
+
+
