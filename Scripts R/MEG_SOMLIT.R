@@ -1229,60 +1229,386 @@ residuals_anomaly_T <- merge(ll10, xtest_m12, all=TRUE)
 
 #plot anomalies TEMPERATURE 1992-2022
 
+#creation variable Year
+res_temp_9222 <- residuals_anomaly_T %>% 
+  dplyr::mutate(Year = format(datetime, format="%Y"))
+
+#plot
 residuals_anomaly_T %>% 
   ggplot() +
   ggtitle("TEMPERATURE : plot of anomalies (1992-2022)") + 
   aes(x=datetime, y=detrend) +
   scale_x_datetime(name="", breaks=date_breaks("5 years"), labels=date_format("%Y")) +
   scale_y_continuous(name="Temp. (°C)") +
-  geom_point(size=0.8)
+  geom_point(size=0.8) +
+  stat_smooth(method="lm", formula=y~x, se=TRUE)
+
+#pour afficher l'equation de la regression :
+
+lm_eqn <- function(res_temp_9222){
+  m <- lm(detrend ~ as.numeric(Year), res_temp_9222);
+  eq <- substitute(italic(y) == a + b %.% italic(x)*","~~italic(r)^2~"="~r2, 
+                   list(a = format(unname(coef(m)[1]), digits = 3),
+                        b = format(unname(coef(m)[2]), digits = 3),
+                        r2 = format(summary(m)$r.squared, digits = 2)))
+  as.character(as.expression(eq));
+}
+
+#puis ajout de geom_text dans ggplot :
+
+res_temp_9222 %>% 
+  ggplot() +
+  ggtitle("TEMPERATURE : plot of anomalies (1992-2022)") + 
+  aes(x=datetime, y=detrend) +
+  scale_x_datetime(name="", breaks=date_breaks("3 years"), labels=date_format("%Y")) +
+  scale_y_continuous(name="Temp. (°C)") +
+  geom_point(size=0.8) +
+  stat_smooth(method="lm", formula=y~x, se=TRUE) +
+  geom_text(x = as.POSIXct("2002-01-09"), y = 3, label = lm_eqn(res_temp_9222), parse = TRUE)
+
+
 
 #regression lineaire 1992-2022
+fit_res_temp_9222 <- lm(data = res_temp_9222, detrend ~ as.numeric(Year))
+summary(fit_res_temp_9222)
 
-fit_9222 <- lm(data = residuals_anomaly_T, detrend ~ unclass(datetime))
-slope_9222 <- fit_9222$coefficients[[2]]
-intercept_9222 <- fit_9222$coefficients[[1]]
-
-
-
+###
 
 #plot anomalies TEMPERATURE 09 jan. 2007 - 22 dec. 2022 (papier Kapsenberg)
 
-res_0715 <- residuals_anomaly_T %>% 
+res_temp_0715 <- residuals_anomaly_T %>% 
   dplyr::mutate(Year = format(datetime, format="%Y")) %>% 
   dplyr::filter(Year >= "2007" & Year <= "2015")
 
 #pour afficher l'equation de la regression :
 
-lm_eqn <- function(res_0715){
-  m <- lm(detrend ~ unclass(datetime), res_0715);
+lm_eqn <- function(res_temp_0715){
+  m <- lm(detrend ~ as.numeric(Year), res_temp_0715);
   eq <- substitute(italic(y) == a + b %.% italic(x)*","~~italic(r)^2~"="~r2, 
-                   list(a = format(unname(coef(m)[1]), digits = 2),
-                        b = format(unname(coef(m)[2]), digits = 2),
+                   list(a = format(unname(coef(m)[1]), digits = 3),
+                        b = format(unname(coef(m)[2]), digits = 3),
                         r2 = format(summary(m)$r.squared, digits = 3)))
   as.character(as.expression(eq));
 }
 
 #puis ajout de geom_text dans ggplot :
 
-res_0715 %>% 
+res_temp_0715 %>% 
   ggplot() +
   ggtitle("TEMPERATURE : plot of anomalies (2007-2015)") + 
   aes(x=datetime, y=detrend) +
   scale_x_datetime(name="", breaks=date_breaks("3 years"), labels=date_format("%Y")) +
   scale_y_continuous(name="Temp. (°C)") +
   geom_point(size=0.8) +
-  geom_smooth(method="lm", formula=y~x, se=TRUE) +
+  stat_smooth(method="lm", formula=y~x, se=TRUE) +
   geom_text(x = as.POSIXct("2008-03-11"), y = 3, label = lm_eqn(res_0715), parse = TRUE)
 
 #on obtient le même graphe
+#mais pas la mm slope....
 
 
 #regression lineaire 2007-2015
 
-fit_0715 <- lm(data = res_0715, detrend ~ unclass(datetime))
-slope_0715 <- (fit_0715$coefficients[[2]]*(473/9))*9
-intercept_0715 <- fit_0715$coefficients[[1]]
+fit_temp_0715 <- lm(data = res_temp_0715, detrend ~ as.numeric(Year))
+summary(fit_temp_0715)
+
+#######
+
+##################################################################################
+#Annual cycle of salinity averaged for 1992 - 2022
+
+SOMLIT_1m_monthly_mean_S <- SOMLIT_1m_fusion %>%
+  dplyr::mutate(Year = format(datetime, format="%Y"),
+                Month = format(datetime, format="%m")) %>% 
+  dplyr::group_by(Year, Month) %>% 
+  dplyr::summarise(Mean1 = mean(sal_B), sd1 = sd(sal_B)) %>% 
+  dplyr::filter(!is.na(Mean1)) %>% 
+  dplyr::group_by(Month) %>% 
+  dplyr::mutate(Mean2 = mean(Mean1), sd2 = sd(Mean1))
+
+#plot
+SOMLIT_1m_monthly_mean_S %>% 
+  ggplot() +
+  ggtitle("Annual cycle of salinity averaged for 1992 - 2022") +
+  aes(x=Month, y=Mean2, group=1) +
+  geom_point(size = 3, shape=9) +
+  geom_line () +
+  scale_y_continuous(name = "Salinity (psu")
+
+#creation data frame climatological monthly means S :
+
+climato_monthly_means_S <- data.frame(Months=SOMLIT_1m_monthly_mean_S$Month,
+                                      Sal_means=SOMLIT_1m_monthly_mean_S$Mean2,
+                                      sd=SOMLIT_1m_monthly_mean_S$sd2)
+climato_monthly_means_S <- climato_monthly_means_S %>% arrange(Months)
+climato_monthly_means_S <- distinct(climato_monthly_means_S)
+
+###
+#plot climato monthly means + sd
+#(table 2 word)
+climato_monthly_means_S %>% 
+  ggplot() +
+  ggtitle("Climatological monthly means : plot") +
+  aes(x=Months, y=Sal_means) + 
+  scale_y_continuous(limits=c(37,39), name="Monthly salinity means (psu)") +
+  scale_x_discrete(name="") +
+  geom_point() +
+  geom_errorbar(aes(ymin=Sal_means-sd, ymax=Sal_means+sd), width=.2)
+
+
+###################################################################################
+#Detrending SALINITY time serie by substracting 
+#the respective climatological monthly means for the period 1992-2022
+#result : residuals (anomalies)
+
+#SALINITY time serie :
+SOMLIT_1m_fusion
+
+#SALINITY climatological monthly means :
+climato_monthly_means_S
+
+#pour tous les mois de janvier :
+ytest_m1S <- climato_monthly_means_S %>% 
+  filter(Months == "01")
+
+xtest_m1S <- SOMLIT_1m_fusion %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "01") %>% 
+  dplyr::reframe(datetime=datetime, detrend = sal_B - ytest_m1S$Sal_means)
+
+plot(xtest_m1S)
+###
+
+#pour tous les mois de février :
+ytest_m2S <- climato_monthly_means_S %>% 
+  filter(Months == "02")
+
+xtest_m2S <- SOMLIT_1m_fusion %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "02") %>% 
+  dplyr::reframe(datetime=datetime, detrend = sal_B - ytest_m2S$Sal_means)
+
+plot(xtest_m2S)
+###
+
+#pour tous les mois de mars :
+ytest_m3S <- climato_monthly_means_S %>% 
+  filter(Months == "03")
+
+xtest_m3S <- SOMLIT_1m_fusion %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "03") %>% 
+  dplyr::reframe(datetime=datetime, detrend = sal_B - ytest_m3S$Sal_means)
+
+plot(xtest_m3S)
+###
+
+#pour tous les mois de avril :
+ytest_m4S <- climato_monthly_means_S %>% 
+  filter(Months == "04")
+
+xtest_m4S <- SOMLIT_1m_fusion %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "04") %>% 
+  dplyr::reframe(datetime=datetime, detrend = sal_B - ytest_m4S$Sal_means)
+
+plot(xtest_m4S)
+###
+
+#pour tous les mois de mai :
+ytest_m5S <- climato_monthly_means_S %>% 
+  filter(Months == "05")
+
+xtest_m5S <- SOMLIT_1m_fusion %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "05") %>% 
+  dplyr::reframe(datetime=datetime, detrend = sal_B - ytest_m5S$Sal_means)
+
+plot(xtest_m5S)
+###
+
+#pour tous les mois de juin :
+ytest_m6S <- climato_monthly_means_S %>% 
+  filter(Months == "06")
+
+xtest_m6S <- SOMLIT_1m_fusion %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "06") %>% 
+  dplyr::reframe(datetime=datetime, detrend = sal_B - ytest_m6S$Sal_means)
+
+plot(xtest_m6S)
+###
+
+#pour tous les mois de juillet :
+ytest_m7S <- climato_monthly_means_S %>% 
+  filter(Months == "07")
+
+xtest_m7S <- SOMLIT_1m_fusion %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "07") %>% 
+  dplyr::reframe(datetime=datetime, detrend = sal_B - ytest_m7S$Sal_means)
+
+plot(xtest_m7S)
+###
+
+#pour tous les mois de aout :
+ytest_m8S <- climato_monthly_means_S %>% 
+  filter(Months == "08")
+
+xtest_m8S <- SOMLIT_1m_fusion %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "08") %>% 
+  dplyr::reframe(datetime=datetime, detrend = sal_B - ytest_m8S$Sal_means)
+
+plot(xtest_m8S)
+###
+
+#pour tous les mois de septembre :
+ytest_m9S <- climato_monthly_means_S %>% 
+  filter(Months == "09")
+
+xtest_m9S <- SOMLIT_1m_fusion %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "09") %>% 
+  dplyr::reframe(datetime=datetime, detrend = sal_B - ytest_m9S$Sal_means)
+
+plot(xtest_m9S)
+###
+
+#pour tous les mois de octobre :
+ytest_m10S <- climato_monthly_means_S %>% 
+  filter(Months == "10")
+
+xtest_m10S <- SOMLIT_1m_fusion %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "10") %>% 
+  dplyr::reframe(datetime=datetime, detrend = sal_B - ytest_m10S$Sal_means)
+
+plot(xtest_m10S)
+###
+
+#pour tous les mois de novembre :
+ytest_m11S <- climato_monthly_means_S %>% 
+  filter(Months == "11")
+
+xtest_m11S <- SOMLIT_1m_fusion %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "11") %>% 
+  dplyr::reframe(datetime=datetime, detrend = sal_B - ytest_m11S$Sal_means)
+
+plot(xtest_m11S)
+###
+
+#pour tous les mois de decembre :
+ytest_m12S <- climato_monthly_means_S %>% 
+  filter(Months == "12")
+
+xtest_m12S <- SOMLIT_1m_fusion %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "12") %>% 
+  dplyr::reframe(datetime=datetime, detrend = sal_B - ytest_m12S$Sal_means)
+
+plot(xtest_m12S)
+###
+
+#fusion des 12 tab : residuals_anomaly_S
+
+
+SS1 <- merge(xtest_m1S, xtest_m2S, all=TRUE)
+SS2 <- merge(SS1, xtest_m3S, all=TRUE)
+SS3 <- merge(SS2, xtest_m4S, all=TRUE)
+SS4 <- merge(SS3, xtest_m5S, all=TRUE)
+SS5 <- merge(SS4, xtest_m6S, all=TRUE)
+SS6 <- merge(SS5, xtest_m7S, all=TRUE)
+SS7 <- merge(SS6, xtest_m8S, all=TRUE)
+SS8 <- merge(SS7, xtest_m9S, all=TRUE)
+SS9 <- merge(SS8, xtest_m10S, all=TRUE)
+SS10 <- merge(SS9, xtest_m11S, all=TRUE)
+residuals_anomaly_S <- merge(SS10, xtest_m12S, all=TRUE)
+
+####
+
+#plot anomalies SALINITE 1992-2022
+
+res_sal_9222 <- residuals_anomaly_S %>% 
+  dplyr::mutate(Year = format(datetime, format="%Y"))
+
+residuals_anomaly_S %>% 
+  ggplot() +
+  ggtitle("SALINITE : plot of anomalies (1992-2022)") + 
+  aes(x=datetime, y=detrend) +
+  scale_x_datetime(name="", breaks=date_breaks("5 years"), labels=date_format("%Y")) +
+  scale_y_continuous(name="Salinity") +
+  geom_point(size=0.8) +
+  stat_smooth(method="lm", formula=y~x, se=TRUE)
+
+#pour afficher l'equation de la regression :
+
+lm_eqn <- function(res_sal_9222){
+  m <- lm(detrend ~ as.numeric(Year), res_sal_9222);
+  eq <- substitute(italic(y) == a + b %.% italic(x)*","~~italic(r)^2~"="~r2, 
+                   list(a = format(unname(coef(m)[1]), digits = 3),
+                        b = format(unname(coef(m)[2]), digits = 3),
+                        r2 = format(summary(m)$r.squared, digits = 2)))
+  as.character(as.expression(eq));
+}
+
+#puis ajout de geom_text dans ggplot :
+
+res_sal_9222 %>% 
+  ggplot() +
+  ggtitle("SALINITY : plot of anomalies (1992-2022)") + 
+  aes(x=datetime, y=detrend) +
+  scale_x_datetime(name="", breaks=date_breaks("3 years"), labels=date_format("%Y")) +
+  scale_y_continuous(name="Salinity") +
+  geom_point(size=0.8) +
+  stat_smooth(method="lm", formula=y~x, se=TRUE) +
+  geom_text(x = as.POSIXct("2008-03-11"), y = -1.5, label = lm_eqn(res_sal_9222), parse = TRUE)
+
+
+#regression lineaire 1992-2022
+
+fit_sal_9222 <- lm(data = res_sal_9222, detrend ~ as.numeric(Year))
+summary(fit_sal_9222)
+
+
+
+#plot anomalies SALINITE 09 jan. 2007 - 22 dec. 2022 (papier Kapsenberg)
+
+res_sal_0715 <- residuals_anomaly_S %>% 
+  dplyr::mutate(Year = format(datetime, format="%Y")) %>% 
+  dplyr::filter(Year >= "2007" & Year <= "2015")
+
+#pour afficher l'equation de la regression :
+
+lm_eqn <- function(res_0715S){
+  m <- lm(detrend ~ as.numeric(Year), res_0715S);
+  eq <- substitute(italic(y) == a + b %.% italic(x)*","~~italic(r)^2~"="~r2, 
+                   list(a = format(unname(coef(m)[1]), digits = 3),
+                        b = format(unname(coef(m)[2]), digits = 3),
+                        r2 = format(summary(m)$r.squared, digits = 2)))
+  as.character(as.expression(eq));
+}
+
+#puis ajout de geom_text dans ggplot :
+
+res_sal_0715 %>% 
+  ggplot() +
+  ggtitle("SALINITY : plot of anomalies (2007-2015)") + 
+  aes(x=datetime, y=detrend) +
+  scale_x_datetime(name="", breaks=date_breaks("3 years"), labels=date_format("%Y")) +
+  scale_y_continuous(name="Salinity", limits=c(-2,1)) +
+  geom_point(size=0.8) +
+  stat_smooth(method="lm", formula=y~x, se=TRUE) +
+  geom_text(x = as.POSIXct("2012-02-21"), y = -1.5, label = lm_eqn(res_sal_0715), parse = TRUE)
+
+
+#regression lineaire 2007-2015
+
+fit_sal_0715 <- lm(data = res_sal_0715, detrend ~ as.numeric(Year))
+summary(fit_sal_0715)
+
+
 
 
 
