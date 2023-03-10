@@ -160,7 +160,7 @@ ggplot_na_imputations(x_with_na = SOMLIT_1m_fusion$temp_B, x_with_imputations = 
 ####Creation data frame temperature interpolee
 DF_temp <- data.frame(Date=SOMLIT_1m_fusion$datetime, Temp=temp_interpol)
 
-
+####
 
 #interpolation variable sal
 
@@ -197,6 +197,7 @@ ggplot_na_imputations(x_with_na = SOMLIT_1m$sal_B, x_with_imputations = sal_inte
 DF_sal <- data.frame(Date=SOMLIT_1m$datetime, Sal=sal_interpol)
 
 
+####
 
 #interpolation variable O2
 ggplot_na_distribution(SOMLIT_1m$O2_B)
@@ -284,40 +285,6 @@ lines(decomp_temp$x, col='grey')
 
 plot(SOMLIT_1m_fusion$temp_B, type='l')
 lines(manual_temp_trend)
-
-#plot residus
-
-plot(decomp_temp$random, type='p', pch=19, cex = 0.40, col='blue', ylim=c(-20,20),
-     main = "Temperature : residus", ylab="Temp. (°C)")
-
-#regression sur les residus
-residus <- data.frame(x=c(1:1561), y=decomp_temp$random)
-residus_lm <- lm(residus$y ~ residus$x)
-plot(residus_lm$fitted.values, ylim=c(-1,1), type='l')
-summary(residus_lm)
-
-#slope + SE : 2.89e-05 +- 2.17e-04
-#pas significatif
-
-
-#plot residus + regression
-plot.new() 
-par(mar=c(4,4,3,5)) 
-plot(decomp_temp$random, type='p',col="blue",
-     pch=19, cex=0.40,axes=F,xlab="",ylab="", ylim=c(-20,20),
-     main="Temperature : Residus + trend")
-axis(2, ylim=c(-20,20),col="black",col.axis="black",at=seq(-20, 20, by=4)) 
-axis(1, ylim=c(1992,2022),col="black",col.axis="black",at=seq(1992, 2022, by=5))
-mtext("Residus",side=2,line=2.5,col="blue") 
-
-par(new = T)
-plot(residus_lm$fitted.values,col="red", type='l',axes=F,xlab="",ylab="",ylim=c(-10,10)) 
-mtext("Anomaly trend",side=4,line=2.5,col="red")
-
-
-
-
-
 
 
 
@@ -605,7 +572,7 @@ summary_min_max_temp %>%
 #evolution, on passe de decembre à fevrier
 
 ### mm chose pour les jours
-##jours les plus chauds de l'annee
+##jours les plus chauds de l'annee par mois
 
 summary_min_max_temp %>%
   mutate(Months = format(date_temp_max, format="%m"),
@@ -628,6 +595,24 @@ summary_min_max_temp %>%
   aes(x=Year, y=Days, fill=Months) +
   geom_bar(stat="identity", color="black") +
   scale_fill_manual(values = c("#99FFFF", "#FFFFCC", "#FFCCCC", "#99CCCC"))
+
+#plot des T° max (pic de + en + hauts)
+
+summary_min_max_temp %>% 
+  ggplot() +
+  ggtitle("Evolution of maximum temperatures (°C) : 1992 to 2022") +
+  aes(x=Year, y=max_Temp, group=1) +
+  geom_point() +
+  geom_line() +
+  scale_y_continuous(limits=c(23,30)) + 
+  stat_smooth(method="lm", formula = y ~ x)
+#augmentation des temperatures max au cours du temps
+
+#regression lineaire T° max
+
+fit_temp_max <- glm(summary_min_max_temp$max_Temp, as.numeric(summary_min_max_temp$Year),
+                    family=gaussian(summary_min_max_temp))
+
 
 #########################################################################################
 #Heatwaves Robert
@@ -1608,9 +1593,322 @@ res_sal_0715 %>%
 fit_sal_0715 <- lm(data = res_sal_0715, detrend ~ as.numeric(Year))
 summary(fit_sal_0715)
 
+##################################################################################
+#importation data SST Azur buoy (2011-2022)
+#observation toutes les 30min : 6 obs toutes les 10s
+
+#annee 2011
+Azur_SST_2011 <- read_delim("SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2011.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2011 <- Azur_SST_2011 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2012
+Azur_SST_2012 <- read_delim("SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2012.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2012 <- Azur_SST_2012 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2013
+Azur_SST_2013 <- read_delim("SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2013.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2013 <- Azur_SST_2013 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2014
+Azur_SST_2014 <- read_delim("SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2014.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2014 <- Azur_SST_2014 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2015
+Azur_SST_2015 <- read_delim("SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2015.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2015 <- Azur_SST_2015 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2016
+Azur_SST_2016 <- read_delim("SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2016.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2016 <- Azur_SST_2016 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2017
+Azur_SST_2017 <- read_delim("SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2017.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2017 <- Azur_SST_2017 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2018
+Azur_SST_2018 <- read_delim("SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2018.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2018 <- Azur_SST_2018 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2019
+Azur_SST_2019 <- read_delim("SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2019.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2019 <- Azur_SST_2019 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2020
+Azur_SST_2020 <- read_delim("SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2020.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2020 <- Azur_SST_2020 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2021
+Azur_SST_2021 <- read_delim("SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2021.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2021 <- Azur_SST_2021 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2022
+Azur_SST_2022 <- read_delim("SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2022.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2022 <- Azur_SST_2022 %>% rename(datetime=X1, SST=X2)
+
+#fusion des 11 tables : AZUR_SST_RAW
+
+AZUR_SST_RAW <- rbind(Azur_SST_2011, Azur_SST_2012, Azur_SST_2013, Azur_SST_2014,
+                  Azur_SST_2015, Azur_SST_2016, Azur_SST_2017, Azur_SST_2018,
+                  Azur_SST_2019, Azur_SST_2020, Azur_SST_2021, Azur_SST_2022)
+
+###################################################################################
+#importation data T° Air Azur buoy (1999-2022)
+#observation toutes les heures (Kelvin de 1999-2015)
+
+Azur_T_1999 <- read_delim("T_Air_Azur_buoy/Azur_T_1999.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_T_2000 <- read_delim("T_Air_Azur_buoy/Azur_T_2000.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_T_2001 <- read_delim("T_Air_Azur_buoy/Azur_T_2001.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_T_2002 <- read_delim("T_Air_Azur_buoy/Azur_T_2002.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_T_2003 <- read_delim("T_Air_Azur_buoy/Azur_T_2003.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_T_2004 <- read_delim("T_Air_Azur_buoy/Azur_T_2004.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_T_2005 <- read_delim("T_Air_Azur_buoy/Azur_T_2005.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_T_2006 <- read_delim("T_Air_Azur_buoy/Azur_T_2006.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_T_2007 <- read_delim("T_Air_Azur_buoy/Azur_T_2007.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_T_2008 <- read_delim("T_Air_Azur_buoy/Azur_T_2008.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_T_2009 <- read_delim("T_Air_Azur_buoy/Azur_T_2009.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_T_2010 <- read_delim("T_Air_Azur_buoy/Azur_T_2010.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_T_2011 <- read_delim("T_Air_Azur_buoy/Azur_T_2011.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_T_2012 <- read_delim("T_Air_Azur_buoy/Azur_T_2012.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_T_2013 <- read_delim("T_Air_Azur_buoy/Azur_T_2013.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_T_2014 <- read_delim("T_Air_Azur_buoy/Azur_T_2014.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_T_2015 <- read_delim("T_Air_Azur_buoy/Azur_T_2015.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+#passage en degrés (2016-2022)
+
+Azur_T_2016 <- read_delim("T_Air_Azur_buoy/Azur_T_2016.dat", 
+                          delim = ";", escape_double = FALSE, col_names = FALSE, 
+                          trim_ws = TRUE)
+Azur_T_2016 <- Azur_T_2016 %>% rename(date=X1, `air temperature`=X2)
+
+Azur_T_2017 <- read_delim("T_Air_Azur_buoy/Azur_T_2017.dat", 
+                          delim = ";", escape_double = FALSE, col_names = FALSE, 
+                          trim_ws = TRUE)
+Azur_T_2017 <- Azur_T_2017 %>% rename(date=X1, `air temperature`=X2)
+
+Azur_T_2018 <- read_delim("T_Air_Azur_buoy/Azur_T_2018.dat", 
+                          delim = ";", escape_double = FALSE, col_names = FALSE, 
+                          trim_ws = TRUE)
+Azur_T_2018 <- Azur_T_2018 %>% rename(date=X1, `air temperature`=X2)
+
+Azur_T_2019 <- read_delim("T_Air_Azur_buoy/Azur_T_2019.dat", 
+                          delim = ";", escape_double = FALSE, col_names = FALSE, 
+                          trim_ws = TRUE)
+Azur_T_2019 <- Azur_T_2019 %>% rename(date=X1, `air temperature`=X2)
+
+Azur_T_2020 <- read_delim("T_Air_Azur_buoy/Azur_T_2020.dat", 
+                          delim = ";", escape_double = FALSE, col_names = FALSE, 
+                          trim_ws = TRUE)
+Azur_T_2020 <- Azur_T_2020 %>% rename(date=X1, `air temperature`=X2)
+
+Azur_T_2021 <- read_delim("T_Air_Azur_buoy/Azur_T_2021.dat", 
+                          delim = ";", escape_double = FALSE, col_names = FALSE, 
+                          trim_ws = TRUE)
+Azur_T_2021 <- Azur_T_2021 %>% rename(date=X1, `air temperature`=X2)
+
+Azur_T_2022 <- read_delim("T_Air_Azur_buoy/Azur_T_2022.dat", 
+                          delim = ";", escape_double = FALSE, col_names = FALSE, 
+                          trim_ws = TRUE)
+Azur_T_2022 <- Azur_T_2022 %>% rename(date=X1, `air temperature`=X2)
 
 
 
 
+#fusion des 23 tables : Azur_T_air_RAW
+#mix entre Kelvin et Degrés, à changer
 
+Azur_T_air_RAW <- rbind(Azur_T_1999, Azur_T_2000, Azur_T_2001, Azur_T_2003, Azur_T_2004, Azur_T_2005,
+                        Azur_T_2006, Azur_T_2007, Azur_T_2008, Azur_T_2009, Azur_T_2010, Azur_T_2011,
+                        Azur_T_2012, Azur_T_2013, Azur_T_2014, Azur_T_2015, Azur_T_2016, Azur_T_2017,
+                        Azur_T_2018, Azur_T_2019, Azur_T_2020, Azur_T_2021, Azur_T_2022)
+
+#############################################################################################################
+#importation data wind speed (10m) Azur buoy (1999-2022)
+#measured at 3.80 m height, then roughly extrapolated to 10 m by adding 10%
+#unity : m/s (1999-2015)
+#unity : knot (2016-2022)
+#2022 : que le mois de janvier
+#observations toutes les heures
+
+Azur_wind_1999 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_1999.dat", 
+                           delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2000 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2000.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2001 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2001.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2002 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2002.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2003 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2003.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2004 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2004.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2005 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2005.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2006 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2006.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2007 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2007.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2008 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2008.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2009 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2009.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2010 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2010.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2011 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2010.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2012 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2012.dat", 
+                              delim = ";", escape_double = FALSE, col_names = FALSE, 
+                              trim_ws = TRUE)
+Azur_wind_2012 <- Azur_wind_2012 %>% rename(date=X1, `wind speed`=X2)
+
+Azur_wind_2013 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2013.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2013 <- Azur_wind_2013 %>% rename(date=X1, `wind speed`=X2)
+
+Azur_wind_2014 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2014.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2014 <- Azur_wind_2014 %>% rename(date=X1, `wind speed`=X2)
+
+Azur_wind_2015 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2015.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2015 <- Azur_wind_2015 %>% rename(date=X1, `wind speed`=X2)
+
+#passage en knots
+
+Azur_wind_2016 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FXI_2016.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2016 <- Azur_wind_2016 %>% rename(date=X1, `wind speed`=X2)
+
+Azur_wind_2017 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FXI_2017.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2017 <- Azur_wind_2017 %>% rename(date=X1, `wind speed`=X2)
+
+Azur_wind_2018 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FXI_2018.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2018 <- Azur_wind_2018 %>% rename(date=X1, `wind speed`=X2)
+
+Azur_wind_2019 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FXI_2019.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2019 <- Azur_wind_2019 %>% rename(date=X1, `wind speed`=X2)
+
+Azur_wind_2020 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FXI_2020.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2020 <- Azur_wind_2020 %>% rename(date=X1, `wind speed`=X2)
+
+Azur_wind_2021 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FXI_2021.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2021 <- Azur_wind_2021 %>% rename(date=X1, `wind speed`=X2)
+
+Azur_wind_2022 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FXI_2022.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2022 <- Azur_wind_2022 %>% rename(date=X1, `wind speed`=X2)
+
+#fusion des 23 tables : Azur_wind_RAW
+#mix entre m/s et knots, a changer
+
+Azur_wind_RAW <- rbind(Azur_wind_1999, Azur_wind_2000, Azur_wind_2001, Azur_wind_2002,
+                       Azur_wind_2003, Azur_wind_2004, Azur_wind_2005, Azur_wind_2006,
+                       Azur_wind_2007, Azur_wind_2008, Azur_wind_2009, Azur_wind_2010,
+                       Azur_wind_2011, Azur_wind_2012, Azur_wind_2013, Azur_wind_2014,
+                       Azur_wind_2015, Azur_wind_2016, Azur_wind_2016, Azur_wind_2017,
+                       Azur_wind_2018, Azur_wind_2019, Azur_wind_2020, Azur_wind_2021,
+                       Azur_wind_2022)
+
+##############
+#pH Steeve
+
+data_pH_steeve <- read_csv("data_pH_steeve.csv")
+
+data_pH_steeve$pH_calc
 
