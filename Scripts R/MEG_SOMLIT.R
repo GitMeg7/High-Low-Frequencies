@@ -859,54 +859,50 @@ plot(lis_hw_pred)
 
 
 ###################################################################################
+#Data carbonate chemistry
+#a partir de janvier 2007 jusqu'a janvier 2022
 
-#Data pH
-#a partir de decembre 2014 jusqu'a juin 2020
-SOMLIT_raw_PH <- read_delim("Point_B_ph_modif.txt", delim = "\t", 
-                            escape_double = FALSE, trim_ws = TRUE)
+SOMLIT_carbo_chemistry <- read_csv("data_pH_steeve.csv")
 
-#visualisation pH
+#differenciation surface / 50m
 
-plot.ts(SOMLIT_raw_PH %>% dplyr::select(pH))
-#bcp de donnees manquantes
+SOMLIT_carbo_chemistry_surf <- SOMLIT_carbo_chemistry %>% 
+  dplyr::filter(depth==0)
+SOMLIT_carbo_chemistry_50m <- SOMLIT_carbo_chemistry %>% 
+  dplyr::filter(depth==50)
 
 
-#creation nouvelle data frame
+#visualisation pH surface
 
-data_ph <- data.frame(date = SOMLIT_raw_PH$`Sampling date`, ph = SOMLIT_raw_PH$pH)
-data_ph <- data_ph[-c(1:820),]
-data_ph <- data_ph %>% drop_na()
+SOMLIT_carbo_chemistry_surf %>% 
+  ggplot() + 
+  aes(x=sampling_date, y=pH_calc) + 
+  geom_line() +
+  scale_x_datetime (name="") +
+  scale_y_continuous(name="pH calc", limits=c(7.8,8.21))
 
-#plot des donnees de pH (2014-2020)
+#tendance a la baisse
+#saisonnalite
 
-data_ph %>% 
-  ggplot() +
-  ggtitle("SOMLIT surface : Données de pH") +
-  aes(x=date, y=ph) + 
-  labs(x="", y="pH") +
-  geom_line() + 
-  scale_y_continuous(limits=c(7.9,8.2))
 
-#saisonnalité
-#baisse ?
+SOMLIT_carbo_chemistry_surf %>% 
+  ggplot() + 
+  aes(x=sampling_date, y=pCO2) + 
+  geom_line() +
+  scale_x_datetime (name="") +
+  scale_y_continuous(name="pCO2", limits=c(250,620))
 
-#plot que sur une annee
-data_ph %>% 
-  mutate(Year = format(date, format="%Y")) %>% 
-  filter(Year==2018) %>% 
-  ggplot() +
-  ggtitle("SOMLIT surface : Données de pH") +
-  aes(x=date, y=ph) + 
-  labs(x="", y="pH") +
-  geom_line() + 
-  scale_y_continuous(limits=c(7.9,8.2))
+#tendance a la hausse
+#saisonnalite
+
+
 
 #plot toutes les annees reunies
-data_ph %>% ggplot() +
-  geom_line(aes(x= as.Date(yday(date), "1970-01-01"), 
-                y=ph, 
-                group = factor(year(date)), 
-                color = factor(year(date))), 
+SOMLIT_carbo_chemistry_surf %>% ggplot() +
+  geom_line(aes(x= as.Date(yday(sampling_date), "1970-01-01"), 
+                y=pH_calc, 
+                group = factor(year(sampling_date)), 
+                color = factor(year(sampling_date))), 
             size = 0.75) +
   scale_colour_viridis_d() +
   scale_x_date(date_breaks="months", date_labels="%b", name = "") +
@@ -914,86 +910,51 @@ data_ph %>% ggplot() +
   theme_bw() +
   scale_y_continuous(name = "pH") 
 
-#annual cycle of pH (2014-2022)
+#annual cycle of pH (2007-2022)
 
-data_ph_mean <- data_ph %>%
-  dplyr::mutate(Year = format(date, format="%Y"),
-                Month = format(date, format="%m")) %>% 
+data_ph_mean_surf <- SOMLIT_carbo_chemistry_surf %>%
+  dplyr::mutate(Year = format(sampling_date, format="%Y"),
+                Month = format(sampling_date, format="%m")) %>% 
   dplyr::group_by(Year, Month) %>% 
-  dplyr::summarise(Mean = mean(ph)) %>% 
+  dplyr::summarise(Mean = mean(pH_calc)) %>% 
   dplyr::filter(!is.na(Mean)) %>% 
   dplyr::group_by(Month) %>% 
   dplyr::mutate(Mean2 = mean(Mean))
 
 #plot
-data_ph_mean %>% 
+data_ph_mean_surf %>% 
   ggplot() +
-  ggtitle("Annual cycle of pH averaged for 2014 - 2020") +
+  ggtitle("Annual cycle of pH averaged for 2007 - 2022") +
   aes(x=Month, y=Mean2, group=1) +
   geom_point(size = 3, shape=9) +
   geom_line () +
   scale_y_continuous(name = "pH")
 
 #trier les valeurs de pH et T° par mois croissants
-data_ph_mean <- data_ph_mean %>% arrange(Month)
-SOMLIT_1m_mean <- SOMLIT_1m_mean %>% arrange(Month)
+data_ph_mean_surf_croiss_month <- data_ph_mean_surf %>% arrange(Month)
+SOMLIT_1m_monthly_mean_T_croiss_month <- SOMLIT_1m_monthly_mean_T %>% arrange(Month)
 
 
 #plot comparaison relation temperature/pH
 
 plot.new() 
 par(mar=c(4,4,3,5)) 
-plot(data_ph_mean$Month, data_ph_mean$Mean2, type='p',col="blue",
-     pch=19, cex=0.40,axes=F,xlab="",ylab="", ylim=c(8,8.16), xlim=c(01,12),
+plot(data_ph_mean_surf_croiss_month$Month, data_ph_mean_surf_croiss_month$Mean2, type='p',col="blue",
+     pch=19, cex=0.40,axes=F,xlab="",ylab="", ylim=c(7.95,8.16), xlim=c(01,12),
      main="Annual cycle of Temperature vs pH averaged")
-axis(2, ylim=c(8,8.16),col="black",col.axis="black",at=seq(8, 8.16, by=0.02)) 
+axis(2, ylim=c(7.95,8.16),col="black",col.axis="black",at=seq(7.95, 8.16, by=0.02)) 
 axis(1, ylim=c(01,12),col="black",col.axis="black",at=seq(01, 13, by=1))
 mtext("pH averaged",side=2,line=2.5,col="blue") 
 
 par(new = T)
-plot(SOMLIT_1m_mean$Month, SOMLIT_1m_mean$Mean2,col="red", type='l',axes=F,xlab="",ylab="",
+plot(SOMLIT_1m_monthly_mean_T$Month, SOMLIT_1m_monthly_mean_T$Mean2,col="red", type='p',axes=F,xlab="",ylab="",
      ylim=c(12,26), xlim=c(01,12)) 
 axis(4, ylim=c(12,26),col="black",col.axis="black",at=seq(12, 28, by=4))
 mtext("Temperature averaged (°C)",side=4,line=2.5,col="red")
 
 #anti-correlation des 2 variables ?
 
-####
-
-#creation serie temporelle pH
-
-ts_ph <- ts(data_ph$ph, frequency=52.14)
-decomp_ph <- decompose(ts_ph)
-plot(decomp_ph)
-
-#baisse dans le temps ?
-
-#plot observations ph + trend 
-plot(decomp_ph$x, col='grey')
-lines(decomp_ph$trend, col='#C4698F')
-
-
-#regression lineaire pH
-reg_ph <- lm(decomp_ph$trend ~ data_ph$date)
-summary(reg_ph) #significatif 
-plot(reg_ph$fitted.values) #baisse
-
-#plot
-plot(data_ph$date, decomp_ph$x, type='l', col='grey', xlab="", ylab="pH", 
-     main="Time serie of pH (2014-2020) + trend")
-lines(data_ph$date, decomp_ph$trend, col='#C4698F')
-
-data_modif <- data_ph$date[26:393]
-ph_trend_df <- data.frame(x=data_modif, y=reg_ph$fitted.values)
-
-par(new = T)
-plot(ph_trend_df$x, ph_trend_df$y, col="red", type='l',axes=F,xlab="",ylab="",
-     ylim=c(7.95,8.15), xlim=as.POSIXct(c("2014-12-02","2020-06-09"))) 
-legend(as.POSIXct("2015-11-24"), 7.98, legend=("-0.0020 units pH/yr"))
-
-#baisse du pH (acidification) au cours des annees, qualifier cette baisse
-
-
+##########
 
 
 ###################################################################################
@@ -1259,11 +1220,240 @@ summary(fit_res_temp_9222)
 
 ###
 
-#plot anomalies TEMPERATURE 09 jan. 2007 - 22 dec. 2022 (papier Kapsenberg)
 
-res_temp_0715 <- residuals_anomaly_T %>% 
-  dplyr::mutate(Year = format(datetime, format="%Y")) %>% 
+#Climatological monthly means TEMPERATURE (SOMLIT - periode 2007-2015) - papier Kapsenberg
+
+#on reprends :
+#Annual cycle of SST averaged for 2007 - 2015
+
+SOMLIT_1m_fusion_0715 <- SOMLIT_1m_fusion %>%
+  dplyr::mutate(Year = format(datetime, format="%Y"),
+                Month = format(datetime, format="%m")) %>% 
   dplyr::filter(Year >= "2007" & Year <= "2015")
+
+SOMLIT_1m_monthly_mean_T_0715 <- SOMLIT_1m_fusion_0715 %>% 
+  dplyr::group_by(Year, Month) %>% 
+  dplyr::summarise(Mean1 = mean(temp_B), sd1 = sd(temp_B)) %>% 
+  dplyr::filter(!is.na(Mean1)) %>% 
+  dplyr::group_by(Month) %>% 
+  dplyr::mutate(Mean2 = mean(Mean1), sd2 = sd(Mean1))
+
+#plot
+SOMLIT_1m_monthly_mean_T_0715 %>% 
+  ggplot() +
+  ggtitle("Annual cycle of SST averaged for 2007 - 2015") +
+  aes(x=Month, y=Mean2, group=1) +
+  geom_point(size = 3, shape=9) +
+  geom_line () +
+  scale_y_continuous(name = "Temperature (°C)")
+
+#creation data frame climatological monthly means 0715 :
+
+climato_monthly_means_T_0715 <- data.frame(Months=SOMLIT_1m_monthly_mean_T_0715$Month,
+                                      Temp_means=SOMLIT_1m_monthly_mean_T_0715$Mean2,
+                                      sd=SOMLIT_1m_monthly_mean_T_0715$sd2)
+climato_monthly_means_T_0715 <- climato_monthly_means_T_0715 %>% arrange(Months)
+climato_monthly_means_T_0715 <- distinct(climato_monthly_means_T_0715)
+
+###
+#plot climato monthly means + sd (2007-2015)
+#(table 3 word)
+climato_monthly_means_T_0715 %>% 
+  ggplot() +
+  ggtitle("Climatological monthly means 2007-2015 : plot") +
+  aes(x=Months, y=Temp_means) + 
+  scale_y_continuous(limits=c(10,30), name="Monthly temperature means (°C)") +
+  scale_x_discrete(name="") +
+  geom_point() +
+  geom_errorbar(aes(ymin=Temp_means-sd, ymax=Temp_means+sd), width=.2)
+
+
+###################################################################################
+#Detrending TEMPERATURE time serie by substracting 
+#the respective climatological monthly means for the period 2007-2015
+#result : residuals (anomalies)
+
+#TEMPERATURE time serie 2007-2015:
+SOMLIT_1m_fusion_0715
+
+#TEMPERATURE climatological monthly means :
+climato_monthly_means_T_0715
+
+#pour tous les mois de janvier :
+ytest_m1_0715 <- climato_monthly_means_T_0715 %>% 
+  filter(Months == "01")
+
+xtest_m1_0715 <- SOMLIT_1m_fusion_0715 %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "01") %>% 
+  dplyr::reframe(datetime=datetime, detrend = temp_B - ytest_m1_0715$Temp_means)
+
+plot(xtest_m1_0715)
+###
+
+#pour tous les mois de février :
+ytest_m2_0715 <- climato_monthly_means_T_0715 %>% 
+  filter(Months == "02")
+
+xtest_m2_0715 <- SOMLIT_1m_fusion_0715 %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "02") %>% 
+  dplyr::reframe(datetime=datetime, detrend = temp_B - ytest_m2_0715$Temp_means)
+
+plot(xtest_m2_0715)
+###
+
+#pour tous les mois de mars :
+ytest_m3_0715 <- climato_monthly_means_T_0715  %>% 
+  filter(Months == "03")
+
+xtest_m3_0715 <- SOMLIT_1m_fusion_0715 %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "03") %>% 
+  dplyr::reframe(datetime=datetime, detrend = temp_B - ytest_m3_0715$Temp_means)
+
+plot(xtest_m3_0715)
+###
+
+#pour tous les mois de avril :
+ytest_m4_0715 <- climato_monthly_means_T_0715 %>% 
+  filter(Months == "04")
+
+xtest_m4_0715 <- SOMLIT_1m_fusion_0715 %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "04") %>% 
+  dplyr::reframe(datetime=datetime, detrend = temp_B - ytest_m4_0715$Temp_means)
+
+plot(xtest_m4_0715)
+###
+
+#pour tous les mois de mai :
+ytest_m5_0715 <- climato_monthly_means_T_0715 %>% 
+  filter(Months == "05")
+
+xtest_m5_0715 <- SOMLIT_1m_fusion_0715 %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "05") %>% 
+  dplyr::reframe(datetime=datetime, detrend = temp_B - ytest_m5_0715$Temp_means)
+
+plot(xtest_m5_0715)
+###
+
+#pour tous les mois de juin :
+ytest_m6_0715 <- climato_monthly_means_T_0715 %>% 
+  filter(Months == "06")
+
+xtest_m6_0715 <- SOMLIT_1m_fusion_0715 %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "06") %>% 
+  dplyr::reframe(datetime=datetime, detrend = temp_B - ytest_m6_0715$Temp_means)
+
+plot(xtest_m6_0715)
+###
+
+#pour tous les mois de juillet :
+ytest_m7_0715 <- climato_monthly_means_T_0715 %>% 
+  filter(Months == "07")
+
+xtest_m7_0715 <- SOMLIT_1m_fusion_0715 %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "07") %>% 
+  dplyr::reframe(datetime=datetime, detrend = temp_B - ytest_m7_0715$Temp_means)
+
+plot(xtest_m7_0715)
+###
+
+#pour tous les mois de aout :
+ytest_m8_0715 <- climato_monthly_means_T_0715 %>% 
+  filter(Months == "08")
+
+xtest_m8_0715 <- SOMLIT_1m_fusion_0715 %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "08") %>% 
+  dplyr::reframe(datetime=datetime, detrend = temp_B - ytest_m8_0715$Temp_means)
+
+plot(xtest_m8_0715)
+###
+
+#pour tous les mois de septembre :
+ytest_m9_0715 <- climato_monthly_means_T_0715 %>% 
+  filter(Months == "09")
+
+xtest_m9_0715 <- SOMLIT_1m_fusion_0715 %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "09") %>% 
+  dplyr::reframe(datetime=datetime, detrend = temp_B - ytest_m9_0715$Temp_means)
+
+plot(xtest_m9_0715)
+###
+
+#pour tous les mois de octobre :
+ytest_m10_0715 <- climato_monthly_means_T_0715 %>% 
+  filter(Months == "10")
+
+xtest_m10_0715 <- SOMLIT_1m_fusion_0715 %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "10") %>% 
+  dplyr::reframe(datetime=datetime, detrend = temp_B - ytest_m10_0715$Temp_means)
+
+plot(xtest_m10_0715)
+###
+
+#pour tous les mois de novembre :
+ytest_m11_0715 <- climato_monthly_means_T_0715 %>% 
+  filter(Months == "11")
+
+xtest_m11_0715 <- SOMLIT_1m_fusion_0715 %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "11") %>% 
+  dplyr::reframe(datetime=datetime, detrend = temp_B - ytest_m11_0715$Temp_means)
+
+plot(xtest_m11_0715)
+###
+
+#pour tous les mois de decembre :
+ytest_m12_0715 <- climato_monthly_means_T_0715 %>% 
+  filter(Months == "12")
+
+xtest_m12_0715 <- SOMLIT_1m_fusion_0715 %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "12") %>% 
+  dplyr::reframe(datetime=datetime, detrend = temp_B - ytest_m12_0715$Temp_means)
+
+plot(xtest_m12_0715)
+###
+
+#fusion des 12 tab : residuals_anomaly_T_0715
+
+ll1_0715 <- merge(xtest_m1_0715, xtest_m2_0715, all=TRUE)
+ll2_0715 <- merge(ll1_0715, xtest_m3_0715, all=TRUE)
+ll3_0715 <- merge(ll2_0715, xtest_m4_0715, all=TRUE)
+ll4_0715 <- merge(ll3_0715, xtest_m5_0715, all=TRUE)
+ll5_0715 <- merge(ll4_0715, xtest_m6_0715, all=TRUE)
+ll6_0715 <- merge(ll5_0715, xtest_m7_0715, all=TRUE)
+ll7_0715 <- merge(ll6_0715, xtest_m8_0715, all=TRUE)
+ll8_0715 <- merge(ll7_0715, xtest_m9_0715, all=TRUE)
+ll9_0715 <- merge(ll8_0715, xtest_m10_0715, all=TRUE)
+ll10_0715 <- merge(ll9_0715, xtest_m11_0715, all=TRUE)
+residuals_anomaly_T_0715 <- merge(ll10_0715, xtest_m12_0715, all=TRUE)
+
+####
+
+#plot anomalies TEMPERATURE 2007-2015
+
+#creation variable Year
+res_temp_0715 <- residuals_anomaly_T_0715 %>% 
+  dplyr::mutate(Year = format(datetime, format="%Y"))
+
+#plot
+residuals_anomaly_T_0715 %>% 
+  ggplot() +
+  ggtitle("TEMPERATURE : plot of anomalies (2007-2015)") + 
+  aes(x=datetime, y=detrend) +
+  scale_x_datetime(name="", breaks=date_breaks("2 years"), labels=date_format("%Y")) +
+  scale_y_continuous(name="Temp. (°C)") +
+  geom_point(size=0.8) +
+  stat_smooth(method="lm", formula=y~x, se=TRUE)
 
 #pour afficher l'equation de la regression :
 
@@ -1272,7 +1462,7 @@ lm_eqn <- function(res_temp_0715){
   eq <- substitute(italic(y) == a + b %.% italic(x)*","~~italic(r)^2~"="~r2, 
                    list(a = format(unname(coef(m)[1]), digits = 3),
                         b = format(unname(coef(m)[2]), digits = 3),
-                        r2 = format(summary(m)$r.squared, digits = 3)))
+                        r2 = format(summary(m)$r.squared, digits = 2)))
   as.character(as.expression(eq));
 }
 
@@ -1282,22 +1472,21 @@ res_temp_0715 %>%
   ggplot() +
   ggtitle("TEMPERATURE : plot of anomalies (2007-2015)") + 
   aes(x=datetime, y=detrend) +
-  scale_x_datetime(name="", breaks=date_breaks("3 years"), labels=date_format("%Y")) +
+  scale_x_datetime(name="", breaks=date_breaks("2 years"), labels=date_format("%Y")) +
   scale_y_continuous(name="Temp. (°C)") +
   geom_point(size=0.8) +
   stat_smooth(method="lm", formula=y~x, se=TRUE) +
-  geom_text(x = as.POSIXct("2008-03-11"), y = 3, label = lm_eqn(res_0715), parse = TRUE)
+  geom_text(x = as.POSIXct("2011-05-18"), y = 3, label = lm_eqn(res_temp_0715), parse = TRUE)
 
-#on obtient le même graphe
-#mais pas la mm slope....
 
 
 #regression lineaire 2007-2015
+fit_res_temp_0715 <- lm(data = res_temp_0715, detrend ~ as.numeric(Year))
+summary(fit_res_temp_0715)
 
-fit_temp_0715 <- lm(data = res_temp_0715, detrend ~ as.numeric(Year))
-summary(fit_temp_0715)
+###
 
-#######
+
 
 ##################################################################################
 #Annual cycle of salinity averaged for 1992 - 2022
@@ -1556,18 +1745,242 @@ res_sal_9222 %>%
 fit_sal_9222 <- lm(data = res_sal_9222, detrend ~ as.numeric(Year))
 summary(fit_sal_9222)
 
-
+#####
 
 #plot anomalies SALINITE 09 jan. 2007 - 22 dec. 2022 (papier Kapsenberg)
 
-res_sal_0715 <- residuals_anomaly_S %>% 
-  dplyr::mutate(Year = format(datetime, format="%Y")) %>% 
+SOMLIT_1m_fusion_0715 <- SOMLIT_1m_fusion %>%
+  dplyr::mutate(Year = format(datetime, format="%Y"),
+                Month = format(datetime, format="%m")) %>% 
   dplyr::filter(Year >= "2007" & Year <= "2015")
+
+
+SOMLIT_1m_monthly_mean_S_0715 <- SOMLIT_1m_fusion_0715 %>%
+  dplyr::group_by(Year, Month) %>% 
+  dplyr::summarise(Mean1 = mean(sal_B), sd1 = sd(sal_B)) %>% 
+  dplyr::filter(!is.na(Mean1)) %>% 
+  dplyr::group_by(Month) %>% 
+  dplyr::mutate(Mean2 = mean(Mean1), sd2 = sd(Mean1))
+
+#plot
+SOMLIT_1m_monthly_mean_S_0715 %>% 
+  ggplot() +
+  ggtitle("Annual cycle of salinity averaged for 2007 - 2015") +
+  aes(x=Month, y=Mean2, group=1) +
+  geom_point(size = 3, shape=9) +
+  geom_line () +
+  scale_y_continuous(name = "Salinity (psu")
+
+#creation data frame climatological monthly means S (2007-2015) :
+
+climato_monthly_means_S_0715 <- data.frame(Months=SOMLIT_1m_monthly_mean_S_0715$Month,
+                                      Sal_means=SOMLIT_1m_monthly_mean_S_0715$Mean2,
+                                      sd=SOMLIT_1m_monthly_mean_S_0715$sd2)
+climato_monthly_means_S_0715 <- climato_monthly_means_S_0715 %>% arrange(Months)
+climato_monthly_means_S_0715 <- distinct(climato_monthly_means_S_0715)
+
+###
+#plot climato monthly means + sd (2007-2015)
+#(table 3 word)
+climato_monthly_means_S_0715 %>% 
+  ggplot() +
+  ggtitle("Climatological monthly means (2007-2015) : plot") +
+  aes(x=Months, y=Sal_means) + 
+  scale_y_continuous(limits=c(37,39), name="Monthly salinity means (psu)") +
+  scale_x_discrete(name="") +
+  geom_point() +
+  geom_errorbar(aes(ymin=Sal_means-sd, ymax=Sal_means+sd), width=.2)
+
+
+###################################################################################
+#Detrending SALINITY time serie by substracting 
+#the respective climatological monthly means for the period 2007-2015
+#result : residuals (anomalies)
+
+#SALINITY time serie 2007-2015 :
+SOMLIT_1m_fusion_0715
+
+#SALINITY climatological monthly means :
+climato_monthly_means_S_0715
+
+#pour tous les mois de janvier :
+ytest_m1S_0715 <- climato_monthly_means_S_0715 %>% 
+  filter(Months == "01")
+
+xtest_m1S_0715 <- SOMLIT_1m_fusion_0715 %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "01") %>% 
+  dplyr::reframe(datetime=datetime, detrend = sal_B - ytest_m1S_0715$Sal_means)
+
+plot(xtest_m1S_0715)
+###
+
+#pour tous les mois de février :
+ytest_m2S_0715 <- climato_monthly_means_S_0715 %>% 
+  filter(Months == "02")
+
+xtest_m2S_0715 <- SOMLIT_1m_fusion_0715 %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "02") %>% 
+  dplyr::reframe(datetime=datetime, detrend = sal_B - ytest_m2S_0715$Sal_means)
+
+plot(xtest_m2S_0715)
+###
+
+#pour tous les mois de mars :
+ytest_m3S_0715 <- climato_monthly_means_S_0715 %>% 
+  filter(Months == "03")
+
+xtest_m3S_0715 <- SOMLIT_1m_fusion_0715 %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "03") %>% 
+  dplyr::reframe(datetime=datetime, detrend = sal_B - ytest_m3S_0715$Sal_means)
+
+plot(xtest_m3S_0715)
+###
+
+#pour tous les mois de avril :
+ytest_m4S_0715 <- climato_monthly_means_S_0715 %>% 
+  filter(Months == "04")
+
+xtest_m4S_0715 <- SOMLIT_1m_fusion_0715 %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "04") %>% 
+  dplyr::reframe(datetime=datetime, detrend = sal_B - ytest_m4S_0715$Sal_means)
+
+plot(xtest_m4S_0715)
+###
+
+#pour tous les mois de mai :
+ytest_m5S_0715 <- climato_monthly_means_S_0715 %>% 
+  filter(Months == "05")
+
+xtest_m5S_0715 <- SOMLIT_1m_fusion_0715 %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "05") %>% 
+  dplyr::reframe(datetime=datetime, detrend = sal_B - ytest_m5S_0715$Sal_means)
+
+plot(xtest_m5S_0715)
+###
+
+#pour tous les mois de juin :
+ytest_m6S_0715 <- climato_monthly_means_S_0715 %>% 
+  filter(Months == "06")
+
+xtest_m6S_0715 <- SOMLIT_1m_fusion_0715 %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "06") %>% 
+  dplyr::reframe(datetime=datetime, detrend = sal_B - ytest_m6S_0715$Sal_means)
+
+plot(xtest_m6S_0715)
+###
+
+#pour tous les mois de juillet :
+ytest_m7S_0715 <- climato_monthly_means_S_0715 %>% 
+  filter(Months == "07")
+
+xtest_m7S_0715 <- SOMLIT_1m_fusion_0715 %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "07") %>% 
+  dplyr::reframe(datetime=datetime, detrend = sal_B - ytest_m7S_0715$Sal_means)
+
+plot(xtest_m7S_0715)
+###
+
+#pour tous les mois de aout :
+ytest_m8S_0715 <- climato_monthly_means_S_0715 %>% 
+  filter(Months == "08")
+
+xtest_m8S_0715 <- SOMLIT_1m_fusion_0715 %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "08") %>% 
+  dplyr::reframe(datetime=datetime, detrend = sal_B - ytest_m8S_0715$Sal_means)
+
+plot(xtest_m8S_0715)
+###
+
+#pour tous les mois de septembre :
+ytest_m9S_0715 <- climato_monthly_means_S_0715 %>% 
+  filter(Months == "09")
+
+xtest_m9S_0715 <- SOMLIT_1m_fusion_0715 %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "09") %>% 
+  dplyr::reframe(datetime=datetime, detrend = sal_B - ytest_m9S_0715$Sal_means)
+
+plot(xtest_m9S_0715)
+###
+
+#pour tous les mois de octobre :
+ytest_m10S_0715 <- climato_monthly_means_S_0715 %>% 
+  filter(Months == "10")
+
+xtest_m10S_0715 <- SOMLIT_1m_fusion_0715 %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "10") %>% 
+  dplyr::reframe(datetime=datetime, detrend = sal_B - ytest_m10S_0715$Sal_means)
+
+plot(xtest_m10S_0715)
+###
+
+#pour tous les mois de novembre :
+ytest_m11S_0715 <- climato_monthly_means_S_0715 %>% 
+  filter(Months == "11")
+
+xtest_m11S_0715 <- SOMLIT_1m_fusion_0715 %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "11") %>% 
+  dplyr::reframe(datetime=datetime, detrend = sal_B - ytest_m11S_0715$Sal_means)
+
+plot(xtest_m11S_0715)
+###
+
+#pour tous les mois de decembre :
+ytest_m12S_0715 <- climato_monthly_means_S_0715 %>% 
+  filter(Months == "12")
+
+xtest_m12S_0715 <- SOMLIT_1m_fusion_0715 %>% 
+  dplyr::mutate(Month = format(datetime, format="%m")) %>%
+  dplyr::filter(Month == "12") %>% 
+  dplyr::reframe(datetime=datetime, detrend = sal_B - ytest_m12S_0715$Sal_means)
+
+plot(xtest_m12S_0715)
+###
+
+#fusion des 12 tab : residuals_anomaly_S_0715
+
+SS1_0715 <- merge(xtest_m1S_0715, xtest_m2S_0715, all=TRUE)
+SS2_0715 <- merge(SS1_0715, xtest_m3S_0715, all=TRUE)
+SS3_0715 <- merge(SS2_0715, xtest_m4S_0715, all=TRUE)
+SS4_0715 <- merge(SS3_0715, xtest_m5S_0715, all=TRUE)
+SS5_0715 <- merge(SS4_0715, xtest_m6S_0715, all=TRUE)
+SS6_0715 <- merge(SS5_0715, xtest_m7S_0715, all=TRUE)
+SS7_0715 <- merge(SS6_0715, xtest_m8S_0715, all=TRUE)
+SS8_0715 <- merge(SS7_0715, xtest_m9S_0715, all=TRUE)
+SS9_0715 <- merge(SS8_0715, xtest_m10S_0715, all=TRUE)
+SS10_0715 <- merge(SS9_0715, xtest_m11S_0715, all=TRUE)
+residuals_anomaly_S_0715 <- merge(SS10_0715, xtest_m12S_0715, all=TRUE)
+
+####
+
+#plot anomalies SALINITE 2007-2015
+
+res_sal_0715 <- residuals_anomaly_S_0715 %>% 
+  dplyr::mutate(Year = format(datetime, format="%Y"))
+
+residuals_anomaly_S_0715 %>% 
+  ggplot() +
+  ggtitle("SALINITE : plot of anomalies (2007-2015)") + 
+  aes(x=datetime, y=detrend) +
+  scale_x_datetime(name="", breaks=date_breaks("2 years"), labels=date_format("%Y")) +
+  scale_y_continuous(name="Salinity") +
+  geom_point(size=0.8) +
+  stat_smooth(method="lm", formula=y~x, se=TRUE)
 
 #pour afficher l'equation de la regression :
 
-lm_eqn <- function(res_0715S){
-  m <- lm(detrend ~ as.numeric(Year), res_0715S);
+lm_eqn <- function(res_sal_0715){
+  m <- lm(detrend ~ as.numeric(Year), res_sal_0715);
   eq <- substitute(italic(y) == a + b %.% italic(x)*","~~italic(r)^2~"="~r2, 
                    list(a = format(unname(coef(m)[1]), digits = 3),
                         b = format(unname(coef(m)[2]), digits = 3),
@@ -1581,17 +1994,21 @@ res_sal_0715 %>%
   ggplot() +
   ggtitle("SALINITY : plot of anomalies (2007-2015)") + 
   aes(x=datetime, y=detrend) +
-  scale_x_datetime(name="", breaks=date_breaks("3 years"), labels=date_format("%Y")) +
-  scale_y_continuous(name="Salinity", limits=c(-2,1)) +
+  scale_x_datetime(name="", breaks=date_breaks("2 years"), labels=date_format("%Y")) +
+  scale_y_continuous(name="Salinity") +
   geom_point(size=0.8) +
   stat_smooth(method="lm", formula=y~x, se=TRUE) +
-  geom_text(x = as.POSIXct("2012-02-21"), y = -1.5, label = lm_eqn(res_sal_0715), parse = TRUE)
+  geom_text(x = as.POSIXct("2008-03-11"), y = -1.5, label = lm_eqn(res_sal_0715), parse = TRUE)
 
 
-#regression lineaire 2007-2015
+#regression lineaire salinity 2007-2015
 
 fit_sal_0715 <- lm(data = res_sal_0715, detrend ~ as.numeric(Year))
 summary(fit_sal_0715)
+
+
+
+
 
 ##################################################################################
 #importation data SST Azur buoy (2011-2022)
@@ -1690,57 +2107,75 @@ AZUR_SST_RAW <- rbind(Azur_SST_2011, Azur_SST_2012, Azur_SST_2013, Azur_SST_2014
 ###################################################################################
 #importation data T° Air Azur buoy (1999-2022)
 #observation toutes les heures (Kelvin de 1999-2015)
+#convert en °C : °C = K - 273.15
 
 Azur_T_1999 <- read_delim("T_Air_Azur_buoy/Azur_T_1999.dat", 
                           delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_1999 <- Azur_T_1999 %>% reframe (date = Azur_T_1999$date, `air temperature`= `air temperature` - 273.15)
 
 Azur_T_2000 <- read_delim("T_Air_Azur_buoy/Azur_T_2000.dat", 
                           delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2000 <- Azur_T_2000 %>% reframe (date = Azur_T_2000$date, `air temperature`= `air temperature` - 273.15)
 
 Azur_T_2001 <- read_delim("T_Air_Azur_buoy/Azur_T_2001.dat", 
                           delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2001 <- Azur_T_2001 %>% reframe (date = Azur_T_2001$date, `air temperature`= `air temperature` - 273.15)
 
 Azur_T_2002 <- read_delim("T_Air_Azur_buoy/Azur_T_2002.dat", 
                           delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2002 <- Azur_T_2002 %>% reframe (date = Azur_T_2002$date, `air temperature`= `air temperature` - 273.15)
 
 Azur_T_2003 <- read_delim("T_Air_Azur_buoy/Azur_T_2003.dat", 
                           delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2003 <- Azur_T_2003 %>% reframe (date = Azur_T_2003$date, `air temperature`= `air temperature` - 273.15)
 
 Azur_T_2004 <- read_delim("T_Air_Azur_buoy/Azur_T_2004.dat", 
                           delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2004 <- Azur_T_2004 %>% reframe (date = Azur_T_2004$date, `air temperature`= `air temperature` - 273.15)
 
 Azur_T_2005 <- read_delim("T_Air_Azur_buoy/Azur_T_2005.dat", 
                           delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2005 <- Azur_T_2005 %>% reframe (date = Azur_T_2005$date, `air temperature`= `air temperature` - 273.15)
 
 Azur_T_2006 <- read_delim("T_Air_Azur_buoy/Azur_T_2006.dat", 
                           delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2006 <- Azur_T_2006 %>% reframe (date = Azur_T_2006$date, `air temperature`= `air temperature` - 273.15)
 
 Azur_T_2007 <- read_delim("T_Air_Azur_buoy/Azur_T_2007.dat", 
                           delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2007 <- Azur_T_2007 %>% reframe (date = Azur_T_2007$date, `air temperature`= `air temperature` - 273.15)
 
 Azur_T_2008 <- read_delim("T_Air_Azur_buoy/Azur_T_2008.dat", 
                           delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2008 <- Azur_T_2008 %>% reframe (date = Azur_T_2008$date, `air temperature`= `air temperature` - 273.15)
 
 Azur_T_2009 <- read_delim("T_Air_Azur_buoy/Azur_T_2009.dat", 
                           delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2009 <- Azur_T_2009 %>% reframe (date = Azur_T_2009$date, `air temperature`= `air temperature` - 273.15)
 
 Azur_T_2010 <- read_delim("T_Air_Azur_buoy/Azur_T_2010.dat", 
                           delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2010 <- Azur_T_2010 %>% reframe (date = Azur_T_2010$date, `air temperature`= `air temperature` - 273.15)
 
 Azur_T_2011 <- read_delim("T_Air_Azur_buoy/Azur_T_2011.dat", 
                           delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2011 <- Azur_T_2011 %>% reframe (date = Azur_T_2011$date, `air temperature`= `air temperature` - 273.15)
 
 Azur_T_2012 <- read_delim("T_Air_Azur_buoy/Azur_T_2012.dat", 
                           delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2012 <- Azur_T_2012 %>% reframe (date = Azur_T_2012$date, `air temperature`= `air temperature` - 273.15)
 
 Azur_T_2013 <- read_delim("T_Air_Azur_buoy/Azur_T_2013.dat", 
                           delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2013 <- Azur_T_2013 %>% reframe (date = Azur_T_2013$date, `air temperature`= `air temperature` - 273.15)
 
 Azur_T_2014 <- read_delim("T_Air_Azur_buoy/Azur_T_2014.dat", 
                           delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2014 <- Azur_T_2014 %>% reframe (date = Azur_T_2014$date, `air temperature`= `air temperature` - 273.15)
 
 Azur_T_2015 <- read_delim("T_Air_Azur_buoy/Azur_T_2015.dat", 
                           delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2015 <- Azur_T_2015 %>% reframe (date = Azur_T_2015$date, `air temperature`= `air temperature` - 273.15)
 
 #passage en degrés (2016-2022)
 
@@ -1781,7 +2216,6 @@ Azur_T_2022 <- Azur_T_2022 %>% rename(date=X1, `air temperature`=X2)
 
 
 
-
 #fusion des 23 tables : Azur_T_air_RAW
 #mix entre Kelvin et Degrés, à changer
 
@@ -1790,11 +2224,13 @@ Azur_T_air_RAW <- rbind(Azur_T_1999, Azur_T_2000, Azur_T_2001, Azur_T_2003, Azur
                         Azur_T_2012, Azur_T_2013, Azur_T_2014, Azur_T_2015, Azur_T_2016, Azur_T_2017,
                         Azur_T_2018, Azur_T_2019, Azur_T_2020, Azur_T_2021, Azur_T_2022)
 
+
+
 #############################################################################################################
 #importation data wind speed (10m) Azur buoy (1999-2022)
 #measured at 3.80 m height, then roughly extrapolated to 10 m by adding 10%
-#unity : m/s (1999-2015)
-#unity : knot (2016-2022)
+#unity : m/s (1999-2021)
+#unity : knot (2022)
 #2022 : que le mois de janvier
 #observations toutes les heures
 
@@ -1834,8 +2270,10 @@ Azur_wind_2009 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2009.dat",
 Azur_wind_2010 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2010.dat", 
                              delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-Azur_wind_2011 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2010.dat", 
-                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_wind_2011 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2011.dat", 
+                           delim = ";", escape_double = FALSE, col_names = FALSE, 
+                           trim_ws = TRUE)
+Azur_wind_2011 <- Azur_wind_2011 %>% rename(date=X1, `wind speed`=X2)
 
 Azur_wind_2012 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2012.dat", 
                               delim = ";", escape_double = FALSE, col_names = FALSE, 
@@ -1857,42 +2295,45 @@ Azur_wind_2015 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2015.dat",
                              trim_ws = TRUE)
 Azur_wind_2015 <- Azur_wind_2015 %>% rename(date=X1, `wind speed`=X2)
 
-#passage en knots
 
-Azur_wind_2016 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FXI_2016.dat", 
+Azur_wind_2016 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2016.dat", 
                              delim = ";", escape_double = FALSE, col_names = FALSE, 
                              trim_ws = TRUE)
 Azur_wind_2016 <- Azur_wind_2016 %>% rename(date=X1, `wind speed`=X2)
 
-Azur_wind_2017 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FXI_2017.dat", 
+Azur_wind_2017 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2017.dat", 
                              delim = ";", escape_double = FALSE, col_names = FALSE, 
                              trim_ws = TRUE)
 Azur_wind_2017 <- Azur_wind_2017 %>% rename(date=X1, `wind speed`=X2)
 
-Azur_wind_2018 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FXI_2018.dat", 
+Azur_wind_2018 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2018.dat", 
                              delim = ";", escape_double = FALSE, col_names = FALSE, 
                              trim_ws = TRUE)
 Azur_wind_2018 <- Azur_wind_2018 %>% rename(date=X1, `wind speed`=X2)
 
-Azur_wind_2019 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FXI_2019.dat", 
+Azur_wind_2019 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2019.dat", 
                              delim = ";", escape_double = FALSE, col_names = FALSE, 
                              trim_ws = TRUE)
 Azur_wind_2019 <- Azur_wind_2019 %>% rename(date=X1, `wind speed`=X2)
 
-Azur_wind_2020 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FXI_2020.dat", 
+Azur_wind_2020 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2020.dat", 
                              delim = ";", escape_double = FALSE, col_names = FALSE, 
                              trim_ws = TRUE)
 Azur_wind_2020 <- Azur_wind_2020 %>% rename(date=X1, `wind speed`=X2)
+
 
 Azur_wind_2021 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FXI_2021.dat", 
                              delim = ";", escape_double = FALSE, col_names = FALSE, 
                              trim_ws = TRUE)
 Azur_wind_2021 <- Azur_wind_2021 %>% rename(date=X1, `wind speed`=X2)
 
+#convert en m/s : 1 knot = 0.514444681 m/s
+
 Azur_wind_2022 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FXI_2022.dat", 
                              delim = ";", escape_double = FALSE, col_names = FALSE, 
                              trim_ws = TRUE)
-Azur_wind_2022 <- Azur_wind_2022 %>% rename(date=X1, `wind speed`=X2)
+Azur_wind_2022 <- Azur_wind_2022 %>% reframe (date=X1, `wind speed` = case_when(X2 == -9999  ~ NA_real_ , 
+                                                                                TRUE ~ (X2*0.514444681)))
 
 #fusion des 23 tables : Azur_wind_RAW
 #mix entre m/s et knots, a changer
@@ -1906,9 +2347,174 @@ Azur_wind_RAW <- rbind(Azur_wind_1999, Azur_wind_2000, Azur_wind_2001, Azur_wind
                        Azur_wind_2022)
 
 ##############
-#pH Steeve
+######################################################################################
 
-data_pH_steeve <- read_csv("data_pH_steeve.csv")
+###article Polsenaere
+#calcul de pCO2 mean = moyenne de pCO2 par mois
 
-data_pH_steeve$pH_calc
+#pCO2 (uatm) frequence par semaine : 
+SOMLIT_carbo_chemistry_surf$pCO2
+
+#calcul pCO2 par mois : pCO2_mean_month
+
+pCO2_mean_month <- SOMLIT_carbo_chemistry_surf %>% 
+  dplyr::mutate(Year = format(sampling_date, format="%Y"),
+                Month = format(sampling_date, format="%m")) %>% 
+  dplyr::group_by(Year, Month) %>% 
+  dplyr::summarise(pCO2_Mean1 = mean(pCO2)) %>% 
+  dplyr::filter(!is.na(pCO2_Mean1)) %>% 
+  dplyr::group_by(Month) %>% 
+  dplyr::mutate(pCO2_Mean2 = mean(pCO2_Mean1))
+
+#ajout dans le dataset SOMLIT_carbo_chemistry_surf
+
+SOMLIT_carbo_chemistry_surf <- SOMLIT_carbo_chemistry_surf %>% 
+  dplyr::mutate(Year = format(sampling_date, format="%Y"),
+                Month = format(sampling_date, format="%m")) %>% 
+  dplyr::group_by(Year, Month) %>% 
+  dplyr::mutate(pCO2_mean_month = mean(pCO2)) %>% 
+  dplyr::filter(!is.na(pCO2_mean_month)) %>% 
+  dplyr::group_by(Month) %>% 
+  dplyr::mutate(pCO2_mean_month = mean(pCO2_mean_month))
+
+#calcul mean pCO2 par annee : pCO2_mean_year
+
+pCO2_mean_year <- SOMLIT_carbo_chemistry_surf %>%
+  dplyr::group_by(year) %>% 
+  dplyr::filter(!is.na(pCO2)) %>% 
+  dplyr::summarise(pCO2_Mean = mean(pCO2))
+
+#ajout dans le dataset SOMLIT_carbo_chemistry_surf :
+
+SOMLIT_carbo_chemistry_surf <- SOMLIT_carbo_chemistry_surf %>%
+  dplyr::group_by(year) %>% 
+  dplyr::filter(!is.na(pCO2)) %>% 
+  dplyr::mutate(pCO2_mean_year = mean(pCO2))
+
+  
+#Tobs = SOMLIT_carbo_chemistry_surf$temperature 
+
+
+#calcul T mean par annee :
+
+T_mean_year <- SOMLIT_carbo_chemistry_surf %>%
+  dplyr::summarise(T_mean_year = mean(temperature))
+
+#ajout dans le dataset
+
+SOMLIT_carbo_chemistry_surf <- SOMLIT_carbo_chemistry_surf %>%
+  dplyr::group_by(year) %>% 
+  dplyr::filter(!is.na(temperature)) %>% 
+  dplyr::mutate(T_mean_year = mean(temperature))
+
+#calcul de TpCO2 (Seasonnal temperature effect)
+#formula : TpCO2 = pCO2mean * exp[0.0423(Tobs - Tmean)]
+
+TpCO2 <- SOMLIT_carbo_chemistry_surf %>% 
+  dplyr::group_by(year) %>% 
+  dplyr::mutate(TpCO2 = pCO2_mean_year * exp(0.0423*(temperature-T_mean_year)))
+
+
+#ajout dans le dataset SOMLIT_carbo_chemistry_surf :
+SOMLIT_carbo_chemistry_surf <- SOMLIT_carbo_chemistry_surf %>% 
+  dplyr::mutate(TpCO2 = pCO2_mean_year * exp(0.0423*(temperature-T_mean_year)))
+
+####
+
+#calcul de NpCO2 (non-temperature effect) = pCO2(N) article Kapsenberg
+#formula : NpCO2 = pCO2obs * exp[0.0423(Tmean - Tobs)]
+
+NpCO2 <- SOMLIT_carbo_chemistry_surf %>% 
+  dplyr::mutate(NpCO2 = pCO2 * exp(0.0423*(T_mean_year-temperature)))
+
+#ajout dans le dataset SOMLIT_carbo_chemistry_surf :
+SOMLIT_carbo_chemistry_surf <- SOMLIT_carbo_chemistry_surf %>% 
+  dplyr::mutate(NpCO2 = pCO2 * exp(0.0423*(T_mean_year-temperature)))
+
+
+
+#creation graphique article Polsenaere
+
+SOMLIT_carbo_chemistry_surf %>% 
+  ggplot(limits=c(200,900)) +
+  ggtitle("Thermal and non-thermal effects on water pCO2") + 
+  geom_line(aes(x=sampling_date, y=TpCO2), col='red') +
+  geom_line(aes(x=sampling_date, y=pCO2), col='black') +
+  geom_line(aes(x=sampling_date, y=NpCO2), col='green')
+
+#Thermal (TpCO2) and non-thermal (NpCO2) components of pCO2 strongly varied seasonally, almost compensating each other
+#TpCO2 : meilleur fit avec pCO2 ?
+#si on ne regarde que le NpCO2 (effets biologiques), on aboutit a des valeurs de pCO2 bien differentes (+ faibles)
+
+###scatter plot : pCO2 vs TpCO2
+
+SOMLIT_carbo_chemistry_surf %>% 
+  ggplot() +
+  ggtitle("Scatter plot : pCO2 vs TpCO2") +
+  aes(x=pCO2, y=TpCO2) +
+  geom_point() + 
+  stat_smooth(method="lm", formula = y ~ x)
+
+#visuellement : relation lineaire
+
+reg_pCO2_TpCO2 <- lm(SOMLIT_carbo_chemistry_surf$TpCO2 ~ SOMLIT_carbo_chemistry_surf$pCO2)
+summary(reg_pCO2_TpCO2)
+
+#calcul coef de Pearson : 
+shapiro.test(SOMLIT_carbo_chemistry_surf$pCO2)
+shapiro.test(SOMLIT_carbo_chemistry_surf$TpCO2)
+#donnees non-normales
+
+cor(SOMLIT_carbo_chemistry_surf$pCO2,SOMLIT_carbo_chemistry_surf$TpCO2, method="pearson") #0.94
+cor.test(SOMLIT_carbo_chemistry_surf$pCO2,SOMLIT_carbo_chemistry_surf$TpCO2, method="pearson") #test significatif
+
+###scatter plot : pCO2 vs NpCO2
+
+SOMLIT_carbo_chemistry_surf %>% 
+  ggplot() +
+  ggtitle("Scatter plot : pCO2 vs NpCO2") +
+  aes(x=pCO2, y=NpCO2) +
+  geom_point()
+#visuellement pas de relation lineaire apparente
+
+#calcul coef de Kendall : 
+shapiro.test(SOMLIT_carbo_chemistry_surf$NpCO2) #donnees non-normales
+
+cor(SOMLIT_carbo_chemistry_surf$pCO2,SOMLIT_carbo_chemistry_surf$TpCO2, method="kendall") #0.77
+cor.test(SOMLIT_carbo_chemistry_surf$pCO2,SOMLIT_carbo_chemistry_surf$TpCO2, method="kendall") #test significatif
+
+###scatter plot : TpCO2 vs NpCO2
+
+SOMLIT_carbo_chemistry_surf %>% 
+  ggplot() +
+  ggtitle("Scatter plot : TpCO2 vs NpCO2") +
+  aes(x=TpCO2, y=NpCO2) +
+  geom_point()
+#visuellement pas de relation apparente
+
+#calcul coef de Kendall : 
+cor.test(SOMLIT_carbo_chemistry_surf$TpCO2,SOMLIT_carbo_chemistry_surf$NpCO2, method="kendall")
+#correlation negative (coef negatif)
+
+##########################################################################################################################
+#pCO2 air (01-avril-1993- 31-12-2018) - daily
+
+pCO2_atmos_daily <- read_table("Atmospheric_CO2_Plateau_Rosa/WDCGG_20230314110158/txt/co2/daily/co2_prs_surface-insitu_64_9999-9999_daily - modif.txt", 
+                               col_types = cols(month = col_double(), 
+                                                day = col_double(), hour = col_double(), 
+                                                minute = col_double(), second = col_double()))
+
+pCO2_atmos_daily <- pCO2_atmos_daily %>% 
+  unite(col='datetime', c('year', 'month', 'day'), sep='-0') %>% 
+  mutate(datetime = format(datetime, format="%Y-%m-%d")) %>% 
+  mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>% 
+  mutate(value = case_when(value == -999.999 ~ NA_real_ , TRUE ~ value)) %>% 
+  mutate(value_unc = case_when(value_unc == -999.999 ~ NA_real_ , TRUE ~ value_unc)) %>% 
+  rename(pCO2_air = value, SE = value_unc)
+
+rm(pCO2_atmos_daily)
+
+#plot pCO2 air (ppm)
+plot(pCO2_atmos_daily$datetime, pCO2_atmos_daily$pCO2_air, type='l')
+
 
