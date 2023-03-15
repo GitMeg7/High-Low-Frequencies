@@ -1,3 +1,5 @@
+##Script papier Kapsenberg
+
 #Libraries
 library("readr")
 library("viridis")
@@ -22,11 +24,14 @@ library("lmtest")
 
 ##
 
-#import data
+#import data (0m et 50m)
 
-data_steeve <- read_csv("data_pH_steeve.csv")
-data_steeve <- data_steeve %>% filter(depth==0)
-data_steeve <- data_steeve %>% filter(sampling_date < "2016-01-05") #470 valeurs
+data_raw <- read_csv("data_pH_steeve.csv")
+data_raw_surf <- data_steeve %>% filter(depth==0)
+data_raw_prof <- data_steeve %>% filter(depth==50)
+
+data_0715 <- data_raw_surf %>% filter(sampling_date < "2016-01-05") #470 valeurs
+
 ##
 Mytheme <- function(size_labs = 6, face_font="plain", ...) {
   theme_bw() +
@@ -43,14 +48,14 @@ Mytheme <- function(size_labs = 6, face_font="plain", ...) {
     )
 }
 ##
-#essai script Kapsenberg
 
+#periode 2007-2015 (Kapsenberg)
 # Calculate anomalies
 # Surface
 # Calculate monthly means
 
 
-tmp2 <- ungroup(data_steeve) %>% 
+monthly_means_0m_0715 <- ungroup(data_0715) %>% 
   group_by(monthd) %>%
   summarise(
     Salinity_month = mean(salinity, na.rm = TRUE),
@@ -66,7 +71,7 @@ tmp2 <- ungroup(data_steeve) %>%
     Ndic_month = mean(dic, na.rm = TRUE))
 
 # Calculate anomalies
-ano <- left_join(ungroup(data_steeve), tmp2, by = "monthd") %>%
+ano_0m_0715 <- left_join(ungroup(data_0715), monthly_means_0m_0715, by = "monthd") %>%
   mutate(
     Salinity_ano = salinity - Salinity_month,
     Temperature_ano = temperature - Temperature_month,
@@ -94,17 +99,16 @@ var_list <-
     "Nta",
     "Ndic")
 
- lm.test <- vector("list", length(var_list))
+lm.test <- vector("list", length(var_list))
  
  for(i in seq_along(var_list)){
-     lm.test[[i]] <- lm(reformulate(var_list[i], "sampling_date"), data = ano)
+     lm.test[[i]] <- lm(reformulate(var_list[i], "sampling_date"), data = ano_0m_0715)
  }
 
-#cutoff_date <- "2016-01-01" #to limit regressions on complete years
 
 lms <- lapply(var_list, function(x) {
   summary(lm(substitute(i ~ decimal_date(sampling_date), list(i = as.name(x))), 
-             data = ano))
+             data = ano_0m_0715))
 })
 
 reg <- NULL
@@ -147,8 +151,8 @@ colnames(reg) <-
     "R2",
     "P value")
 row.names(reg) <- var_list
-reg_ano_1m <- reg
-slope_temp <- reg_ano_1m[2, 1]
+reg_ano_surf <- reg
+slope_temp <- reg_ano_surf[2, 1]
 
 # Regression and table anomalies
 var_list <-
@@ -166,7 +170,8 @@ var_list <-
     "Ndic_ano"
   )
 lms <- lapply(var_list, function(x) {
-  summary(lm(substitute(i ~ decimal_date(sampling_date), list(i = as.name(x))), data = ano))
+  summary(lm(substitute(i ~ decimal_date(sampling_date), list(i = as.name(x))), 
+             data = ano_0m_0715))
 })
 reg <- NULL
 for (i in 1:length(var_list)) {
@@ -207,27 +212,27 @@ colnames(reg) <-
     "R2",
     "P value")
 row.names(reg) <- var_list
-reg_ano_1m <- reg
-slope_temp <- reg_ano_1m[2, 1]
-slope_pH <- reg_ano_1m[7, 1]
+reg_ano_surf <- reg
+slope_temp <- reg_ano_surf[2, 1]
+slope_pH <- reg_ano_surf[7, 1]
 
 
 
 # Plot anomalies
 #Anomalies 0 m
-plot_temp <- ggplot(data = ano, aes(x = sampling_date, y = Temperature_ano), na.rm=TRUE) +
+plot_ano_temp <- ggplot(data = ano_0m_0715, aes(x = sampling_date, y = Temperature_ano), na.rm=TRUE) +
   scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_point(colour="blue", na.rm=TRUE, size=1) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
   labs(title=NULL,x="", y="Temp. (°C)") +
-  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano$Temperature_ano, na.rm=TRUE), 
+  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano_0m_0715$Temperature_ano, na.rm=TRUE), 
            label="", colour="black", size=9, fontface="plain") +
   coord_fixed() +
   Mytheme(size_labs = 8) +
   theme(axis.text.x=element_blank())
 ##
 
-plot_sal <- ggplot(data = ano, aes(x = sampling_date, y = Salinity_ano), na.rm=TRUE) +
+plot_ano_sal <- ggplot(data = ano_0m_0715, aes(x = sampling_date, y = Salinity_ano), na.rm=TRUE) +
   scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   scale_y_continuous(breaks=c(-2,-1,0,0.5)) +
   geom_point(colour="blue", na.rm=TRUE, size=1) + 
@@ -238,24 +243,24 @@ plot_sal <- ggplot(data = ano, aes(x = sampling_date, y = Salinity_ano), na.rm=T
   theme(axis.text.x=element_blank())
 ##
 
-plot_ph <- ggplot(data = ano, aes(x = sampling_date, y = pH_calc_ano), na.rm=TRUE) +
+plot_ano_ph <- ggplot(data = ano_0m_0715, aes(x = sampling_date, y = pH_calc_ano), na.rm=TRUE) +
   scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_point(colour="blue", na.rm=TRUE, size=1) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
   labs(title=NULL, x="", y=expression(paste(pH[T]," calculated"))) +
-  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano$pH_calc_ano, na.rm=TRUE), 
+  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano_0m_0715$pH_calc_ano, na.rm=TRUE), 
            label="", colour="black", size=9, fontface="plain") +
   coord_fixed() +
   Mytheme(size_labs = 8) +
   theme(axis.text.x=element_blank())
 ##
 
-plot_pCO2 <- ggplot(data = ano, aes(x = sampling_date, y = pCO2_ano), na.rm=TRUE) +
+plot_ano_pCO2 <- ggplot(data = ano_0m_0715, aes(x = sampling_date, y = pCO2_ano), na.rm=TRUE) +
   scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_point(colour="blue", na.rm=TRUE, size=1) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
   labs(title=NULL,x="",y=expression(paste(pCO[2], " (",mu, "atm)"))) +
-  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano$pCO2_ano, na.rm=TRUE), 
+  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano_0m_0715$pCO2_ano, na.rm=TRUE), 
            label="", colour="black", size=9, fontface="plain") +
   coord_fixed() +
   Mytheme(size_labs = 8) +
@@ -264,7 +269,7 @@ plot_pCO2 <- ggplot(data = ano, aes(x = sampling_date, y = pCO2_ano), na.rm=TRUE
 ########################################################################################
 #mm technique pour 2007-2022
 
-data_steeve2 <- data_steeve %>% filter(sampling_date < "2022-01-11") #774 valeurs
+data_0722 <- data_raw_surf %>% filter(sampling_date < "2022-01-11") #774 valeurs
 ##
 Mytheme <- function(size_labs = 6, face_font="plain", ...) {
   theme_bw() +
@@ -281,14 +286,14 @@ Mytheme <- function(size_labs = 6, face_font="plain", ...) {
     )
 }
 ##
-#essai script Kapsenberg
 
+#periode 2007-2022
 # Calculate anomalies
 # Surface
 # Calculate monthly means
 
 
-tmp3 <- ungroup(data_steeve2) %>% 
+monthly_means_0m_0722 <- ungroup(data_0722) %>% 
   group_by(monthd) %>%
   summarise(
     Salinity_month = mean(salinity, na.rm = TRUE),
@@ -304,7 +309,7 @@ tmp3 <- ungroup(data_steeve2) %>%
     Ndic_month = mean(dic, na.rm = TRUE))
 
 # Calculate anomalies
-ano2 <- left_join(ungroup(data_steeve2), tmp3, by = "monthd") %>%
+ano_0m_0722 <- left_join(ungroup(data_0722), monthly_means_0m_0722, by = "monthd") %>%
   mutate(
     Salinity_ano = salinity - Salinity_month,
     Temperature_ano = temperature - Temperature_month,
@@ -335,14 +340,14 @@ var_list2 <-
 lm.test2 <- vector("list", length(var_list2))
 
 for(i in seq_along(var_list2)){
-  lm.test2[[i]] <- lm(reformulate(var_list2[i], "sampling_date"), data = ano2)
+  lm.test2[[i]] <- lm(reformulate(var_list2[i], "sampling_date"), data = ano_0m_0722)
 }
 
 #cutoff_date <- "2016-01-01" #to limit regressions on complete years
 
 lms2 <- lapply(var_list2, function(x) {
   summary(lm(substitute(i ~ decimal_date(sampling_date), list(i = as.name(x))), 
-             data = ano2))
+             data = ano_0m_0722))
 })
 
 reg2 <- NULL
@@ -385,8 +390,8 @@ colnames(reg2) <-
     "R2",
     "P value")
 row.names(reg2) <- var_list2
-reg_ano_1m2 <- reg2
-slope_temp2 <- reg_ano_1m2[2, 1]
+reg_ano_surf2 <- reg2
+slope_temp2 <- reg_ano_surf2[2, 1]
 
 # Regression and table anomalies
 var_list2 <-
@@ -404,7 +409,7 @@ var_list2 <-
     "Ndic_ano"
   )
 lms2 <- lapply(var_list2, function(x) {
-  summary(lm(substitute(i ~ decimal_date(sampling_date), list(i = as.name(x))), data = ano2))
+  summary(lm(substitute(i ~ decimal_date(sampling_date), list(i = as.name(x))), data = ano_0m_0722))
 })
 reg2 <- NULL
 for (i in 1:length(var_list2)) {
@@ -445,27 +450,27 @@ colnames(reg2) <-
     "R2",
     "P value")
 row.names(reg2) <- var_list2
-reg_ano_1m2 <- reg2
-slope_temp2 <- reg_ano_1m2[2, 1]
-slope_pH2 <- reg_ano_1m2[7, 1]
+reg_ano_surf2 <- reg2
+slope_temp2 <- reg_ano_surf2[2, 1]
+slope_pH2 <- reg_ano_surf2[7, 1]
 
 
 
 # Plot anomalies
 #Anomalies 0 m
-plot_temp2 <- ggplot(data = ano2, aes(x = sampling_date, y = Temperature_ano), na.rm=TRUE) +
+plot_ano_temp2 <- ggplot(data = ano_0m_0722, aes(x = sampling_date, y = Temperature_ano), na.rm=TRUE) +
   scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_point(colour="blue", na.rm=TRUE, size=1) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
   labs(title=NULL,x="", y="Temp. (°C)") +
-  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano2$Temperature_ano, na.rm=TRUE), 
+  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano_0m_0722$Temperature_ano, na.rm=TRUE), 
            label="", colour="black", size=9, fontface="plain") +
   coord_fixed() +
   Mytheme(size_labs = 8) +
   theme(axis.text.x=element_blank())
 ##
 
-plot_sal2 <- ggplot(data = ano2, aes(x = sampling_date, y = Salinity_ano), na.rm=TRUE) +
+plot_ano_sal2 <- ggplot(data = ano_0m_0722, aes(x = sampling_date, y = Salinity_ano), na.rm=TRUE) +
   scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   scale_y_continuous(breaks=c(-2,-1,0,0.5)) +
   geom_point(colour="blue", na.rm=TRUE, size=1) + 
@@ -476,25 +481,27 @@ plot_sal2 <- ggplot(data = ano2, aes(x = sampling_date, y = Salinity_ano), na.rm
   theme(axis.text.x=element_blank())
 ##
 
-plot_ph2 <- ggplot(data = ano2, aes(x = sampling_date, y = pH_calc_ano), na.rm=TRUE) +
+plot_ano_ph2 <- ggplot(data = ano_0m_0722, aes(x = sampling_date, y = pH_calc_ano), na.rm=TRUE) +
   scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_point(colour="blue", na.rm=TRUE, size=1) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
   labs(title=NULL, x="", y=expression(paste(pH[T]," calculated"))) +
-  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano2$pH_calc_ano, na.rm=TRUE), 
+  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano_0m_0722$pH_calc_ano, na.rm=TRUE), 
            label="", colour="black", size=9, fontface="plain") +
   coord_fixed() +
   Mytheme(size_labs = 8) +
   theme(axis.text.x=element_blank())
 ##
 
-plot_pCO22 <- ggplot(data = ano2, aes(x = sampling_date, y = pCO2_ano), na.rm=TRUE) +
+plot_ano_pCO22 <- ggplot(data = ano_0m_0722, aes(x = sampling_date, y = pCO2_ano), na.rm=TRUE) +
   scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_point(colour="blue", na.rm=TRUE, size=1) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
   labs(title=NULL,x="",y=expression(paste(pCO[2], " (",mu, "atm)"))) +
-  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano2$pCO2_ano, na.rm=TRUE), 
+  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano_0m_0722$pCO2_ano, na.rm=TRUE), 
            label="", colour="black", size=9, fontface="plain") +
   coord_fixed() +
   Mytheme(size_labs = 8) +
   theme(axis.text.x=element_blank())
+
+
