@@ -234,14 +234,30 @@ T_air <- Azur_T_air_RAW %>%
   summarise(air_temp = mean(air_temp))
 
 
+####
 
-####################################################################################
 #fusion des 2 datasets Teau (°C) + Tair (°C) : DATA (2000-2021)
 #frequence par semaine
 
-DATA <- left_join(T_eau, T_air, by = "datetime")
+DATA <- left_join(T_eau, T_air, by = "datetime") %>% 
+  mutate(air_temp = case_when(air_temp < 0 ~ NA_real_ , TRUE ~ air_temp))
 
 
 
+##########################################################################################
 
+#scatterplot T_air VS T_eau
 
+DATA %>% 
+  ggplot(na.rm=TRUE) + 
+  ggtitle("Scatterplot : T_eau VS T_air") + 
+  aes(x=air_temp, y=water_temp) +
+  geom_point() + 
+  stat_smooth(method="lm", formula = y ~ x)
+#visiblement : relation lineaire
+
+reg_DATA <- lm(DATA$water_temp ~ DATA$air_temp)
+summary(reg_DATA)
+
+#calcul coef de correlation (Pearson) : 
+cor.test(DATA$water_temp, DATA$air_temp, method="pearson") #0.93, significatif
