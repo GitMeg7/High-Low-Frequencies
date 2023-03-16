@@ -19,9 +19,12 @@ library("tsoutliers")
 library("seacarb")
 library("lmodel2")
 library("lmtest")
+library("ggExtra")
+library("corrplot")
+library("ggcorrplot")
 
 
-####Data filled SAMIR (B > B+ quand B+ empty), mean profondeur 1 ? 3m
+####Data filled SAMIR (B > B+ quand B+ empty), mean profondeur 1 - 3m
 RAW_SOMLIT_1m <- readRDS("rh_B_Bplus_1m_mean.rds")
 ###tri
 SOMLIT_1m <- RAW_SOMLIT_1m %>%
@@ -2498,13 +2501,16 @@ cor.test(SOMLIT_carbo_chemistry_surf$TpCO2,SOMLIT_carbo_chemistry_surf$NpCO2, me
 #correlation negative (coef negatif)
 
 ###scatter plot : Temperature vs pCO2
+#avec marginal histograms
 
-SOMLIT_carbo_chemistry_surf %>% 
+p <- SOMLIT_carbo_chemistry_surf %>% 
   ggplot() +
   ggtitle("Scatter plot : Temperature vs pCO2") +
   aes(x=temperature, y=pCO2) +
   geom_point() +
-  stat_smooth(method="lm", formula = y ~ x)
+  stat_smooth(method="lm", formula = y ~ x) 
+
+ggExtra::ggMarginal(p, type = "histogram", color="grey")
 #visuellement : relation lineaire
 
 reg_temp_pCO2 <- lm(SOMLIT_carbo_chemistry_surf$pCO2 ~ SOMLIT_carbo_chemistry_surf$temperature)
@@ -2513,6 +2519,16 @@ summary(reg_temp_pCO2)
 #calcul coef de Pearson : 
 cor.test(SOMLIT_carbo_chemistry_surf$temperature,SOMLIT_carbo_chemistry_surf$pCO2, method="pearson") #0.88, significatif
 
+##
+#Correlogramme
+
+correlo_carbo_chem <- SOMLIT_carbo_chemistry_surf %>% 
+  select(year, salinity, temperature, pCO2, pH_calc, TpCO2, NpCO2)
+
+cor <- cor(correlo_carbo_chem[,-1], method = "pearson")
+
+ggcorrplot(cor, method = "circle", colors = c("#5472AE", "white", "#E9383F"),
+           outline.color = "white", ggtheme = ggplot2::theme_dark())
 
 ##########################################################################################################################
 #pCO2 air (01-avril-1993- 31-12-2018) - daily (ppm)
@@ -2536,4 +2552,5 @@ pCO2_atmos_daily <- pCO2_atmos_daily %>%
 plot(pCO2_atmos_daily$datetime, pCO2_atmos_daily$pCO2_air, type='l')
 
 ##################################################################################################################
+
 
