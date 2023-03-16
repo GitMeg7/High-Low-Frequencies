@@ -40,8 +40,10 @@ plot.ts(SOMLIT_1m %>% dplyr::select(-datetime))
 SOMLIT_1m <- SOMLIT_1m %>%
   dplyr::rename(temp_B = mean_temp_rhBplus_B,
                 sal_B = mean_sal_rhBplus_B,
-                O2_B = mean_oxy_mll_rhBplus_B) %>% #pour eviter les doublons
-  dplyr::filter(datetime < "2022-01-11 08:00:00")
+                O2_B = mean_oxy_mll_rhBplus_B) %>% 
+  mutate(datetime = format(datetime, format="%Y-%m-%d"))
+
+
 
 ###################################################################################
 #importation data point B 2022
@@ -54,11 +56,14 @@ Data_TS_2022 <- read_delim("PtB_data_TS_2022.csv", delim = ";",
 #3 NA
 Data_TS_2022 <- Data_TS_2022 %>% 
   dplyr::filter(Data_TS_2022$Depth == 1)
+Data_TS_2022 <- Data_TS_2022 %>% filter(Date > "2022-05-02") #pour eviter les doublons avec l annee 2022
 
 
 #select date, T et S
 Data_TS_2022 <- Data_TS_2022 %>%
-  dplyr::select(Date, T, S)
+  dplyr::select(Date, T, S) %>% 
+  mutate(Date = format(as.POSIXct.Date(Date), format = "%Y-%m-%d"))
+
 
 #select salinity > 35 (SAMIR)
 Data_TS_2022 <- dplyr::mutate(Data_TS_2022, S = case_when(S <= 35 ~ NA_real_ ,
@@ -68,6 +73,7 @@ Data_TS_2022 <- dplyr::mutate(Data_TS_2022, S = case_when(S <= 35 ~ NA_real_ ,
 
 #fusionner les 2 datasets
 #creation d'une 4e colonne
+
 Data_TS_2022 <- data.frame(datetime = Data_TS_2022$Date, 
                            temp_B = Data_TS_2022$T,
                            sal_B = Data_TS_2022$S,
