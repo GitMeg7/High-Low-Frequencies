@@ -40,7 +40,8 @@ plot.ts(SOMLIT_1m %>% dplyr::select(-datetime))
 SOMLIT_1m <- SOMLIT_1m %>%
   dplyr::rename(temp_B = mean_temp_rhBplus_B,
                 sal_B = mean_sal_rhBplus_B,
-                O2_B = mean_oxy_mll_rhBplus_B)
+                O2_B = mean_oxy_mll_rhBplus_B) %>% #pour eviter les doublons
+  dplyr::filter(datetime < "2022-01-11 08:00:00")
 
 ###################################################################################
 #importation data point B 2022
