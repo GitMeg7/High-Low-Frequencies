@@ -2464,10 +2464,7 @@ SOMLIT_carbo_chemistry_surf %>%
 reg_pCO2_TpCO2 <- lm(SOMLIT_carbo_chemistry_surf$TpCO2 ~ SOMLIT_carbo_chemistry_surf$pCO2)
 summary(reg_pCO2_TpCO2)
 
-#calcul coef de Pearson : 
-shapiro.test(SOMLIT_carbo_chemistry_surf$pCO2)
-shapiro.test(SOMLIT_carbo_chemistry_surf$TpCO2)
-#donnees non-normales
+#calcul coef de correlation (Pearson) : 
 
 cor(SOMLIT_carbo_chemistry_surf$pCO2,SOMLIT_carbo_chemistry_surf$TpCO2, method="pearson") #0.94
 cor.test(SOMLIT_carbo_chemistry_surf$pCO2,SOMLIT_carbo_chemistry_surf$TpCO2, method="pearson") #test significatif
@@ -2481,11 +2478,10 @@ SOMLIT_carbo_chemistry_surf %>%
   geom_point()
 #visuellement pas de relation lineaire apparente
 
-#calcul coef de Kendall : 
-shapiro.test(SOMLIT_carbo_chemistry_surf$NpCO2) #donnees non-normales
+#calcul coef de correlation (Pearson) : 
 
-cor(SOMLIT_carbo_chemistry_surf$pCO2,SOMLIT_carbo_chemistry_surf$TpCO2, method="kendall") #0.77
-cor.test(SOMLIT_carbo_chemistry_surf$pCO2,SOMLIT_carbo_chemistry_surf$TpCO2, method="kendall") #test significatif
+cor(SOMLIT_carbo_chemistry_surf$pCO2,SOMLIT_carbo_chemistry_surf$TpCO2, method="pearson") #0.94
+cor.test(SOMLIT_carbo_chemistry_surf$pCO2,SOMLIT_carbo_chemistry_surf$TpCO2, method="pearson") #test significatif
 
 ###scatter plot : TpCO2 vs NpCO2
 
@@ -2496,8 +2492,8 @@ SOMLIT_carbo_chemistry_surf %>%
   geom_point()
 #visuellement pas de relation apparente
 
-#calcul coef de Kendall : 
-cor.test(SOMLIT_carbo_chemistry_surf$TpCO2,SOMLIT_carbo_chemistry_surf$NpCO2, method="kendall")
+#calcul coef de correlation (Pearson) : 
+cor.test(SOMLIT_carbo_chemistry_surf$TpCO2,SOMLIT_carbo_chemistry_surf$NpCO2, method="pearson")
 #correlation negative (coef negatif)
 
 ###scatter plot : Temperature vs pCO2
@@ -2516,8 +2512,9 @@ ggExtra::ggMarginal(p, type = "histogram", color="grey")
 reg_temp_pCO2 <- lm(SOMLIT_carbo_chemistry_surf$pCO2 ~ SOMLIT_carbo_chemistry_surf$temperature)
 summary(reg_temp_pCO2)
 
-#calcul coef de Pearson : 
+#calcul coef de correlation (Pearson) : 
 cor.test(SOMLIT_carbo_chemistry_surf$temperature,SOMLIT_carbo_chemistry_surf$pCO2, method="pearson") #0.88, significatif
+
 
 ##
 #Correlogramme
@@ -2525,10 +2522,16 @@ cor.test(SOMLIT_carbo_chemistry_surf$temperature,SOMLIT_carbo_chemistry_surf$pCO
 correlo_carbo_chem <- SOMLIT_carbo_chemistry_surf %>% 
   select(year, salinity, temperature, pCO2, pH_calc, TpCO2, NpCO2)
 
+#visualisation des relations
+plot(correlo_carbo_chem[-correlo_carbo_chem$year])
+    
+#visualisation des correlations entre variables
 cor <- cor(correlo_carbo_chem[,-1], method = "pearson")
 
 ggcorrplot(cor, method = "circle", colors = c("#5472AE", "white", "#E9383F"),
            outline.color = "white", ggtheme = ggplot2::theme_dark())
+
+
 
 ##########################################################################################################################
 #pCO2 air (01-avril-1993- 31-12-2018) - daily (ppm)
