@@ -161,10 +161,45 @@ DATA %>%
 
 ######################################################################################
 
+#the effects of only temperature
+#calcul de TpCO2 at Tobs
+#formula : TpCO2 = pCO2mean * exp[0.0423(Tobs - Tmean)]
+
+#calcul de pCO2mean :
+pCO2mean <- mean(DATA$pCO2_water, na.rm=T) #402.03
+
+#calcul de TpCO2 :
+
+TpCO2 <- DATA %>% 
+  dplyr::mutate(TpCO2 = pCO2mean * exp(0.0423*(temperature-Tmean)))
+
+DATA <- DATA %>% 
+  dplyr::mutate(TpCO2 = pCO2mean * exp(0.0423*(temperature-Tmean)))
+##
+
+######################################################################################
+
+###Calcul des deltas
+
+#calcul delta pCO2(T) = pCO2obs - pCO2(N)
+delta_pCO2_T <- DATA$pCO2_water - DATA$T_norm_pCO2_sw
+
+#Calcul pCO2(bio) = pCO2obs - pCO2(T-driven) ou TpCO2
+delta_pCO2_bio <- DATA$pCO2_water - DATA$TpCO2
+
+DATA <- DATA %>% 
+  dplyr::mutate(delta_pCO2_T = pCO2_water - T_norm_pCO2_sw,
+                delta_pCO2_bio = pCO2_water - TpCO2)
+##
 
 
+#plot
+##Figure 6 DE CARLO :
 
-
-
+DATA %>% 
+  ggplot() + 
+  ggtitle("Temperature and biological effects on pCO2 variations") +
+  geom_point(aes(x=sampling_date, y=delta_pCO2_T), col='darkgreen', size=0.9) +
+  geom_point(aes(x=sampling_date, y=delta_pCO2_bio), col='#EED153', size=0.9)
 
 
