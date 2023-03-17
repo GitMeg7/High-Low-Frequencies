@@ -39,6 +39,7 @@ SOMLIT_carbo_chemistry_surf <- SOMLIT_carbo_chemistry %>%
   dplyr::filter(depth==0) %>% 
   select(sampling_date, salinity, temperature, ta, dic, NO2, NO3, Chla, pH_calc, pCO2) %>% 
   rename(pCO2_water = pCO2) %>% 
+  filter(sampling_date <= "2018-12-31") %>% 
   mutate(sampling_date = as.character(sampling_date))
 SOMLIT_carbo_chemistry_50m <- SOMLIT_carbo_chemistry %>% 
   dplyr::filter(depth==50)
@@ -80,23 +81,90 @@ DATA %>%
   ggtitle("Air pCO2 (ppm) according to time ") +
   aes(x=sampling_date, y=pCO2_air) +
   geom_point()
-    
-#scatterplot pCO2air VS pCO2water
+##
+
+
+#pCO2 water en uatm
+#pCO2 air en ppm
+#convertir les valeurs de pCO2 air en uatm
+
+#package SeaCarb (vapress + p2xCO2)
+
+#vapress : vapeur pressure of seawater in atm
+
+vapress_sw <- vapress(S=DATA$salinity, T=DATA$temperature, form="d2007")
+
+DATA <- DATA %>% 
+  mutate(vapress_sw = vapress(S=salinity, T=temperature, form="d2007"))
+
+#pCO2 ppm en pCO2 uatm, formule : xCO2 = pCO2 / (Patm - pH2O)
+
+pCO2_air_uatm <- DATA$pCO2_air * (1-vapress_sw) #Patm en surface = 1
+
+DATA <- DATA %>% 
+  mutate(pCO2_air_uatm = pCO2_air * (1-vapress_sw))
+
+##
+
+#plot pCO2 air (uatm)
 
 DATA %>% 
   ggplot() +
-  ggtitle("Scatterplot : pCO2water VS pCO2air") +
-  aes(x=pCO2_air, y=pCO2_water) +
-  geom_point() +
-  geom_smooth(method="lm", formula = y ~ x)
+  ggtitle("Air pCO2 (uatm) according to time") +
+  aes(x=sampling_date, y=pCO2_air_uatm) +
+  geom_point()
+##
 
 
-reg_DATA <- lm(DATA$pCO2_water ~ DATA$pCO2_air) #pas significatif
-summary(reg_DATA)
+######################################################################################
+#calcul de T-normalized pCO2 seawater ou pCO2(N) = non-temperature effects on pCO2water
+#formula : pCO2(N) = pCO2w obs * e(0.0423*Tmean-Tobs) = NpCO2 de Kapsenber
 
-#calcul coef de correlation (Pearson) : 
-cor.test(DATA$pCO2_water, DATA$pCO2_air, method="pearson") #negatif, pas significatif
-    
+#calcul de Tmean :
+Tmean <- mean(DATA$temperature, na.rm=T) #18.70
+
+T_norm_pCO2_sw <- DATA %>% 
+  dplyr::mutate(T_norm_pCO2_sw = pCO2_water * exp(0.0423*(Tmean-temperature)))
+
+DATA <- DATA %>% 
+  dplyr::mutate(T_norm_pCO2_sw = pCO2_water * exp(0.0423*(Tmean-temperature)))
+
+##
+
+##Figure 5.a DE CARLO :
+
+DATA %>% 
+  ggplot() +
+  ggtitle("pCO2 at Point B : 2007-2018") +
+  geom_line(aes(x=sampling_date, y=pCO2_air_uatm), col='darkgreen') +
+  geom_point(aes(x=sampling_date, y=pCO2_water), col='blue', size=0.8) +
+  geom_line(aes(x=sampling_date, y=T_norm_pCO2_sw), col='red')
+
+##
+
+######################################################################################
+#annual cycle of pCO2 (2007-2018)
+
+##Figure 5.b DE CARLO :
+
+DATA %>% 
+  ggplot() +
+  geom_line(aes(x= as.Date(yday(sampling_date), "1970-01-01"), y=pCO2_water, 
+                group = factor(year(sampling_date)), 
+                color = factor(year(sampling_date))), size = 0.75) +
+  scale_colour_viridis_d() +
+  scale_x_date(date_breaks="months", date_labels="%b", name = "") +
+  labs(x="Months",colour="") +
+  theme_bw() +
+  scale_y_continuous(name = "pCO2 water (uatm)") 
+##
+
+######################################################################################
+
+
+
+
+
 
 
 
