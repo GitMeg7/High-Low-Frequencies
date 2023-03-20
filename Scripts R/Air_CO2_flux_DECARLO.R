@@ -1,5 +1,5 @@
 ####article DE CARLO
-#CO2 flux
+#CO2 flux 2007-2018
 
 #Libraries
 library("readr")
@@ -25,9 +25,12 @@ library("lmtest")
 library("ggExtra")
 library("corrplot")
 library("ggcorrplot")
+library("LakeMetabolizer")
 
 ##
+######################################################################################
 
+###Importation des donnees
 ##Data pCO2 water
 #a partir de janvier 2007 jusqu'a janvier 2022
 
@@ -69,10 +72,145 @@ pCO2_atmos <- data.frame(sampling_date = as.character(pCO2_atmos_daily_raw$datet
 
 DATA <- left_join(SOMLIT_carbo_chemistry_surf, pCO2_atmos, by = as.character("sampling_date"))
 
+
+##
+
+##Data wind speed (10m)
+#importation data wind speed (10m) Azur buoy (1999-2022)
+#measured at 3.80 m height, then roughly extrapolated to 10 m by adding 10%
+#unity : m/s (1999-2021)
+#unity : knot (2022)
+#2022 : que le mois de janvier
+#observations toutes les heures
+
+Azur_wind_1999 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_1999.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2000 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2000.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2001 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2001.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2002 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2002.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2003 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2003.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2004 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2004.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2005 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2005.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2006 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2006.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2007 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2007.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2008 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2008.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2009 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2009.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2010 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2010.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2011 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2011.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2011 <- Azur_wind_2011 %>% rename(date=X1, `wind speed`=X2)
+
+Azur_wind_2012 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2012.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2012 <- Azur_wind_2012 %>% rename(date=X1, `wind speed`=X2)
+
+Azur_wind_2013 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2013.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2013 <- Azur_wind_2013 %>% rename(date=X1, `wind speed`=X2)
+
+Azur_wind_2014 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2014.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2014 <- Azur_wind_2014 %>% rename(date=X1, `wind speed`=X2)
+
+Azur_wind_2015 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2015.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2015 <- Azur_wind_2015 %>% rename(date=X1, `wind speed`=X2)
+
+
+Azur_wind_2016 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2016.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2016 <- Azur_wind_2016 %>% rename(date=X1, `wind speed`=X2)
+
+Azur_wind_2017 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2017.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2017 <- Azur_wind_2017 %>% rename(date=X1, `wind speed`=X2)
+
+Azur_wind_2018 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2018.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2018 <- Azur_wind_2018 %>% rename(date=X1, `wind speed`=X2)
+
+Azur_wind_2019 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2019.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2019 <- Azur_wind_2019 %>% rename(date=X1, `wind speed`=X2)
+
+Azur_wind_2020 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2020.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2020 <- Azur_wind_2020 %>% rename(date=X1, `wind speed`=X2)
+
+
+Azur_wind_2021 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FXI_2021.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2021 <- Azur_wind_2021 %>% rename(date=X1, `wind speed`=X2)
+
+#convert en m/s : 1 knot = 0.514444681 m/s
+
+Azur_wind_2022 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FXI_2022.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2022 <- Azur_wind_2022 %>% reframe (date=X1, `wind speed` = case_when(X2 == -9999  ~ NA_real_ , 
+                                                                                TRUE ~ (X2*0.514444681)))
+
+#fusion (2007-2018) : Azur_wind_RAW
+
+Azur_wind_RAW <- rbind(Azur_wind_2007, Azur_wind_2008, Azur_wind_2009, Azur_wind_2010,
+                       Azur_wind_2011, Azur_wind_2012, Azur_wind_2013, Azur_wind_2014,
+                       Azur_wind_2015, Azur_wind_2016, Azur_wind_2016, Azur_wind_2017,
+                       Azur_wind_2018)
+
+#moyenne wind speed par jour :
+
+Azur_wind_daily <- Azur_wind_RAW %>% 
+  mutate(day = format(date, format="%Y-%m-%d")) %>% 
+  group_by(day) %>% 
+  mutate(mean_daily = mean(`wind speed`)) %>% 
+  reframe(sampling_date=day, wind_mean_daily = mean_daily) %>% 
+  select(-day)
+
+Azur_wind_daily <- distinct(Azur_wind_daily)
+
+#integration azur_wind_daily avec DATA
+
+DATA <- left_join(DATA, Azur_wind_daily, by = as.character("sampling_date"))
+
 DATA <- DATA %>% 
   mutate(sampling_date = as.POSIXct(sampling_date))
 
-##
+
+############################################################################################
 
 #plot pCO2 air (ppm)
 
@@ -201,5 +339,56 @@ DATA %>%
   ggtitle("Temperature and biological effects on pCO2 variations") +
   geom_point(aes(x=sampling_date, y=delta_pCO2_T), col='darkgreen', size=0.9) +
   geom_point(aes(x=sampling_date, y=delta_pCO2_bio), col='#EED153', size=0.9)
+##
+
+######################################################################################
+
+###Fluxes of CO2
+
+#calcul delta pCO2 (uatm) = pCO2sw - pCO2air
+
+delta_pCO2 <- DATA$pCO2_water - DATA$pCO2_air_uatm
+DATA <- DATA %>% mutate(delta_pCO2 = pCO2_water - pCO2_air_uatm)
+
+#calcul du Schmidt number (SC)
+#formula : Sc = 2073.1 - (125.62*T) + (3.6276 * T^2) - (0.043219 * T^3)
+ Sc <- 2073.1 - (125.62*DATA$temperature) + (3.6276 * DATA$temperature^2) - (0.043219 * DATA$temperature^3)
+ DATA <- DATA %>% mutate(Sc = 2073.1 - (125.62*temperature) + (3.6276 * temperature^2) - (0.043219 * temperature^3))
+
+#utilisation de getSchmidt vs Sc article : 
+getSchmidt(temperature=25, gas="CO2") #498.8125
+
+2073.1 - (125.62*25) + (3.6276 * 25^2) - (0.043219 * 25^3) #Sc = 524.5531
+
+#calcul de gaz transfert velocity K (m.s-1)
+#formula : K = 0.266 * U^2 avec U : wind velocity at 10m
+
+K600 <- 0.266 * DATA$wind_mean_daily^2
+DATA <- DATA %>% mutate(K600 = 0.266*wind_mean_daily^2)
+
+#calcul de k (m.s-1)
+#formula : k = K * (Sc / 600)^-1/2
+
+#pour que Sc et K600 soient de la mm longueur
+k <- K600 * (Sc/600)^(-1/2)
+DATA <- DATA %>% mutate(k = K600 * (Sc/600)^(-1/2))
+
+#on part du principe que alpha = 2.912*10^-2 (unity : mmol.m-3.atm)
+#calcul de F
+#formula : F = k * alpha * deltapCO2
+
+F <- k * (2.912*10^(-2)) * delta_pCO2
+
+DATA <- DATA %>% mutate(Flux_CO2 = k * (2.912*10^(-2)) * delta_pCO2)
+
+
+#plot flux CO2 air-eau
+DATA %>% 
+  ggplot() +
+  aes(x=sampling_date, y=Flux_CO2*10^(-3)) +
+  geom_point(size=1) + 
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Flux (mol C/m²/day)") +
+  ggtitle("Days CO2 fluxes ocean-atmosphere")
 
 
