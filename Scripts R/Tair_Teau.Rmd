@@ -1,0 +1,263 @@
+---
+title: "Teau VS Tair"
+author: "Mégane"
+date: "2023-03-20"
+output: html_document
+---
+
+```{r libraries, echo=FALSE, warning=FALSE, message=FALSE}
+library("readr")
+library("viridis")
+library("scales")
+library("lubridate")
+library("gsignal")
+library("FactoMineR")
+library("factoextra")
+library("gplots")
+library("heatwaveR")
+library("dplyr")
+library("imputeTS")
+library("Metrics")
+library("tidyr")
+library("tseries")
+library("forecast")
+library("tsDyn")
+library("tsoutliers")
+library("seacarb")
+library("lmodel2")
+library("lmtest")
+library("ggExtra")
+library("corrplot")
+library("ggcorrplot")
+```
+
+## Relationship between air and water temperature
+
+```{r importation data - data eau, echo=FALSE, warning=FALSE, message=FALSE}
+
+options(dplyr.summarise.inform = FALSE)
+
+#Data filled SAMIR (B > B+ quand B+ empty), mean profondeur 1 - 3m
+RAW_SOMLIT_1m <- readRDS("../Data/rh_B_Bplus_1m_mean.rds")
+
+#tri
+SOMLIT_1m <- RAW_SOMLIT_1m %>%
+  dplyr::select(datetime, mean_temp_rhBplus_B, mean_sal_rhBplus_B, mean_oxy_mll_rhBplus_B)
+
+SOMLIT_1m = SOMLIT_1m %>% arrange(datetime)
+
+#Rename
+SOMLIT_1m <- SOMLIT_1m %>%
+  dplyr::rename(temp_B = mean_temp_rhBplus_B,
+                sal_B = mean_sal_rhBplus_B,
+                O2_B = mean_oxy_mll_rhBplus_B) %>% 
+  mutate(datetime = format(datetime, format="%Y-%m-%d"))
+
+####
+#Importation data point B 2022
+Data_TS_2022 <- read_delim("../Data/PtB_data_TS_2022.csv", delim = ";", 
+                           escape_double = FALSE, 
+                           col_types = cols(Date = col_date(format = "%d/%m/%Y")), 
+                           trim_ws = TRUE)
+#select depth = 1m
+#46 observations
+#3 NA
+Data_TS_2022 <- Data_TS_2022 %>% 
+  dplyr::filter(Data_TS_2022$Depth == 1)
+Data_TS_2022 <- Data_TS_2022 %>% filter(Date > "2022-05-02") #pour eviter les doublons avec l annee 2022
+
+
+#select date, T et S
+Data_TS_2022 <- Data_TS_2022 %>%
+  dplyr::select(Date, T, S) %>% 
+  mutate(Date = format(as.POSIXct.Date(Date), format = "%Y-%m-%d"))
+
+
+#select salinity > 35 (SAMIR)
+Data_TS_2022 <- dplyr::mutate(Data_TS_2022, S = case_when(S <= 35 ~ NA_real_ ,
+                                                          TRUE ~ S))
+#valeurs de salinite tres faibles en juillet/aout
+#enlever outliers ?
+
+#fusionner les 2 datasets
+#creation d'une 4e colonne
+
+Data_TS_2022 <- data.frame(datetime = Data_TS_2022$Date, 
+                           temp_B = Data_TS_2022$T,
+                           sal_B = Data_TS_2022$S,
+                           O2_B = NA)
+#remplacer les 999999 par NA
+Data_TS_2022 <- dplyr::mutate(Data_TS_2022, 
+                              temp_B = case_when(temp_B >= 999 ~ NA_real_ ,TRUE ~ temp_B),
+                              sal_B = case_when(sal_B >= 999 ~ NA_real_ ,TRUE ~ sal_B))
+
+##data Teau
+T_eau <- rbind(SOMLIT_1m, Data_TS_2022)
+
+#tri data 2000-2021 (pour avoir les annees completes chez les 2 datasets) + datetime au format posixct
+
+T_eau <- T_eau %>% 
+  dplyr::filter(datetime >= "2000-01-05", datetime < "2022-01-11") %>% 
+  select(-O2_B, -sal_B) %>% 
+  mutate(datetime = as.POSIXct(format(datetime, format = "%Y-%m-%d"))) %>% 
+  rename(water_temp = temp_B)
+  
+```
+
+```{r importation data - data air, echo=FALSE, warning=FALSE, message=FALSE}
+#importation data T° Air Azur buoy (1999-2022)
+#observation toutes les heures 
+#convert en °C : °C = K - 273.15
+
+Azur_T_1999 <- read_delim("../Data/T_Air_Azur_buoy/Azur_T_1999.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_1999 <- Azur_T_1999 %>% reframe (date = Azur_T_1999$date, `air temperature`= `air temperature` - 273.15)
+
+Azur_T_2000 <- read_delim("../Data/T_Air_Azur_buoy/Azur_T_2000.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2000 <- Azur_T_2000 %>% reframe (date = Azur_T_2000$date, `air temperature`= `air temperature` - 273.15)
+
+Azur_T_2001 <- read_delim("../Data/T_Air_Azur_buoy/Azur_T_2001.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2001 <- Azur_T_2001 %>% reframe (date = Azur_T_2001$date, `air temperature`= `air temperature` - 273.15)
+
+Azur_T_2002 <- read_delim("../Data/T_Air_Azur_buoy/Azur_T_2002.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2002 <- Azur_T_2002 %>% reframe (date = Azur_T_2002$date, `air temperature`= `air temperature` - 273.15)
+
+Azur_T_2003 <- read_delim("../Data/T_Air_Azur_buoy/Azur_T_2003.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2003 <- Azur_T_2003 %>% reframe (date = Azur_T_2003$date, `air temperature`= `air temperature` - 273.15)
+
+Azur_T_2004 <- read_delim("../Data/T_Air_Azur_buoy/Azur_T_2004.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2004 <- Azur_T_2004 %>% reframe (date = Azur_T_2004$date, `air temperature`= `air temperature` - 273.15)
+
+Azur_T_2005 <- read_delim("../Data/T_Air_Azur_buoy/Azur_T_2005.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2005 <- Azur_T_2005 %>% reframe (date = Azur_T_2005$date, `air temperature`= `air temperature` - 273.15)
+
+Azur_T_2006 <- read_delim("../Data/T_Air_Azur_buoy/Azur_T_2006.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2006 <- Azur_T_2006 %>% reframe (date = Azur_T_2006$date, `air temperature`= `air temperature` - 273.15)
+
+Azur_T_2007 <- read_delim("../Data/T_Air_Azur_buoy/Azur_T_2007.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2007 <- Azur_T_2007 %>% reframe (date = Azur_T_2007$date, `air temperature`= `air temperature` - 273.15)
+
+Azur_T_2008 <- read_delim("../Data/T_Air_Azur_buoy/Azur_T_2008.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2008 <- Azur_T_2008 %>% reframe (date = Azur_T_2008$date, `air temperature`= `air temperature` - 273.15)
+
+Azur_T_2009 <- read_delim("../Data/T_Air_Azur_buoy/Azur_T_2009.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2009 <- Azur_T_2009 %>% reframe (date = Azur_T_2009$date, `air temperature`= `air temperature` - 273.15)
+
+Azur_T_2010 <- read_delim("../Data/T_Air_Azur_buoy/Azur_T_2010.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2010 <- Azur_T_2010 %>% reframe (date = Azur_T_2010$date, `air temperature`= `air temperature` - 273.15)
+
+Azur_T_2011 <- read_delim("../Data/T_Air_Azur_buoy/Azur_T_2011.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2011 <- Azur_T_2011 %>% reframe (date = Azur_T_2011$date, `air temperature`= `air temperature` - 273.15)
+
+Azur_T_2012 <- read_delim("../Data/T_Air_Azur_buoy/Azur_T_2012.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2012 <- Azur_T_2012 %>% reframe (date = Azur_T_2012$date, `air temperature`= `air temperature` - 273.15)
+
+Azur_T_2013 <- read_delim("../Data/T_Air_Azur_buoy/Azur_T_2013.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2013 <- Azur_T_2013 %>% reframe (date = Azur_T_2013$date, `air temperature`= `air temperature` - 273.15)
+
+Azur_T_2014 <- read_delim("../Data/T_Air_Azur_buoy/Azur_T_2014.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2014 <- Azur_T_2014 %>% reframe (date = Azur_T_2014$date, `air temperature`= `air temperature` - 273.15)
+
+Azur_T_2015 <- read_delim("../Data/T_Air_Azur_buoy/Azur_T_2015.dat", 
+                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Azur_T_2015 <- Azur_T_2015 %>% reframe (date = Azur_T_2015$date, `air temperature`= `air temperature` - 273.15)
+
+#passage en degrés (2016-2022)
+
+Azur_T_2016 <- read_delim("../Data/T_Air_Azur_buoy/Azur_T_2016.dat", 
+                          delim = ";", escape_double = FALSE, col_names = FALSE, 
+                          trim_ws = TRUE)
+Azur_T_2016 <- Azur_T_2016 %>% rename(date=X1, `air temperature`=X2)
+
+Azur_T_2017 <- read_delim("../Data/T_Air_Azur_buoy/Azur_T_2017.dat", 
+                          delim = ";", escape_double = FALSE, col_names = FALSE, 
+                          trim_ws = TRUE)
+Azur_T_2017 <- Azur_T_2017 %>% rename(date=X1, `air temperature`=X2)
+
+Azur_T_2018 <- read_delim("../Data/T_Air_Azur_buoy/Azur_T_2018.dat", 
+                          delim = ";", escape_double = FALSE, col_names = FALSE, 
+                          trim_ws = TRUE)
+Azur_T_2018 <- Azur_T_2018 %>% rename(date=X1, `air temperature`=X2)
+
+Azur_T_2019 <- read_delim("../Data/T_Air_Azur_buoy/Azur_T_2019.dat", 
+                          delim = ";", escape_double = FALSE, col_names = FALSE, 
+                          trim_ws = TRUE)
+Azur_T_2019 <- Azur_T_2019 %>% rename(date=X1, `air temperature`=X2)
+
+Azur_T_2020 <- read_delim("../Data/T_Air_Azur_buoy/Azur_T_2020.dat", 
+                          delim = ";", escape_double = FALSE, col_names = FALSE, 
+                          trim_ws = TRUE)
+Azur_T_2020 <- Azur_T_2020 %>% rename(date=X1, `air temperature`=X2)
+
+Azur_T_2021 <- read_delim("../Data/T_Air_Azur_buoy/Azur_T_2021.dat", 
+                          delim = ";", escape_double = FALSE, col_names = FALSE, 
+                          trim_ws = TRUE)
+Azur_T_2021 <- Azur_T_2021 %>% rename(date=X1, `air temperature`=X2)
+
+Azur_T_2022 <- read_delim("../Data/T_Air_Azur_buoy/Azur_T_2022.dat", 
+                          delim = ";", escape_double = FALSE, col_names = FALSE, 
+                          trim_ws = TRUE)
+Azur_T_2022 <- Azur_T_2022 %>% rename(date=X1, `air temperature`=X2)
+
+
+
+#fusion des 23 tables : Azur_T_air_RAW
+#mix entre Kelvin et Degrés, à changer
+
+Azur_T_air_RAW <- rbind(Azur_T_1999, Azur_T_2000, Azur_T_2001, Azur_T_2003, Azur_T_2004, Azur_T_2005,
+                        Azur_T_2006, Azur_T_2007, Azur_T_2008, Azur_T_2009, Azur_T_2010, Azur_T_2011,
+                        Azur_T_2012, Azur_T_2013, Azur_T_2014, Azur_T_2015, Azur_T_2016, Azur_T_2017,
+                        Azur_T_2018, Azur_T_2019, Azur_T_2020, Azur_T_2021, Azur_T_2022)
+
+#datetime au format posixct
+Azur_T_air_RAW <- Azur_T_air_RAW %>% 
+  dplyr :: filter(date >= "2000-01-05" & date < "2022-01-01") %>% 
+  mutate(date = as.POSIXct(format(date, format = "%Y-%m-%d"))) %>%  
+  rename(datetime = date, air_temp = `air temperature`)
+
+#moyenne des air_temp par jour
+
+T_air <- Azur_T_air_RAW %>% 
+  group_by(datetime) %>% 
+  summarise(air_temp = mean(air_temp))
+
+####
+
+```
+
+```{r fusion data : DATA, echo=FALSE}
+#fusion des 2 datasets Teau (°C) + Tair (°C) : DATA (2000-2021)
+#frequence par semaine
+
+DATA <- left_join(T_eau, T_air, by = "datetime") %>% 
+  mutate(air_temp = case_when(air_temp < 0 ~ NA_real_ , TRUE ~ air_temp))
+
+```
+
+## Analyses
+
+Ici, nous faisons un plot (T°Eau \~ T°Air) et remarquons une relation linéaire
+
+```{r scatterplot T_air VS T_eau, echo=FALSE, warning=FALSE}
+DATA %>% 
+  ggplot(na.rm=TRUE) + 
+  ggtitle("Scatterplot : T_eau VS T_air") + 
+  aes(x=air_temp, y=water_temp) +
+  geom_point() + 
+  stat_smooth(method="lm", formula = y ~ x)
+```

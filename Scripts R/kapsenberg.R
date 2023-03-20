@@ -27,8 +27,8 @@ library("lmtest")
 #import data (0m et 50m)
 
 data_raw <- read_csv("data_pH_steeve.csv")
-data_raw_surf <- data_steeve %>% filter(depth==0)
-data_raw_prof <- data_steeve %>% filter(depth==50)
+data_raw_surf <- data_raw %>% filter(depth==0)
+data_raw_prof <- data_raw %>% filter(depth==50)
 
 data_0715 <- data_raw_surf %>% filter(sampling_date < "2016-01-05") #470 valeurs
 

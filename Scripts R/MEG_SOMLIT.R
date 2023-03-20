@@ -2347,7 +2347,6 @@ Azur_wind_2022 <- Azur_wind_2022 %>% reframe (date=X1, `wind speed` = case_when(
                                                                                 TRUE ~ (X2*0.514444681)))
 
 #fusion des 23 tables : Azur_wind_RAW
-#mix entre m/s et knots, a changer
 
 Azur_wind_RAW <- rbind(Azur_wind_1999, Azur_wind_2000, Azur_wind_2001, Azur_wind_2002,
                        Azur_wind_2003, Azur_wind_2004, Azur_wind_2005, Azur_wind_2006,
