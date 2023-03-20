@@ -1,7 +1,13 @@
-####article DE CARLO
-#CO2 flux 2007-2018
+---
+title: "CO2_Flux"
+author: "Mégane"
+date: "2023-03-20"
+output: html_document
+---
 
-#Libraries
+## Air--Sea CO2 Flux (2007-2018)
+
+```{r libraries, echo=FALSE, warning=FALSE, message=FALSE}
 library("readr")
 library("viridis")
 library("scales")
@@ -26,15 +32,15 @@ library("ggExtra")
 library("corrplot")
 library("ggcorrplot")
 library("LakeMetabolizer")
+```
 
-##
-######################################################################################
+```{r importation data, echo=FALSE, warning=FALSE, message=FALSE}
 
 ###Importation des donnees
 ##Data pCO2 water
 #a partir de janvier 2007 jusqu'a janvier 2022
 
-SOMLIT_carbo_chemistry <- read_csv("data_pH_steeve.csv")
+SOMLIT_carbo_chemistry <- read_csv("../Data/data_pH_steeve.csv")
 
 #differenciation surface / 50m
 
@@ -51,7 +57,7 @@ SOMLIT_carbo_chemistry_50m <- SOMLIT_carbo_chemistry %>%
 #Data pCO2 air
 #pCO2 air (01-avril-1993- 31-12-2018) - daily (ppm)
 
-pCO2_atmos_daily_raw <- read_table("Atmospheric_CO2_Plateau_Rosa/WDCGG_20230314110158/txt/co2/daily/co2_prs_surface-insitu_64_9999-9999_daily - modif.txt", 
+pCO2_atmos_daily_raw <- read_table("../Data/Atmospheric_CO2_Plateau_Rosa/WDCGG_20230314110158/txt/co2/daily/co2_prs_surface-insitu_64_9999-9999_daily - modif.txt", 
                                col_types = cols(month = col_double(), 
                                                 day = col_double(), hour = col_double(), 
                                                 minute = col_double(), second = col_double()))
@@ -72,9 +78,9 @@ pCO2_atmos <- data.frame(sampling_date = as.character(pCO2_atmos_daily_raw$datet
 
 DATA <- left_join(SOMLIT_carbo_chemistry_surf, pCO2_atmos, by = as.character("sampling_date"))
 
+```
 
-##
-
+```{r data wind speed, echo=FALSE, warning=FALSE, message=FALSE}
 ##Data wind speed (10m)
 #importation data wind speed (10m) Azur buoy (1999-2022)
 #measured at 3.80 m height, then roughly extrapolated to 10 m by adding 10%
@@ -83,102 +89,102 @@ DATA <- left_join(SOMLIT_carbo_chemistry_surf, pCO2_atmos, by = as.character("sa
 #2022 : que le mois de janvier
 #observations toutes les heures
 
-Azur_wind_1999 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_1999.dat", 
+Azur_wind_1999 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_1999.dat", 
                              delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-Azur_wind_2000 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2000.dat", 
+Azur_wind_2000 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2000.dat", 
                              delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-Azur_wind_2001 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2001.dat", 
+Azur_wind_2001 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2001.dat", 
                              delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-Azur_wind_2002 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2002.dat", 
+Azur_wind_2002 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2002.dat", 
                              delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-Azur_wind_2003 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2003.dat", 
+Azur_wind_2003 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2003.dat", 
                              delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-Azur_wind_2004 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2004.dat", 
+Azur_wind_2004 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2004.dat", 
                              delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-Azur_wind_2005 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2005.dat", 
+Azur_wind_2005 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2005.dat", 
                              delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-Azur_wind_2006 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2006.dat", 
+Azur_wind_2006 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2006.dat", 
                              delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-Azur_wind_2007 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2007.dat", 
+Azur_wind_2007 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2007.dat", 
                              delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-Azur_wind_2008 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2008.dat", 
+Azur_wind_2008 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2008.dat", 
                              delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-Azur_wind_2009 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2009.dat", 
+Azur_wind_2009 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2009.dat", 
                              delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-Azur_wind_2010 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2010.dat", 
+Azur_wind_2010 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2010.dat", 
                              delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-Azur_wind_2011 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2011.dat", 
+Azur_wind_2011 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2011.dat", 
                              delim = ";", escape_double = FALSE, col_names = FALSE, 
                              trim_ws = TRUE)
 Azur_wind_2011 <- Azur_wind_2011 %>% rename(date=X1, `wind speed`=X2)
 
-Azur_wind_2012 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2012.dat", 
+Azur_wind_2012 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2012.dat", 
                              delim = ";", escape_double = FALSE, col_names = FALSE, 
                              trim_ws = TRUE)
 Azur_wind_2012 <- Azur_wind_2012 %>% rename(date=X1, `wind speed`=X2)
 
-Azur_wind_2013 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2013.dat", 
+Azur_wind_2013 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2013.dat", 
                              delim = ";", escape_double = FALSE, col_names = FALSE, 
                              trim_ws = TRUE)
 Azur_wind_2013 <- Azur_wind_2013 %>% rename(date=X1, `wind speed`=X2)
 
-Azur_wind_2014 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2014.dat", 
+Azur_wind_2014 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2014.dat", 
                              delim = ";", escape_double = FALSE, col_names = FALSE, 
                              trim_ws = TRUE)
 Azur_wind_2014 <- Azur_wind_2014 %>% rename(date=X1, `wind speed`=X2)
 
-Azur_wind_2015 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2015.dat", 
+Azur_wind_2015 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2015.dat", 
                              delim = ";", escape_double = FALSE, col_names = FALSE, 
                              trim_ws = TRUE)
 Azur_wind_2015 <- Azur_wind_2015 %>% rename(date=X1, `wind speed`=X2)
 
 
-Azur_wind_2016 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2016.dat", 
+Azur_wind_2016 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2016.dat", 
                              delim = ";", escape_double = FALSE, col_names = FALSE, 
                              trim_ws = TRUE)
 Azur_wind_2016 <- Azur_wind_2016 %>% rename(date=X1, `wind speed`=X2)
 
-Azur_wind_2017 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2017.dat", 
+Azur_wind_2017 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2017.dat", 
                              delim = ";", escape_double = FALSE, col_names = FALSE, 
                              trim_ws = TRUE)
 Azur_wind_2017 <- Azur_wind_2017 %>% rename(date=X1, `wind speed`=X2)
 
-Azur_wind_2018 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2018.dat", 
+Azur_wind_2018 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2018.dat", 
                              delim = ";", escape_double = FALSE, col_names = FALSE, 
                              trim_ws = TRUE)
 Azur_wind_2018 <- Azur_wind_2018 %>% rename(date=X1, `wind speed`=X2)
 
-Azur_wind_2019 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2019.dat", 
+Azur_wind_2019 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2019.dat", 
                              delim = ";", escape_double = FALSE, col_names = FALSE, 
                              trim_ws = TRUE)
 Azur_wind_2019 <- Azur_wind_2019 %>% rename(date=X1, `wind speed`=X2)
 
-Azur_wind_2020 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FF_2020.dat", 
+Azur_wind_2020 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2020.dat", 
                              delim = ";", escape_double = FALSE, col_names = FALSE, 
                              trim_ws = TRUE)
 Azur_wind_2020 <- Azur_wind_2020 %>% rename(date=X1, `wind speed`=X2)
 
 
-Azur_wind_2021 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FXI_2021.dat", 
+Azur_wind_2021 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FXI_2021.dat", 
                              delim = ";", escape_double = FALSE, col_names = FALSE, 
                              trim_ws = TRUE)
 Azur_wind_2021 <- Azur_wind_2021 %>% rename(date=X1, `wind speed`=X2)
 
 #convert en m/s : 1 knot = 0.514444681 m/s
 
-Azur_wind_2022 <- read_delim("Wind_speed_10m_Azur_buoy/Azur_FXI_2022.dat", 
+Azur_wind_2022 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FXI_2022.dat", 
                              delim = ";", escape_double = FALSE, col_names = FALSE, 
                              trim_ws = TRUE)
 Azur_wind_2022 <- Azur_wind_2022 %>% reframe (date=X1, `wind speed` = case_when(X2 == -9999  ~ NA_real_ , 
@@ -191,8 +197,9 @@ Azur_wind_RAW <- rbind(Azur_wind_2007, Azur_wind_2008, Azur_wind_2009, Azur_wind
                        Azur_wind_2015, Azur_wind_2016, Azur_wind_2016, Azur_wind_2017,
                        Azur_wind_2018)
 
-#moyenne wind speed par jour :
+```
 
+```{r moyenne wind speed par jour, echo=FALSE, warning=FALSE, message=FALSE}
 Azur_wind_daily <- Azur_wind_RAW %>% 
   mutate(day = format(date, format="%Y-%m-%d")) %>% 
   group_by(day) %>% 
@@ -208,20 +215,19 @@ DATA <- left_join(DATA, Azur_wind_daily, by = as.character("sampling_date"))
 
 DATA <- DATA %>% 
   mutate(sampling_date = as.POSIXct(sampling_date))
+```
 
+#### Plot pCO2 atmosphere (ppm)
 
-############################################################################################
-
-#plot pCO2 air (ppm)
-
+```{r plot pCO2 air (ppm), echo=FALSE, warning=FALSE, message=FALSE}
 DATA %>% 
   ggplot() +
   ggtitle("Air pCO2 (ppm) according to time ") +
   aes(x=sampling_date, y=pCO2_air) +
   geom_point()
-##
+```
 
-
+```{r conversion pCO2air en uatm, echo=FALSE, warning=FALSE, message=FALSE}
 #pCO2 water en uatm
 #pCO2 air en ppm
 #convertir les valeurs de pCO2 air en uatm
@@ -243,18 +249,21 @@ DATA <- DATA %>%
   mutate(pCO2_air_uatm = pCO2_air * (1-vapress_sw))
 
 ##
+```
 
-#plot pCO2 air (uatm)
+#### Plot pCO2 (uatm)
+
+```{r plot pCO2 air (uatm), echo=FALSE, warning=FALSE, message=FALSE}
 
 DATA %>% 
   ggplot() +
   ggtitle("Air pCO2 (uatm) according to time") +
   aes(x=sampling_date, y=pCO2_air_uatm) +
   geom_point()
-##
 
+```
 
-######################################################################################
+```{r NpCO2, echo=FALSE, warning=FALSE, message=FALSE}
 #calcul de T-normalized pCO2 seawater ou pCO2(N) = non-temperature effects on pCO2water
 #formula : pCO2(N) = pCO2w obs * e(0.0423*Tmean-Tobs) = NpCO2 de Kapsenber
 
@@ -267,8 +276,11 @@ T_norm_pCO2_sw <- DATA %>%
 DATA <- DATA %>% 
   dplyr::mutate(T_norm_pCO2_sw = pCO2_water * exp(0.0423*(Tmean-temperature)))
 
-##
+```
 
+#### (pCO2 at Point B : 2007-2018 (Figure 5.a DE CARLO)
+
+```{r Figure 5a DE CARLO, echo=FALSE, warning=FALSE, message=FALSE}
 ##Figure 5.a DE CARLO :
 
 DATA %>% 
@@ -278,9 +290,13 @@ DATA %>%
   geom_point(aes(x=sampling_date, y=pCO2_water), col='blue', size=0.8) +
   geom_line(aes(x=sampling_date, y=T_norm_pCO2_sw), col='red')
 
-##
+```
 
-######################################################################################
+#### Annual cycle of pCO2 (2007-2018)
+
+Figure 5.b DE CARLO
+
+```{r Figure 5.b DE CARLO, echo=FALSE, warning=FALSE, message=FALSE}
 #annual cycle of pCO2 (2007-2018)
 
 ##Figure 5.b DE CARLO :
@@ -289,16 +305,15 @@ DATA %>%
   ggplot() +
   geom_line(aes(x= as.Date(yday(sampling_date), "1970-01-01"), y=pCO2_water, 
                 group = factor(year(sampling_date)), 
-                color = factor(year(sampling_date))), size = 0.75) +
+                color = factor(year(sampling_date))), linewidth = 0.75) +
   scale_colour_viridis_d() +
   scale_x_date(date_breaks="months", date_labels="%b", name = "") +
   labs(x="Months",colour="") +
   theme_bw() +
   scale_y_continuous(name = "pCO2 water (uatm)") 
-##
+```
 
-######################################################################################
-
+```{r TpCO2, echo=FALSE, warning=FALSE, message=FALSE}
 #the effects of only temperature
 #calcul de TpCO2 at Tobs
 #formula : TpCO2 = pCO2mean * exp[0.0423(Tobs - Tmean)]
@@ -314,9 +329,9 @@ TpCO2 <- DATA %>%
 DATA <- DATA %>% 
   dplyr::mutate(TpCO2 = pCO2mean * exp(0.0423*(temperature-Tmean)))
 ##
+```
 
-######################################################################################
-
+```{r Calcul des deltas, echo=FALSE, warning=FALSE, message=FALSE}
 ###Calcul des deltas
 
 #calcul delta pCO2(T) = pCO2obs - pCO2(N)
@@ -329,8 +344,11 @@ DATA <- DATA %>%
   dplyr::mutate(delta_pCO2_T = pCO2_water - T_norm_pCO2_sw,
                 delta_pCO2_bio = pCO2_water - TpCO2)
 ##
+```
 
+#### Temperature and biological effects on pCO2 variations Plot (Figure 6 DE CARLO)
 
+```{r Figure 6 DE CARLO, echo=FALSE, warning=FALSE, message=FALSE}
 #plot
 ##Figure 6 DE CARLO :
 
@@ -341,10 +359,9 @@ DATA %>%
   geom_point(aes(x=sampling_date, y=delta_pCO2_bio), col='#EED153', size=0.9)
 ##
 
-######################################################################################
+```
 
-###Fluxes of CO2
-
+```{r Calcul CO2 fluxes, echo=FALSE, warning=FALSE, message=FALSE}
 #calcul delta pCO2 (uatm) = pCO2sw - pCO2air
 
 delta_pCO2 <- DATA$pCO2_water - DATA$pCO2_air_uatm
@@ -381,10 +398,36 @@ F <- k * (2.912*10^(-2)) * delta_pCO2
 
 DATA <- DATA %>% mutate(Flux_CO2 = k * (2.912*10^(-2)) * delta_pCO2)
 
+```
 
+```{r outliers Flux_CO2, echo=FALSE, warning=FALSE, message=FALSE}
 
+#plot visualiser les outliers
+DATA %>% 
+  ggplot() +
+  aes(x=sampling_date, y=Flux_CO2) +
+  geom_boxplot() + 
+  xlab(label = "") +
+  ylab(label = "") +
+  theme(legend.position="none")+
+  ggtitle("Flux_CO2 boxplot (outliers)") 
 
-#plot flux CO2 air-eau
+#recuperation des outliers
+
+outliers <- boxplot.stats(DATA$Flux_CO2)
+outliers_index <- which(DATA$Flux_CO2 %in% c(outliers$out))
+
+#remplacer les outliers Flux_CO2 par des NA
+DATA[DATA$Flux_CO2 %in% outliers$out, "Flux_CO2"] = NA
+
+summary(DATA$Flux_CO2)
+
+```
+
+#### Plot flux CO2 air \~ eau
+
+```{r plot flux CO2 air-eau, echo=FALSE, warning=FALSE, message=FALSE}
+
 DATA %>% 
   ggplot() +
   aes(x=sampling_date, y=Flux_CO2*10^(-3)) +
@@ -392,5 +435,4 @@ DATA %>%
   scale_x_datetime(name="") +
   scale_y_continuous(name="Flux (mol C/m²/day)") +
   ggtitle("Days CO2 fluxes ocean-atmosphere")
-
-
+```
