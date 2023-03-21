@@ -249,17 +249,28 @@ DATA <- left_join(T_eau, T_air, by = "datetime") %>%
 
 ```
 
-#### Analyses
+#### Analyse relation Temperature eau vs Temperature air
 
-\@
+Scatter plot : relation linéaire
 
-Ici, nous faisons un plot (T°Eau \~ T°Air) et remarquons une relation linéaire
+```{r scatterplot T_air VS T_eau, echo=TRUE, warning=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
-```{r scatterplot T_air VS T_eau, echo=FALSE, warning=FALSE}
+DATA %>% 
+  ggplot(na.rm=T) +
+  ggtitle("Air and water temperatures according to time (2000-2021)") +
+  geom_point(aes(x=datetime, y=water_temp), col='#24445C') +
+  geom_point(aes(x=datetime, y=air_temp), col='#BF3030')
+
 DATA %>% 
   ggplot(na.rm=TRUE) + 
   ggtitle("Scatterplot : T_eau VS T_air") + 
   aes(x=air_temp, y=water_temp) +
   geom_point() + 
-  stat_smooth(method="lm", formula = y ~ x)
+  stat_smooth(method="lm", formula = y ~ x) +
+  scale_x_continuous(name="Air Temp. (°C)") +
+  scale_y_continuous(name="Water Temp. (°C)")
+
+
 ```
+
+
