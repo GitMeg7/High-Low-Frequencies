@@ -7,6 +7,10 @@ output: html_document
 
 ## Air--Sea CO2 Flux (2007-2018)
 
+Article DE CARLO
+
+Data : - pCO2 water (uatm) - pCO2 air (ppm) - wind speed 10m (m/s)
+
 ```{r libraries, echo=FALSE, warning=FALSE, message=FALSE}
 library("readr")
 library("viridis")
@@ -34,7 +38,7 @@ library("ggcorrplot")
 library("LakeMetabolizer")
 ```
 
-```{r importation data, echo=FALSE, warning=FALSE, message=FALSE}
+```{r importation data pCO2 water + air, echo=FALSE, warning=FALSE, message=FALSE}
 
 ###Importation des donnees
 ##Data pCO2 water
@@ -47,7 +51,7 @@ SOMLIT_carbo_chemistry <- read_csv("../Data/data_pH_steeve.csv")
 SOMLIT_carbo_chemistry_surf <- SOMLIT_carbo_chemistry %>% 
   dplyr::filter(depth==0) %>% 
   select(sampling_date, salinity, temperature, ta, dic, NO2, NO3, Chla, pH_calc, pCO2) %>% 
-  rename(pCO2_water = pCO2) %>% 
+  rename(pCO2_water_uatm = pCO2) %>% 
   filter(sampling_date <= "2018-12-31") %>% 
   mutate(sampling_date = as.character(sampling_date))
 SOMLIT_carbo_chemistry_50m <- SOMLIT_carbo_chemistry %>% 
@@ -73,9 +77,10 @@ pCO2_atmos_daily_raw <- pCO2_atmos_daily_raw %>%
   filter(datetime >= "2007-01-01")
 
 
-pCO2_atmos <- data.frame(sampling_date = as.character(pCO2_atmos_daily_raw$datetime), pCO2_air = pCO2_atmos_daily_raw$pCO2_air)
+pCO2_atmos <- data.frame(sampling_date = as.character(pCO2_atmos_daily_raw$datetime), pCO2_air_ppm = pCO2_atmos_daily_raw$pCO2_air)
 
 
+#creation DATA = pCO2 water + pCO2 air (2007-2018)
 DATA <- left_join(SOMLIT_carbo_chemistry_surf, pCO2_atmos, by = as.character("sampling_date"))
 
 ```
@@ -190,7 +195,8 @@ Azur_wind_2022 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FXI_2022.dat
 Azur_wind_2022 <- Azur_wind_2022 %>% reframe (date=X1, `wind speed` = case_when(X2 == -9999  ~ NA_real_ , 
                                                                                 TRUE ~ (X2*0.514444681)))
 
-#fusion (2007-2018) : Azur_wind_RAW
+
+#fusion (2007-2018) : Azur_wind_RAW = wind speed en m/s 2007-2018)
 
 Azur_wind_RAW <- rbind(Azur_wind_2007, Azur_wind_2008, Azur_wind_2009, Azur_wind_2010,
                        Azur_wind_2011, Azur_wind_2012, Azur_wind_2013, Azur_wind_2014,
@@ -198,6 +204,8 @@ Azur_wind_RAW <- rbind(Azur_wind_2007, Azur_wind_2008, Azur_wind_2009, Azur_wind
                        Azur_wind_2018)
 
 ```
+
+Wind speed (m/s) par heure \>\> calcul moyenne wind speed par jour
 
 ```{r moyenne wind speed par jour, echo=FALSE, warning=FALSE, message=FALSE}
 Azur_wind_daily <- Azur_wind_RAW %>% 
@@ -209,61 +217,77 @@ Azur_wind_daily <- Azur_wind_RAW %>%
 
 Azur_wind_daily <- distinct(Azur_wind_daily)
 
-#integration azur_wind_daily avec DATA
 
+#integration azur_wind_daily avec DATA
 DATA <- left_join(DATA, Azur_wind_daily, by = as.character("sampling_date"))
 
 DATA <- DATA %>% 
   mutate(sampling_date = as.POSIXct(sampling_date))
+
+Azur_wind_daily
 ```
 
-#### Plot pCO2 atmosphere (ppm)
+#### Plot pCO2 water (uatm) VS pCO2 atmosphere (ppm)
 
-```{r plot pCO2 air (ppm), echo=FALSE, warning=FALSE, message=FALSE}
-DATA %>% 
+```{r plot pCO2 air (ppm) vs pCO2 water (uatm), echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+plot_pCO2_water <- DATA %>% 
+  ggplot() + 
+  ggtitle("Water pCO2 (uatm) according to time") +
+  aes(x=sampling_date, y=pCO2_water_uatm) + 
+  geom_point(size=1, col='#357AB7')
+
+plot_pCO2_air <- DATA %>% 
   ggplot() +
   ggtitle("Air pCO2 (ppm) according to time ") +
-  aes(x=sampling_date, y=pCO2_air) +
-  geom_point()
+  aes(x=sampling_date, y=pCO2_air_ppm) +
+  geom_point(size=1, col='#EED153')
+
+plot_pCO2_water
+plot_pCO2_air
 ```
 
-```{r conversion pCO2air en uatm, echo=FALSE, warning=FALSE, message=FALSE}
-#pCO2 water en uatm
-#pCO2 air en ppm
-#convertir les valeurs de pCO2 air en uatm
+#### Conversion data pCO2 water uatm \>\> ppm
 
-#package SeaCarb (vapress + p2xCO2)
+-   package seacarb (vapress + p2xCO2)
 
-#vapress : vapeur pressure of seawater in atm
+```{r conversion pCO2 water en ppm, echo=TRUE, warning=FALSE, message=FALSE}
+#pCO2 water (uatm) < to ppm
 
-vapress_sw <- vapress(S=DATA$salinity, T=DATA$temperature, form="d2007")
+## 1 : vapress (vapeur pressure of seawater in atm)
+pH20 <- vapress(S=DATA$salinity, T=DATA$temperature, form="d2007")
 
+#integration au dataset (column "pH20")
 DATA <- DATA %>% 
-  mutate(vapress_sw = vapress(S=salinity, T=temperature, form="d2007"))
+  mutate(pH20 = vapress(S=salinity, T=temperature, form="d2007"))
 
-#pCO2 ppm en pCO2 uatm, formule : xCO2 = pCO2 / (Patm - pH2O)
+##2 : convertion : p2xCO2
+pCO2_water_ppm <- p2xCO2(S=DATA$salinity, T=DATA$temperature, Patm=1, DATA$pCO2_water_uatm)
 
-pCO2_air_uatm <- DATA$pCO2_air * (1-vapress_sw) #Patm en surface = 1
-
+#integration au dataset
 DATA <- DATA %>% 
-  mutate(pCO2_air_uatm = pCO2_air * (1-vapress_sw))
+  mutate(pCO2_water_ppm = p2xCO2(S=salinity, T=temperature, Patm=1, pCO2_water_uatm))
 
 ##
 ```
 
-#### Plot pCO2 (uatm)
+#### Plot pCO2 water VS pCO2 atmosphere (ppm)
 
-```{r plot pCO2 air (uatm), echo=FALSE, warning=FALSE, message=FALSE}
+```{r Plot pCO2 water VS pCO2 atmosphere (ppm), echo=FALSE, warning=FALSE, message=FALSE}
 
-DATA %>% 
-  ggplot() +
-  ggtitle("Air pCO2 (uatm) according to time") +
-  aes(x=sampling_date, y=pCO2_air_uatm) +
-  geom_point()
+plot_pCO2_water_vs_air <- DATA %>% 
+  ggplot() + 
+  ggtitle("Water and atmosphere pCO2 (ppm) according to time") +
+  geom_point(aes(x=sampling_date, y=pCO2_water_ppm), size=1, col='#357AB7') + 
+  geom_point(aes(x=sampling_date, y=pCO2_air_ppm), size=1, col='#EED153')
+
+plot_pCO2_water_vs_air
 
 ```
 
-```{r NpCO2, echo=FALSE, warning=FALSE, message=FALSE}
+#### Calcul de T-normalized (=NpCO2 seawater) Correspond aux non-temperature effects on pCO2 water variations
+
+```{r NpCO2, echo=TRUE, warning=FALSE, message=FALSE}
 #calcul de T-normalized pCO2 seawater ou pCO2(N) = non-temperature effects on pCO2water
 #formula : pCO2(N) = pCO2w obs * e(0.0423*Tmean-Tobs) = NpCO2 de Kapsenber
 
@@ -271,82 +295,109 @@ DATA %>%
 Tmean <- mean(DATA$temperature, na.rm=T) #18.70
 
 T_norm_pCO2_sw <- DATA %>% 
-  dplyr::mutate(T_norm_pCO2_sw = pCO2_water * exp(0.0423*(Tmean-temperature)))
+  dplyr::mutate(T_norm_pCO2_sw = pCO2_water_ppm * exp(0.0423*(Tmean-temperature)))
 
+#integration au dataset
 DATA <- DATA %>% 
-  dplyr::mutate(T_norm_pCO2_sw = pCO2_water * exp(0.0423*(Tmean-temperature)))
+  dplyr::mutate(T_norm_pCO2_sw = pCO2_water_ppm * exp(0.0423*(Tmean-temperature)))
 
 ```
 
-#### (pCO2 at Point B : 2007-2018 (Figure 5.a DE CARLO)
+#### pCO2 at Point B : 2007-2018
 
-```{r Figure 5a DE CARLO, echo=FALSE, warning=FALSE, message=FALSE}
+(Figure 5.a DE CARLO)
+
+*(rajouter legende plot)*
+
+```{r Figure 5a DE CARLO, echo=TRUE, warning=FALSE, message=FALSE}
 ##Figure 5.a DE CARLO :
 
 DATA %>% 
   ggplot() +
   ggtitle("pCO2 at Point B : 2007-2018") +
-  geom_line(aes(x=sampling_date, y=pCO2_air_uatm), col='darkgreen') +
-  geom_point(aes(x=sampling_date, y=pCO2_water), col='blue', size=0.8) +
-  geom_line(aes(x=sampling_date, y=T_norm_pCO2_sw), col='red')
-
+  geom_line(aes(x=sampling_date, y=pCO2_air_ppm), col='darkgreen') +
+  geom_point(aes(x=sampling_date, y=pCO2_water_ppm), col='blue', size=0.8) +
+  geom_line(aes(x=sampling_date, y=T_norm_pCO2_sw), col='red') +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="")
 ```
 
 #### Annual cycle of pCO2 (2007-2018)
 
-Figure 5.b DE CARLO
+(Figure 5.b DE CARLO)
+
+*Remarque :* augmentation globale des valeurs de pCO2(water) au fil des années
+
+[*(rajouter legende plot)*]{style="“color:lightred”"}
 
 ```{r Figure 5.b DE CARLO, echo=FALSE, warning=FALSE, message=FALSE}
 #annual cycle of pCO2 (2007-2018)
 
-##Figure 5.b DE CARLO :
-
 DATA %>% 
   ggplot() +
-  geom_line(aes(x= as.Date(yday(sampling_date), "1970-01-01"), y=pCO2_water, 
+  geom_line(aes(x= as.Date(yday(sampling_date), "1970-01-01"), y=pCO2_water_ppm, 
                 group = factor(year(sampling_date)), 
                 color = factor(year(sampling_date))), linewidth = 0.75) +
   scale_colour_viridis_d() +
   scale_x_date(date_breaks="months", date_labels="%b", name = "") +
   labs(x="Months",colour="") +
   theme_bw() +
-  scale_y_continuous(name = "pCO2 water (uatm)") 
+  scale_y_continuous(name = "pCO2 water (ppm)") 
 ```
 
-```{r TpCO2, echo=FALSE, warning=FALSE, message=FALSE}
+#### Calcul de TpCO2 seawater Correspond aux temperature effects on pCO2 water variations
+
+```{r TpCO2, echo=TRUE, warning=FALSE, message=FALSE}
 #the effects of only temperature
 #calcul de TpCO2 at Tobs
 #formula : TpCO2 = pCO2mean * exp[0.0423(Tobs - Tmean)]
 
 #calcul de pCO2mean :
-pCO2mean <- mean(DATA$pCO2_water, na.rm=T) #402.03
+pCO2mean <- mean(DATA$pCO2_water_ppm, na.rm=T) #411.17
 
 #calcul de TpCO2 :
-
 TpCO2 <- DATA %>% 
   dplyr::mutate(TpCO2 = pCO2mean * exp(0.0423*(temperature-Tmean)))
 
+#integration au dataset
 DATA <- DATA %>% 
   dplyr::mutate(TpCO2 = pCO2mean * exp(0.0423*(temperature-Tmean)))
+
 ##
 ```
 
-```{r Calcul des deltas, echo=FALSE, warning=FALSE, message=FALSE}
+#### Calcul des deltas
+
+-   delta pCO2(T) : correspond aux temperature effects = pCO2 water - NpCO2
+
+-   delta pCO2(bio) : correspond aux biological effects = pCO2 water - TpCO2
+
+-   delta pCO2 = pCO2 water - pCO2 air (ppm)
+
+```{r Calcul des deltas, echo=TRUE, warning=FALSE, message=FALSE}
 ###Calcul des deltas
 
 #calcul delta pCO2(T) = pCO2obs - pCO2(N)
-delta_pCO2_T <- DATA$pCO2_water - DATA$T_norm_pCO2_sw
+delta_pCO2_T <- DATA$pCO2_water_ppm - DATA$T_norm_pCO2_sw
 
 #Calcul pCO2(bio) = pCO2obs - pCO2(T-driven) ou TpCO2
-delta_pCO2_bio <- DATA$pCO2_water - DATA$TpCO2
+delta_pCO2_bio <- DATA$pCO2_water_ppm - DATA$TpCO2
 
+#integration au dataset
 DATA <- DATA %>% 
-  dplyr::mutate(delta_pCO2_T = pCO2_water - T_norm_pCO2_sw,
-                delta_pCO2_bio = pCO2_water - TpCO2)
+  dplyr::mutate(delta_pCO2_T = pCO2_water_ppm - T_norm_pCO2_sw,
+                delta_pCO2_bio = pCO2_water_ppm - TpCO2)
+
 ##
 ```
 
-#### Temperature and biological effects on pCO2 variations Plot (Figure 6 DE CARLO)
+#### Temperature and biological effects on pCO2 variations
+
+**Plot delta pCO2(T) et delta pCO2(bio)**
+
+(Figure 6 DE CARLO)
+
+*(rajouter légende plot)*
 
 ```{r Figure 6 DE CARLO, echo=FALSE, warning=FALSE, message=FALSE}
 #plot
@@ -356,39 +407,83 @@ DATA %>%
   ggplot() + 
   ggtitle("Temperature and biological effects on pCO2 variations") +
   geom_point(aes(x=sampling_date, y=delta_pCO2_T), col='darkgreen', size=0.9) +
-  geom_point(aes(x=sampling_date, y=delta_pCO2_bio), col='#EED153', size=0.9)
+  geom_point(aes(x=sampling_date, y=delta_pCO2_bio), col='#EED153', size=0.9) + 
+  scale_x_datetime(name="") + 
+  scale_y_continuous(name="deltas pCO2 (ppm)")
 ##
 
 ```
 
-```{r Calcul CO2 fluxes, echo=FALSE, warning=FALSE, message=FALSE}
+#### CO2 fluxes
+
+Calcul de F - part 1
+
+1 : calcul de delta pCO2 (ppm)
+
+2: calcul de Sc
+
+3 : calcul de K600
+
+4: calcul de k
+
+```{r Calcul CO2 fluxes-part1, echo=TRUE, warning=FALSE, message=FALSE}
 #calcul delta pCO2 (uatm) = pCO2sw - pCO2air
 
-delta_pCO2 <- DATA$pCO2_water - DATA$pCO2_air_uatm
-DATA <- DATA %>% mutate(delta_pCO2 = pCO2_water - pCO2_air_uatm)
+delta_pCO2 <- DATA$pCO2_water_ppm - DATA$pCO2_air_ppm
+DATA <- DATA %>% mutate(delta_pCO2 = pCO2_water_ppm - pCO2_air_ppm)
 
 #calcul du Schmidt number (SC)
 #formula : Sc = 2073.1 - (125.62*T) + (3.6276 * T^2) - (0.043219 * T^3)
  Sc <- 2073.1 - (125.62*DATA$temperature) + (3.6276 * DATA$temperature^2) - (0.043219 * DATA$temperature^3)
  DATA <- DATA %>% mutate(Sc = 2073.1 - (125.62*temperature) + (3.6276 * temperature^2) - (0.043219 * temperature^3))
 
-#utilisation de getSchmidt vs Sc article : 
+###utilisation de getSchmidt vs Sc article : 
 getSchmidt(temperature=25, gas="CO2") #498.8125
-
+#vs
 2073.1 - (125.62*25) + (3.6276 * 25^2) - (0.043219 * 25^3) #Sc = 524.5531
 
-#calcul de gaz transfert velocity K (m.s-1)
-#formula : K = 0.266 * U^2 avec U : wind velocity at 10m
+#calcul K600 (m.s-1)
+#formula : K600 = 0.266 * U^2 avec U : wind velocity at 10m
 
 K600 <- 0.266 * DATA$wind_mean_daily^2
 DATA <- DATA %>% mutate(K600 = 0.266*wind_mean_daily^2)
 
-#calcul de k (m.s-1)
+#calcul de gaz transfert velocity k (m.s-1)
 #formula : k = K * (Sc / 600)^-1/2
 
-#pour que Sc et K600 soient de la mm longueur
 k <- K600 * (Sc/600)^(-1/2)
 DATA <- DATA %>% mutate(k = K600 * (Sc/600)^(-1/2))
+
+```
+
+#### Calcul de F - part 2
+
+alpha = solubility of CO2 in seawater at a specific temperature and salinity
+
+Table of the solubility coefficients (10\^-2 moles/l/atm) according to temperature and salinity = mmol/m3/atm
+
+```{r creation table solubility coef (Weiss 1974), echo=TRUE, warning=FALSE, message=FALSE}
+
+coef_solubility_alpha <- read_table("../Data/coef_solubility_alpha_weiss_1974.txt")
+coef_solubility_alpha
+
+```
+
+```{r essais, echo=FALSE, warning=FALSE, message=FALSE}
+#creation colonne salinity arrondie
+DATA <- DATA %>% 
+  mutate(rounded_salinity = round(salinity, 0))
+
+#creation colonne temperature arrondie
+DATA <- DATA %>% 
+  mutate(rounded_temperature = round(temperature,0))
+
+
+```
+
+##### Essai calcul F avec alpha = 2.912\*10\^-2 pour une temperature de 24°C et une salinite de 35
+
+```{r Calcul CO2 fluxes-part2 (alpha), echo=TRUE, warning=FALSE, message=FALSE}
 
 #on part du principe que alpha = 2.912*10^-2 (unity : mmol.m-3.atm)
 #calcul de F
@@ -399,6 +494,10 @@ F <- k * (2.912*10^(-2)) * delta_pCO2
 DATA <- DATA %>% mutate(Flux_CO2 = k * (2.912*10^(-2)) * delta_pCO2)
 
 ```
+
+##### Visualisation des outliers dans Flux_CO2
+
+-   remplacement des outliers par NA
 
 ```{r outliers Flux_CO2, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -412,15 +511,15 @@ DATA %>%
   theme(legend.position="none")+
   ggtitle("Flux_CO2 boxplot (outliers)") 
 
-#recuperation des outliers
+#recuperation des outliers (101 outliers)
 
 outliers <- boxplot.stats(DATA$Flux_CO2)
 outliers_index <- which(DATA$Flux_CO2 %in% c(outliers$out))
 
-#remplacer les outliers Flux_CO2 par des NA
+#remplacer les outliers Flux_CO2 par des NA (337 NA)
 DATA[DATA$Flux_CO2 %in% outliers$out, "Flux_CO2"] = NA
 
-summary(DATA$Flux_CO2)
+#summary(DATA$Flux_CO2)
 
 ```
 
