@@ -273,4 +273,9 @@ DATA %>%
 
 ```
 
-
+#autre methode que sur les residus (samir)
+#donnee velocite Fred
+#pco2 atmosphere 2018, pour avoir les data jusqua 2022 : puy du dome ?
+#calcul de flux selon plusieurs methodes (3)
+#data samir
+#faire une partie markdown sur interpolation
