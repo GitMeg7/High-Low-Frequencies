@@ -164,13 +164,15 @@ Data_TS_2022 <- Data_TS_2022 %>%
 Data_TS_2022 <- Data_TS_2022 %>%
   dplyr::select(Date, T) %>% 
   rename(datetime = Date, temp_B = T) %>% 
-  mutate(datetime = format(as.POSIXct(datetime), format = "%Y-%m-%d"))
+  #mutate(datetime = format(as.POSIXct(datetime), format = "%Y-%m-%d"))
+  
+#je n'arrive pas a mettre sous format posixct
 
 #fusionner les 2 datasets : SOMLIT_1m et Data_TS_2022 = DATA_SST_SOMLIT
 #periode 1992-2022
 DATA_SST_SOMLIT <- rbind(SOMLIT_1m, Data_TS_2022)
 DATA_SST_SOMLIT <- DATA_SST_SOMLIT %>% 
-  mutate(datetime = format(as.POSIXct(datetime), format = "%Y-%m-%d"))
+  #mutate(datetime = format(as.POSIXct(datetime), format = "%Y-%m-%d"))
 
 #remplacer les 999999 par NA
 DATA_SST_SOMLIT <- dplyr::mutate(Data_TS_2022, 

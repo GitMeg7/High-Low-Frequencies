@@ -393,7 +393,6 @@ monthly_means_0m_0722
 
 ####Table of time series anomaly regression analyses (2007-2022)
 
-
 ```{r calculate anomalies + regression 2007-2022, echo=FALSE, warning=FALSE, message=FALSE}
 
 ano_0m_0722 <- left_join(ungroup(data_0722), monthly_means_0m_0722, by = "monthd") %>%
@@ -544,8 +543,6 @@ slope_pH2 <- reg_ano_surf2[7, 1]
 reg_ano_surf2
 
 ```
-
-
 
 #### Plot of anomalies : Temperature (2007-2022)
 

@@ -438,7 +438,7 @@ DATA <- DATA %>% mutate(delta_pCO2 = pCO2_water_ppm - pCO2_air_ppm)
  DATA <- DATA %>% mutate(Sc = 2073.1 - (125.62*temperature) + (3.6276 * temperature^2) - (0.043219 * temperature^3))
 
 ###utilisation de getSchmidt vs Sc article : 
-getSchmidt(temperature=25, gas="CO2") #498.8125
+getSchmidt(temperature=25, gas="CO2") #  ne pas prendre cette valeur
 #vs
 2073.1 - (125.62*25) + (3.6276 * 25^2) - (0.043219 * 25^3) #Sc = 524.5531
 
@@ -535,3 +535,4 @@ DATA %>%
   scale_y_continuous(name="Flux (mol C/m²/day)") +
   ggtitle("Days CO2 fluxes ocean-atmosphere")
 ```
+
