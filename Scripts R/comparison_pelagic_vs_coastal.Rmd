@@ -1,0 +1,193 @@
+---
+title: "Comparison pelagic vs coastal"
+author: "Mégane"
+date: "2023-03-21"
+output: html_document
+---
+```{r libraries, echo=FALSE, warning=FALSE, message=FALSE}
+library("readr")
+library("viridis")
+library("scales")
+library("lubridate")
+library("gsignal")
+library("FactoMineR")
+library("factoextra")
+library("gplots")
+library("heatwaveR")
+library("dplyr")
+library("imputeTS")
+library("Metrics")
+library("tidyr")
+library("tseries")
+library("forecast")
+library("tsDyn")
+library("tsoutliers")
+library("seacarb")
+library("lmodel2")
+library("lmtest")
+library("ggExtra")
+library("corrplot")
+library("ggcorrplot")
+```
+
+
+```{r importation data SST AZUR BUOY, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+#data SST Azur buoy (2011-2022)
+#observation toutes les 30min : 6 obs toutes les 10s
+#temperature in °C
+
+#annee 2011
+Azur_SST_2011 <- read_delim("Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2011.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2011 <- Azur_SST_2011 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2012
+Azur_SST_2012 <- read_delim("Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2012.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2012 <- Azur_SST_2012 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2013
+Azur_SST_2013 <- read_delim("Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2013.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2013 <- Azur_SST_2013 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2014
+Azur_SST_2014 <- read_delim("Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2014.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2014 <- Azur_SST_2014 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2015
+Azur_SST_2015 <- read_delim("Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2015.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2015 <- Azur_SST_2015 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2016
+Azur_SST_2016 <- read_delim("Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2016.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2016 <- Azur_SST_2016 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2017
+Azur_SST_2017 <- read_delim("Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2017.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2017 <- Azur_SST_2017 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2018
+Azur_SST_2018 <- read_delim("Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2018.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2018 <- Azur_SST_2018 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2019
+Azur_SST_2019 <- read_delim("Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2019.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2019 <- Azur_SST_2019 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2020
+Azur_SST_2020 <- read_delim("Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2020.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2020 <- Azur_SST_2020 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2021
+Azur_SST_2021 <- read_delim("Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2021.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2021 <- Azur_SST_2021 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2022
+Azur_SST_2022 <- read_delim("Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2022.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2022 <- Azur_SST_2022 %>% rename(datetime=X1, SST=X2)
+
+#fusion des 11 tables : AZUR_SST_RAW
+#periode 2011-07-12 a 2022-08-12
+
+AZUR_SST_RAW <- rbind(Azur_SST_2011, Azur_SST_2012, Azur_SST_2013, Azur_SST_2014,
+                  Azur_SST_2015, Azur_SST_2016, Azur_SST_2017, Azur_SST_2018,
+                  Azur_SST_2019, Azur_SST_2020, Azur_SST_2021, Azur_SST_2022)
+
+AZUR_SST_RAW <- AZUR_SST_RAW %>% mutate(datetime = format(datetime, format="%Y-%m-%d"))
+
+```
+
+
+```{r importation data SST SOMLIT, echo=FALSE, warning=FALSE, message=FALSE}
+####Data filled SAMIR (B > B+ quand B+ empty), mean profondeur 1 - 3m
+RAW_SOMLIT_1m <- readRDS("Data/rh_B_Bplus_1m_mean.rds")
+###tri
+SOMLIT_1m <- RAW_SOMLIT_1m %>%
+  dplyr::select(datetime, mean_temp_rhBplus_B)
+
+SOMLIT_1m = SOMLIT_1m %>% arrange(datetime)
+
+####Rename
+SOMLIT_1m <- SOMLIT_1m %>%
+  dplyr::rename(temp_B = mean_temp_rhBplus_B) 
+  #mutate(datetime = format(datetime, format="%Y-%m-%d"))
+
+##importation data point B 2022
+Data_TS_2022 <- read_delim("Data/PtB_data_TS_2022.csv", 
+    delim = ";", escape_double = FALSE, col_types = cols(Date = col_date(format = "%d/%m/%Y")), 
+    trim_ws = TRUE)
+
+#select depth = 1m
+#46 observations
+#3 NA
+Data_TS_2022 <- Data_TS_2022 %>% 
+  filter(Depth == 1) %>% 
+  filter(Date > "2022-05-02") #pour eviter les doublons avec l annee 2022
+ 
+
+#select only date and T
+Data_TS_2022 <- Data_TS_2022 %>%
+  dplyr::select(Date, T) %>% 
+  rename(datetime = Date, temp_B = T) %>% 
+  mutate(datetime = format(as.POSIXct(datetime), format = "%Y-%m-%d"))
+
+#fusionner les 2 datasets : SOMLIT_1m et Data_TS_2022 = DATA_SST_SOMLIT
+#periode 1992-2022
+DATA_SST_SOMLIT <- rbind(SOMLIT_1m, Data_TS_2022)
+DATA_SST_SOMLIT <- DATA_SST_SOMLIT %>% 
+  mutate(datetime = format(as.POSIXct(datetime), format = "%Y-%m-%d"))
+
+#remplacer les 999999 par NA
+DATA_SST_SOMLIT <- dplyr::mutate(Data_TS_2022, 
+                              temp_B = case_when(temp_B >= 999 ~ NA_real_ ,TRUE ~ temp_B))
+
+#select DATA_SST_SOMLIT a partir de 2011-07-12 a 2022-08-12
+DATA_SST_SOMLIT_1122 <- DATA_SST_SOMLIT %>% 
+  filter(datetime >= "2011-07-12")
+
+#join DATA_SST_SOMLIT + DATA_Azur_buoy : DATA_SST
+DATA_SST <- left_join(DATA_SST_SOMLIT, AZUR_SST_RAW, by = "datetime")
+
+```
+
+## 
+
+```{r pressure, echo=FALSE}
+
+
+```
