@@ -1,0 +1,536 @@
+# header_lines : 227
+# Data_Set_Name : co2_prs_surface-insitu_64_9999-9999_monthly
+# Data_Set_Version : 0064-6039-1001-01-01-9999_2021-10-12-1333
+# Data_Set_Fair_Use : For Scientific purposes, access to these data is unlimited and provided without charge. By their use you accept that an offer of co-authorship will be made through personal contact with the contributors whenever substantial use is made of their data. In all cases, an acknowledgement must be made to the contributors and to the data centre when these data are used within a publication.
+# Data_Set_DOI : 
+# Data_Set_Citation_Format : 
+#
+# GLOBAL ATTRIBUTES
+#
+# site_gaw_id : PRS
+# site_gaw_type : GAW Regional
+# site_name : Plateau Rosa
+# site_country/territory : Italy
+# site_wmo_region : REGION VI (Europe)
+# site_address1 : Testa Grigia Laboratory
+# site_address2 : 
+# site_address3 : 
+# site_latitude : 45.9353408813
+# site_longitude : 7.7073101997
+# site_elevation : 3480
+# site_elevation_unit : m
+# site_lst2utc : UTC+01:00
+# site_climate_zone : ET
+# site_climate_zone:comment : Tundra climate
+# dataset_creation_date : 2021-10-14
+# dataset_parameter : co2
+# dataset_parameter_large_class : Greenhouse Gas
+# dataset_parameter_small_class : 
+# dataset_parameter_name_1 : CO2
+# dataset_parameter_name_2 : carbon dioxide
+# dataset_parameter_name_3 : 
+# dataset_parameter_name_4 : 
+# dataset_parameter_name_5 : 
+# dataset_project : surface-insitu
+# dataset_platform : fixed station
+# dataset_selection : All monthly data
+# dataset_selection_tag : monthly
+# dataset_time_zone : UTC
+# dataset_start_date : 1993-04-01T00:00:00Z
+# dataset_end_date : 2018-12-01T00:00:00Z
+# dataset_statistic_code : 1
+# dataset_statistic : contributor
+# dataset_description : Scientific Aim : To provide data for research and study of the long term trends and to identify sources and sinks in the continental area. 
+# dataset_description : 
+# dataset_description : CO2 measurements by means of flasks (about every two weeks) from April 1989 to December 1997. Continuous measurements of the CO2 since March 1993. Half an hour averages are available up to December 2007. Since 2008 the minimum temporal resolution for the mean values is based on hourly averages.
+# dataset_description : 
+# dataset_description : The CO2 dataset of the Plateau Rosa is composed by two partially overlapped series: the first one contains weekly data measured using flasks and extends from April 1989 to December 1997; the second one contains continuous measurements, and reports data since March 1993.
+# dataset_description : The atmospheric CO2 concentration is measured by means of two non dispersive infrared analysers (ULTRAMAT 5E and, recently, 6E) working, respectively, in the range 350-400 ppmv (5E) and 360-410 ppmv (6E). The CO2 measurements are referred to the WMO X2007 international mole fraction scale.
+# dataset_description : The water content in the air sampling (flasks and continuous measurements) is eliminated by means of a cryogenic cooler working at -65°C.
+# dataset_description : The uncertainty of the measurement is about 0.07 ppmv.
+# dataset_description : 
+# dataset_description : http://greeninfo.ricercadisistema.it/
+# dataset_description : http://oasi.rse-web.it
+# dataset_aim_of_observation_code : 1
+# dataset_aim_of_observation : Background observation
+# dataset_buffer_code : 9999
+# dataset_buffer : data1
+# dataset_buffer:comment : default
+# dataset_footnote_code : 9999
+# dataset_footnote : default
+# dataset_footnote:comment : default
+# dataset_processing : We use a background data selection criteria to identify the hourly background data. More details concerning to the selection criteria will be available in the future.
+# dataset_hr_mean_processing : Hourly averages are obtained as the mean values of at least 360 measurements (a measure every 5 s).
+# dataset_da_mean_processing : The daily averages are computed starting from the background hourly mean values.
+# dataset_mo_mean_processing : The monthly averages are computed starting from the background daily mean values.
+# dataset_transition_flag : 1
+# dataset_transition_comment : Dataset was made using the former WDCGG data file
+# dataset_reference_total_listed : 4
+# dataset_reference_1_name : Apadula F., Gotti A., Pigini A., Longhetto A., Rocchetti F., Cassardo C., Ferrarese S. and Forza R., 2003. Localization of source and sink regions of carbon dioxide through the method of the synoptic air trajectory statistics, Atmospheric Environment, Vol. 37, N. 27, pp. 3757-3770, September 2003.
+# dataset_reference_2_name : Ferrarese S., Longhetto A., Cassardo C., Apadula F., Bertoni D., Giraud C., and Gotti A., 2002. A study of seasonal and yearly modulation of carbon dioxide sources and sinks, with a particular attention to the boreal Atlantic Ocean, Atmospheric Environment Vol. 36, N. 35, pp. 5517-5526, November 2002.
+# dataset_reference_3_name : Levin I., F. Apadula, P. Ciais, L. Ciattaglia, T. Colombo, R. Graul, L. Haszpra, A. Hensen, L. Jourd'Heuil, M. Ramonet, R. Santaguida, M. Schmidt, and A. T. Vermeulen, 2001. Dedicated monitoring of atmospheric CO2 in western europe - a concerted action in AEROCARB. Sixth International Carbon Dioxide Conference, Sendai, Japan, October 1-5, 2001.
+# dataset_reference_4_name : Ferrarese S., A. Longhetto, C. Cassardo, F. Apadula, D. Bertoni, C. Giraud. A study of a source-receptor methodology used to identify source and sink regions of CO2, 2001. Korean Society for Atmospheric Environment, 12th World Clean Air and Environment Congress and Exhibition, August 26-31, 2001.
+# contributor_organization_code : 64
+# contributor_acronym : RSE
+# contributor_name : Ricerca sul Sistema Energetico - RSE S.p.A.
+# contributor_address1 : 
+# contributor_address2 : 
+# contributor_address3 : via R. Rubattino 54, 20134 Milano
+# contributor_country/territory : Italy
+# contributor_url : http://www.rse-web.it
+# contact_total_listed : 3
+# contact_1_name : Andrea Lanza
+# contact_1_address1 : 
+# contact_1_address2 : 
+# contact_1_address3 : via Rubattino 54, 20134 Milano, Italy
+# contact_1_country/territory : Italy
+# contact_1_organization : Ricerca sul Sistema Energetico - RSE S.p.A.
+# contact_1_organization_acronym : RSE
+# contact_1_organization_url : http://www.rse-web.it
+# contact_1_email : Andrea.Lanza@rse-web.it
+# contact_1_tel : 
+# contact_1_fax : 
+# contact_2_name : Daniela Heltai
+# contact_2_address1 : 
+# contact_2_address2 : 
+# contact_2_address3 : via Rubattino 54, 20134 Milano, Italy
+# contact_2_country/territory : Italy
+# contact_2_organization : Ricerca sul Sistema Energetico - RSE S.p.A.
+# contact_2_organization_acronym : RSE
+# contact_2_organization_url : http://www.rse-web.it
+# contact_2_email : Daniela.Heltai@rse-web.it
+# contact_2_tel : 
+# contact_2_fax : 
+# contact_3_name : Francesco Apadula
+# contact_3_address1 : 
+# contact_3_address2 : 
+# contact_3_address3 : via Rubattino 54, 20134 Milano, Italy
+# contact_3_country/territory : Italy
+# contact_3_organization : Ricerca sul Sistema Energetico - RSE S.p.A.
+# contact_3_organization_acronym : RSE
+# contact_3_organization_url : http://www.rse-web.it
+# contact_3_email : Francesco.Apadula@rse-web.it
+# contact_3_tel : 00 39.02.3992.5235
+# contact_3_fax : 00 39.02.3992.4608
+# collaborator_total_listed : 0
+# ORG_QCflag_description : "0" means "background data" (values identified as background data by means of our criteria of selection);
+# ORG_QCflag_description : "1" means "not background data" (for example, due to large variability of CO2 concentration within a half an hour or values identified as not background data by means of our criteria of selection);
+# ORG_QCflag_description : "2" means "invalid data" (for example, instrumental problems due to the missed electrical power, incorrect calibration measurements, sampling flow incorrect and so on).
+# intake_height_total_listed : 1
+# intake_height_1 : 10
+# intake_height_1_units : m
+# intake_height_1_start_date : 1993-04-01T00:00:00Z
+# intake_height_1_end_date : 2018-12-01T00:00:00Z
+# instrument_total_listed : 3
+# instrument_1 : ULTRAMAT 5E NDIR Analyser, SIEMENS
+# instrument_1_measurement_method_type_code : 9
+# instrument_1_measurement_method_name : NDIR
+# instrument_1_start_date : 1993-04-01T00:00:00Z
+# instrument_1_end_date : 2007-12-31T23:59:59Z
+# instrument_2 : ULTRAMAT 6E NDIR Analyser, SIEMENS
+# instrument_2_measurement_method_type_code : 9
+# instrument_2_measurement_method_name : NDIR
+# instrument_2_start_date : 2008-01-01T00:00:00Z
+# instrument_2_end_date : 2018-05-03T23:59:59Z
+# instrument_3 : PICARRO G2301 Analyzer for CO2, CH4 and H2O (Serial number 2579-CFADS2443)
+# instrument_3_measurement_method_type_code : 18
+# instrument_3_measurement_method_name : CRDS
+# instrument_3_start_date : 2018-05-04T00:00:00Z
+# instrument_3_end_date : 2018-12-01T00:00:00Z
+# scale_total_listed : 3
+# scale_1_code : 59
+# scale_1_name : WMO CO2 X1993
+# scale_1_start_date : 1993-04-01T00:00:00Z
+# scale_1_end_date : 2006-12-31T23:59:59Z
+# scale_2_code : 1
+# scale_2_name : WMO CO2 X2007
+# scale_2_start_date : 2007-01-01T00:00:00Z
+# scale_2_end_date : 2018-05-03T23:59:59Z
+# scale_3_code : 153
+# scale_3_name : ICOS
+# scale_3_start_date : 2018-05-04T00:00:00Z
+# scale_3_end_date : 2018-12-01T00:00:00Z
+# observation_status_code : 2
+# observation_status : Temporarily suspended
+# measurement_calibration : The CO2 analyser of Plateau Rosa is calibrated with the NOAA-CMDL primary standards. Moreover the secondary and tertiary standards (the so-called "working standard") are acquired by SIAD and referred to the primary standard. Usually the comparison among the primary and the secondary/tertiary standard is performed every six months or, at the maximum, every year. The analyzer calibration test is realized respectively every 3 days with the secondary standard and every 6 hours with the working standard.
+# measurement_calibration : From 2018-05-04: ICOS scale (traceable to WMO CO2 X2007 scale, see details in Jordan and Rzesanke, 2018. https://www.icos-cal.eu/static/images/docs/ICOS-FCL_QC-Report_2017_v1.3.pdf)
+# sampling_frequency_code : 14
+# sampling_frequency : 5 seconds
+#
+# VARIABLE ATTRIBUTES
+#
+# site_gaw_id:long_name : unique_station/mobile_identifiers.
+# site_gaw_id:comment : 3-letter site identification code as defined by GAWSIS for stationary platforms
+# time_components:_FillValue : -999 or -9
+# time_components:long_name : integer_components_of_UTC_date/time
+# time_components:order : year, month, day, hour, minute, second
+# time_components:comment : Air sample collection time (UTC) represented as a 6-element array [year, month, day, hour, minute, second]. Calendar time components as integers.
+# value:_FillValue : -999.999
+# value:units : ppm
+# value:long_name : measured_mole_fraction_of_trace_gas_in_dry_air
+# value:comment : Reported mole fraction, isotope ratio or radioactivity. Units depend on trace gas species.
+# value_unc:_FillValue : -999.999
+# value_unc:units : ppm
+# value_unc:long_name : estimated_uncertainty_in_reported_value
+# value_unc:comment : Standard deviation of the reported mean value when nvalue is greater than 1. Units depend on trace gas species.
+# nvalue:_FillValue : -9
+# nvalue:long_name : number_of_measurements_contributing_to_reported_value
+# nvalue:comment : Number of individual measurements used to compute reported values.
+# latitude:_FillValue : -999.999999999
+# latitude:standard_name : latitude
+# latitude:long_name : sample_latitude_in_decimal_degrees
+# latitude:units : degrees_north
+# latitude:comment : Latitude of sampling location in decimal degrees (north: +; south: -)
+# longitude:_FillValue : -999.999999999
+# longitude:standard_name : longitude
+# longitude:long_name : sample_longitude_in_decimal_degrees
+# longitude:units : degrees_east
+# longitude:comment : Longitude of sampling location in decimal degrees (east: +; west: -)
+# altitude:_FillValue : -999.999
+# altitude:standard_name : altitude
+# altitude:long_name : sample_altitude_in_meters_above_sea_level
+# altitude:units : m
+# altitude:comment : Altitude (elevation + intake height) of air sample collection. Units are meters above sea level (masl).
+# elevation:_FillValue : -999.999
+# elevation:standard_name : elevation
+# elevation:long_name : surface_elevation_in_meters_above_sea_level
+# elevation:units : m
+# elevation:comment : Station height (m) above sea level
+# intake_height:_FillValue : -999.999
+# intake_height:long_name : sample_intake_height_in_meters_above_ground_level
+# intake_height:units : m
+# intake_height:comment : Sampling height (depth) of air (seawater) above ground (below sea level) (height: +; depth: -) (m)
+# flask_no:_FillValue : -999.999
+# flask_no:long_name : sample_flask_no
+# flask_no:comment : Identification code (or number) of flask used for observation
+# ORG_QCflag:_FillValue : -999.999
+# ORG_QCflag:long_name : original_quality_control_flag
+# ORG_QCflag:comment : Details of original data quality control flags should be specified by contributors in metadata.
+# QCflag:_FillValue : -9
+# QCflag:long_name : quality_control_flag
+# QCflag:comment : 1 Valid (background) data considered "background"
+# QCflag:comment : 2 Valid data considered valid other than "background," or all valid data without categorization
+# QCflag:comment : 3 Invalid data considered unfit for use (questionable/erroneous/absent data)
+# QCflag:comment : Details of correspondence between original data quality control flags and WDCGG data flags should be specified by contributors in metadata.
+# instrument:_FillValue : -9
+# instrument:long_name : instrument_ID_to_detect_atmospheric_parameter
+# instrument:comment : A numeric field that identifies the instrument.
+# measurement_method:_FillValue : -9
+# measurement_method:long_name : measurement_method_history
+# measurement_method:comment : A numeric field that identifies the measurement method.
+# scale:_FillValue : -9
+# scale:long_name : calibration_scale_history
+# scale:comment : A numeric field that identifies the calibration scale. Measurements are relative to reported calibration scale.
+#
+# VARIABLE ORDER
+#
+# site_gaw_id year month day hour minute second year month day hour minute second value value_unc nvalue latitude longitude altitude elevation intake_height flask_no ORG_QCflag QCflag instrument measurement_method scale
+PRS 1993 04 01 00 00 00 -999 -9 -9 -9 -9 -9 360.385 0.45 12 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1993 05 01 00 00 00 -999 -9 -9 -9 -9 -9 359.064 0.61 17 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1993 06 01 00 00 00 -999 -9 -9 -9 -9 -9 356.092 0.56 13 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1993 07 01 00 00 00 -999 -9 -9 -9 -9 -9 351.631 0.34 7 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1993 08 01 00 00 00 -999 -9 -9 -9 -9 -9 352.734 0.45 7 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1993 09 01 00 00 00 -999 -9 -9 -9 -9 -9 350.727 0.49 17 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1993 10 01 00 00 00 -999 -9 -9 -9 -9 -9 354.684 0.54 17 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1993 11 01 00 00 00 -999 -9 -9 -9 -9 -9 356.702 0.50 28 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1993 12 01 00 00 00 -999 -9 -9 -9 -9 -9 357.297 0.63 15 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1994 01 01 00 00 00 -999 -9 -9 -9 -9 -9 359.730 0.53 15 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1994 02 01 00 00 00 -999 -9 -9 -9 -9 -9 361.328 0.38 23 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1994 03 01 00 00 00 -999 -9 -9 -9 -9 -9 360.731 0.51 31 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1994 04 01 00 00 00 -999 -9 -9 -9 -9 -9 363.544 0.45 26 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1994 05 01 00 00 00 -999 -9 -9 -9 -9 -9 360.750 0.44 8 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1994 06 01 00 00 00 -999 -9 -9 -9 -9 -9 -999.999 -999.999 -9 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 3 1 9 59
+PRS 1994 07 01 00 00 00 -999 -9 -9 -9 -9 -9 353.942 0.50 7 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1994 08 01 00 00 00 -999 -9 -9 -9 -9 -9 352.395 0.42 24 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1994 09 01 00 00 00 -999 -9 -9 -9 -9 -9 354.436 0.57 11 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1994 10 01 00 00 00 -999 -9 -9 -9 -9 -9 356.107 0.58 18 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1994 11 01 00 00 00 -999 -9 -9 -9 -9 -9 358.532 0.54 18 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1994 12 01 00 00 00 -999 -9 -9 -9 -9 -9 359.924 0.52 25 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1995 01 01 00 00 00 -999 -9 -9 -9 -9 -9 362.216 0.56 18 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1995 02 01 00 00 00 -999 -9 -9 -9 -9 -9 362.529 0.44 14 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1995 03 01 00 00 00 -999 -9 -9 -9 -9 -9 362.900 0.58 22 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1995 04 01 00 00 00 -999 -9 -9 -9 -9 -9 363.732 0.53 18 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1995 05 01 00 00 00 -999 -9 -9 -9 -9 -9 363.356 0.53 28 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1995 06 01 00 00 00 -999 -9 -9 -9 -9 -9 360.226 0.42 13 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1995 07 01 00 00 00 -999 -9 -9 -9 -9 -9 356.968 0.35 23 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1995 08 01 00 00 00 -999 -9 -9 -9 -9 -9 354.306 0.52 27 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1995 09 01 00 00 00 -999 -9 -9 -9 -9 -9 356.266 0.55 16 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1995 10 01 00 00 00 -999 -9 -9 -9 -9 -9 358.417 0.57 25 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1995 11 01 00 00 00 -999 -9 -9 -9 -9 -9 361.100 0.62 27 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1995 12 01 00 00 00 -999 -9 -9 -9 -9 -9 362.793 0.60 21 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1996 01 01 00 00 00 -999 -9 -9 -9 -9 -9 363.662 0.55 21 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1996 02 01 00 00 00 -999 -9 -9 -9 -9 -9 365.336 0.51 17 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1996 03 01 00 00 00 -999 -9 -9 -9 -9 -9 365.763 0.52 23 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1996 04 01 00 00 00 -999 -9 -9 -9 -9 -9 366.489 0.49 27 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1996 05 01 00 00 00 -999 -9 -9 -9 -9 -9 365.548 0.46 30 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1996 06 01 00 00 00 -999 -9 -9 -9 -9 -9 362.126 0.37 22 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1996 07 01 00 00 00 -999 -9 -9 -9 -9 -9 358.811 0.46 17 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1996 08 01 00 00 00 -999 -9 -9 -9 -9 -9 355.957 0.47 24 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1996 09 01 00 00 00 -999 -9 -9 -9 -9 -9 357.178 0.60 26 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1996 10 01 00 00 00 -999 -9 -9 -9 -9 -9 360.028 0.48 25 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1996 11 01 00 00 00 -999 -9 -9 -9 -9 -9 361.303 0.48 4 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1996 12 01 00 00 00 -999 -9 -9 -9 -9 -9 363.359 0.69 20 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1997 01 01 00 00 00 -999 -9 -9 -9 -9 -9 364.628 0.65 19 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1997 02 01 00 00 00 -999 -9 -9 -9 -9 -9 367.086 0.45 21 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1997 03 01 00 00 00 -999 -9 -9 -9 -9 -9 368.088 0.56 29 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1997 04 01 00 00 00 -999 -9 -9 -9 -9 -9 367.390 0.54 30 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1997 05 01 00 00 00 -999 -9 -9 -9 -9 -9 366.532 0.63 20 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1997 06 01 00 00 00 -999 -9 -9 -9 -9 -9 362.362 0.46 16 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1997 07 01 00 00 00 -999 -9 -9 -9 -9 -9 359.311 0.48 21 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1997 08 01 00 00 00 -999 -9 -9 -9 -9 -9 357.946 0.38 27 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1997 09 01 00 00 00 -999 -9 -9 -9 -9 -9 358.600 0.44 28 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1997 10 01 00 00 00 -999 -9 -9 -9 -9 -9 360.818 0.61 29 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1997 11 01 00 00 00 -999 -9 -9 -9 -9 -9 363.686 0.48 28 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1997 12 01 00 00 00 -999 -9 -9 -9 -9 -9 365.763 0.61 19 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1998 01 01 00 00 00 -999 -9 -9 -9 -9 -9 366.655 0.61 25 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1998 02 01 00 00 00 -999 -9 -9 -9 -9 -9 366.723 0.54 27 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1998 03 01 00 00 00 -999 -9 -9 -9 -9 -9 368.624 0.48 29 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1998 04 01 00 00 00 -999 -9 -9 -9 -9 -9 369.642 0.41 29 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1998 05 01 00 00 00 -999 -9 -9 -9 -9 -9 366.927 0.51 20 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1998 06 01 00 00 00 -999 -9 -9 -9 -9 -9 366.144 0.44 17 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1998 07 01 00 00 00 -999 -9 -9 -9 -9 -9 362.935 0.44 20 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1998 08 01 00 00 00 -999 -9 -9 -9 -9 -9 360.271 0.24 7 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1998 09 01 00 00 00 -999 -9 -9 -9 -9 -9 361.697 0.53 19 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1998 10 01 00 00 00 -999 -9 -9 -9 -9 -9 363.813 0.40 11 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1998 11 01 00 00 00 -999 -9 -9 -9 -9 -9 368.345 0.41 15 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1998 12 01 00 00 00 -999 -9 -9 -9 -9 -9 368.543 0.49 26 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1999 01 01 00 00 00 -999 -9 -9 -9 -9 -9 368.244 0.62 21 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1999 02 01 00 00 00 -999 -9 -9 -9 -9 -9 370.709 0.57 14 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1999 03 01 00 00 00 -999 -9 -9 -9 -9 -9 371.310 0.56 26 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1999 04 01 00 00 00 -999 -9 -9 -9 -9 -9 372.992 0.52 20 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1999 05 01 00 00 00 -999 -9 -9 -9 -9 -9 370.623 0.46 21 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1999 06 01 00 00 00 -999 -9 -9 -9 -9 -9 364.987 0.36 9 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1999 07 01 00 00 00 -999 -9 -9 -9 -9 -9 361.227 0.43 13 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1999 08 01 00 00 00 -999 -9 -9 -9 -9 -9 363.093 0.36 16 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1999 09 01 00 00 00 -999 -9 -9 -9 -9 -9 363.478 0.55 19 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1999 10 01 00 00 00 -999 -9 -9 -9 -9 -9 364.595 0.41 17 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1999 11 01 00 00 00 -999 -9 -9 -9 -9 -9 369.883 0.48 17 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 1999 12 01 00 00 00 -999 -9 -9 -9 -9 -9 369.350 0.53 25 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2000 01 01 00 00 00 -999 -9 -9 -9 -9 -9 370.326 0.56 26 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2000 02 01 00 00 00 -999 -9 -9 -9 -9 -9 371.262 0.50 22 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2000 03 01 00 00 00 -999 -9 -9 -9 -9 -9 372.362 0.60 21 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2000 04 01 00 00 00 -999 -9 -9 -9 -9 -9 373.228 0.66 28 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2000 05 01 00 00 00 -999 -9 -9 -9 -9 -9 370.630 0.33 10 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2000 06 01 00 00 00 -999 -9 -9 -9 -9 -9 368.926 0.30 20 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2000 07 01 00 00 00 -999 -9 -9 -9 -9 -9 364.229 0.42 23 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2000 08 01 00 00 00 -999 -9 -9 -9 -9 -9 363.303 0.37 22 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2000 09 01 00 00 00 -999 -9 -9 -9 -9 -9 365.759 0.54 13 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2000 10 01 00 00 00 -999 -9 -9 -9 -9 -9 367.097 0.33 11 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2000 11 01 00 00 00 -999 -9 -9 -9 -9 -9 369.910 0.57 23 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2000 12 01 00 00 00 -999 -9 -9 -9 -9 -9 370.561 0.56 26 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2001 01 01 00 00 00 -999 -9 -9 -9 -9 -9 373.046 0.50 27 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2001 02 01 00 00 00 -999 -9 -9 -9 -9 -9 372.601 0.46 19 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2001 03 01 00 00 00 -999 -9 -9 -9 -9 -9 373.954 0.46 20 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2001 04 01 00 00 00 -999 -9 -9 -9 -9 -9 374.865 0.57 27 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2001 05 01 00 00 00 -999 -9 -9 -9 -9 -9 373.265 0.45 13 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2001 06 01 00 00 00 -999 -9 -9 -9 -9 -9 371.188 0.45 16 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2001 07 01 00 00 00 -999 -9 -9 -9 -9 -9 365.657 0.43 16 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2001 08 01 00 00 00 -999 -9 -9 -9 -9 -9 364.034 0.47 17 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2001 09 01 00 00 00 -999 -9 -9 -9 -9 -9 365.507 0.46 17 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2001 10 01 00 00 00 -999 -9 -9 -9 -9 -9 368.279 0.52 22 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2001 11 01 00 00 00 -999 -9 -9 -9 -9 -9 374.908 0.32 12 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2001 12 01 00 00 00 -999 -9 -9 -9 -9 -9 373.118 0.61 24 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2002 01 01 00 00 00 -999 -9 -9 -9 -9 -9 374.219 0.47 29 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2002 02 01 00 00 00 -999 -9 -9 -9 -9 -9 374.794 0.57 23 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2002 03 01 00 00 00 -999 -9 -9 -9 -9 -9 376.274 0.65 25 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2002 04 01 00 00 00 -999 -9 -9 -9 -9 -9 376.838 0.36 24 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2002 05 01 00 00 00 -999 -9 -9 -9 -9 -9 376.145 0.41 26 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2002 06 01 00 00 00 -999 -9 -9 -9 -9 -9 373.583 0.36 24 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2002 07 01 00 00 00 -999 -9 -9 -9 -9 -9 369.705 0.37 16 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2002 08 01 00 00 00 -999 -9 -9 -9 -9 -9 367.535 0.42 24 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2002 09 01 00 00 00 -999 -9 -9 -9 -9 -9 368.912 0.62 25 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2002 10 01 00 00 00 -999 -9 -9 -9 -9 -9 371.561 0.59 28 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2002 11 01 00 00 00 -999 -9 -9 -9 -9 -9 374.083 0.54 18 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2002 12 01 00 00 00 -999 -9 -9 -9 -9 -9 375.531 0.56 22 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2003 01 01 00 00 00 -999 -9 -9 -9 -9 -9 376.664 0.51 13 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2003 02 01 00 00 00 -999 -9 -9 -9 -9 -9 377.691 0.54 20 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2003 03 01 00 00 00 -999 -9 -9 -9 -9 -9 378.562 0.43 28 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2003 04 01 00 00 00 -999 -9 -9 -9 -9 -9 380.291 0.51 22 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2003 05 01 00 00 00 -999 -9 -9 -9 -9 -9 378.448 0.50 27 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2003 06 01 00 00 00 -999 -9 -9 -9 -9 -9 -999.999 -999.999 -9 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 3 1 9 59
+PRS 2003 07 01 00 00 00 -999 -9 -9 -9 -9 -9 372.230 0.47 13 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2003 08 01 00 00 00 -999 -9 -9 -9 -9 -9 372.847 0.49 14 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2003 09 01 00 00 00 -999 -9 -9 -9 -9 -9 371.642 0.53 21 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2003 10 01 00 00 00 -999 -9 -9 -9 -9 -9 374.528 0.69 25 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2003 11 01 00 00 00 -999 -9 -9 -9 -9 -9 375.512 0.62 21 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2003 12 01 00 00 00 -999 -9 -9 -9 -9 -9 378.451 0.61 24 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2004 01 01 00 00 00 -999 -9 -9 -9 -9 -9 379.053 0.66 16 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2004 02 01 00 00 00 -999 -9 -9 -9 -9 -9 380.372 0.51 20 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2004 03 01 00 00 00 -999 -9 -9 -9 -9 -9 381.573 0.34 23 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2004 04 01 00 00 00 -999 -9 -9 -9 -9 -9 382.193 0.53 27 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2004 05 01 00 00 00 -999 -9 -9 -9 -9 -9 381.489 0.37 11 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2004 06 01 00 00 00 -999 -9 -9 -9 -9 -9 -999.999 -999.999 -9 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 3 1 9 59
+PRS 2004 07 01 00 00 00 -999 -9 -9 -9 -9 -9 -999.999 -999.999 -9 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 3 1 9 59
+PRS 2004 08 01 00 00 00 -999 -9 -9 -9 -9 -9 373.728 0.53 15 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2004 09 01 00 00 00 -999 -9 -9 -9 -9 -9 371.724 0.32 21 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2004 10 01 00 00 00 -999 -9 -9 -9 -9 -9 373.486 0.63 20 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2004 11 01 00 00 00 -999 -9 -9 -9 -9 -9 377.820 0.55 18 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2004 12 01 00 00 00 -999 -9 -9 -9 -9 -9 378.851 0.52 22 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2005 01 01 00 00 00 -999 -9 -9 -9 -9 -9 380.357 0.50 20 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2005 02 01 00 00 00 -999 -9 -9 -9 -9 -9 382.897 0.79 7 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2005 03 01 00 00 00 -999 -9 -9 -9 -9 -9 382.740 0.48 25 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2005 04 01 00 00 00 -999 -9 -9 -9 -9 -9 383.680 0.53 26 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2005 05 01 00 00 00 -999 -9 -9 -9 -9 -9 381.971 0.64 7 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2005 06 01 00 00 00 -999 -9 -9 -9 -9 -9 380.482 0.45 15 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2005 07 01 00 00 00 -999 -9 -9 -9 -9 -9 375.293 0.39 15 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2005 08 01 00 00 00 -999 -9 -9 -9 -9 -9 372.838 0.24 6 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2005 09 01 00 00 00 -999 -9 -9 -9 -9 -9 375.845 0.54 23 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2005 10 01 00 00 00 -999 -9 -9 -9 -9 -9 378.189 0.50 29 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2005 11 01 00 00 00 -999 -9 -9 -9 -9 -9 379.122 0.41 13 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2005 12 01 00 00 00 -999 -9 -9 -9 -9 -9 382.140 0.61 19 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2006 01 01 00 00 00 -999 -9 -9 -9 -9 -9 383.786 0.950 30 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2006 02 01 00 00 00 -999 -9 -9 -9 -9 -9 384.785 1.325 28 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2006 03 01 00 00 00 -999 -9 -9 -9 -9 -9 385.323 0.901 30 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2006 04 01 00 00 00 -999 -9 -9 -9 -9 -9 385.269 0.743 30 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2006 05 01 00 00 00 -999 -9 -9 -9 -9 -9 384.301 0.883 22 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2006 06 01 00 00 00 -999 -9 -9 -9 -9 -9 381.511 1.244 19 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2006 07 01 00 00 00 -999 -9 -9 -9 -9 -9 377.378 1.299 30 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2006 08 01 00 00 00 -999 -9 -9 -9 -9 -9 374.618 1.242 21 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2006 09 01 00 00 00 -999 -9 -9 -9 -9 -9 377.043 0.871 17 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2006 10 01 00 00 00 -999 -9 -9 -9 -9 -9 378.145 0.655 3 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2006 11 01 00 00 00 -999 -9 -9 -9 -9 -9 380.881 0.995 18 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2006 12 01 00 00 00 -999 -9 -9 -9 -9 -9 383.590 0.934 29 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 59
+PRS 2007 01 01 00 00 00 -999 -9 -9 -9 -9 -9 384.437 0.784 28 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 1
+PRS 2007 02 01 00 00 00 -999 -9 -9 -9 -9 -9 386.104 0.978 16 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 1
+PRS 2007 03 01 00 00 00 -999 -9 -9 -9 -9 -9 388.283 1.497 18 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 1
+PRS 2007 04 01 00 00 00 -999 -9 -9 -9 -9 -9 386.792 0.750 21 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 1
+PRS 2007 05 01 00 00 00 -999 -9 -9 -9 -9 -9 386.000 0.877 21 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 1
+PRS 2007 06 01 00 00 00 -999 -9 -9 -9 -9 -9 380.717 0.567 3 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 1
+PRS 2007 07 01 00 00 00 -999 -9 -9 -9 -9 -9 379.929 0.892 21 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 1
+PRS 2007 08 01 00 00 00 -999 -9 -9 -9 -9 -9 378.647 0.925 15 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 1
+PRS 2007 09 01 00 00 00 -999 -9 -9 -9 -9 -9 378.765 0.705 10 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 1
+PRS 2007 10 01 00 00 00 -999 -9 -9 -9 -9 -9 382.252 0.986 15 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 1
+PRS 2007 11 01 00 00 00 -999 -9 -9 -9 -9 -9 384.155 1.066 28 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 1
+PRS 2007 12 01 00 00 00 -999 -9 -9 -9 -9 -9 385.895 0.899 26 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 1 9 1
+PRS 2008 01 01 00 00 00 -999 -9 -9 -9 -9 -9 387.036 0.989 31 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2008 02 01 00 00 00 -999 -9 -9 -9 -9 -9 387.776 0.568 28 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2008 03 01 00 00 00 -999 -9 -9 -9 -9 -9 389.839 1.187 29 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2008 04 01 00 00 00 -999 -9 -9 -9 -9 -9 390.823 0.844 27 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2008 05 01 00 00 00 -999 -9 -9 -9 -9 -9 388.245 0.990 26 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2008 06 01 00 00 00 -999 -9 -9 -9 -9 -9 386.351 1.140 12 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2008 07 01 00 00 00 -999 -9 -9 -9 -9 -9 381.716 1.254 19 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2008 08 01 00 00 00 -999 -9 -9 -9 -9 -9 380.592 1.109 15 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2008 09 01 00 00 00 -999 -9 -9 -9 -9 -9 380.434 1.030 27 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2008 10 01 00 00 00 -999 -9 -9 -9 -9 -9 383.590 1.523 30 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2008 11 01 00 00 00 -999 -9 -9 -9 -9 -9 386.440 1.024 25 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2008 12 01 00 00 00 -999 -9 -9 -9 -9 -9 387.775 1.084 29 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2009 01 01 00 00 00 -999 -9 -9 -9 -9 -9 389.1 0.71 24 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2009 02 01 00 00 00 -999 -9 -9 -9 -9 -9 390.6 0.93 26 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2009 03 01 00 00 00 -999 -9 -9 -9 -9 -9 393.0 0.86 20 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2009 04 01 00 00 00 -999 -9 -9 -9 -9 -9 391.5 0.77 30 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2009 05 01 00 00 00 -999 -9 -9 -9 -9 -9 389.9 1.03 29 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2009 06 01 00 00 00 -999 -9 -9 -9 -9 -9 386.4 2.82 18 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2009 07 01 00 00 00 -999 -9 -9 -9 -9 -9 383.1 1.06 26 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2009 08 01 00 00 00 -999 -9 -9 -9 -9 -9 380.8 0.83 15 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2009 09 01 00 00 00 -999 -9 -9 -9 -9 -9 381.9 1.38 30 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2009 10 01 00 00 00 -999 -9 -9 -9 -9 -9 385.0 0.88 30 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2009 11 01 00 00 00 -999 -9 -9 -9 -9 -9 387.2 1.21 26 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2009 12 01 00 00 00 -999 -9 -9 -9 -9 -9 389.9 0.98 27 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2010 01 01 00 00 00 -999 -9 -9 -9 -9 -9 391.507 0.706 29 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2010 02 01 00 00 00 -999 -9 -9 -9 -9 -9 392.904 0.926 23 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2010 03 01 00 00 00 -999 -9 -9 -9 -9 -9 393.350 0.857 28 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2010 04 01 00 00 00 -999 -9 -9 -9 -9 -9 393.682 0.768 26 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2010 05 01 00 00 00 -999 -9 -9 -9 -9 -9 392.466 1.029 24 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2010 06 01 00 00 00 -999 -9 -9 -9 -9 -9 387.672 2.823 19 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2010 07 01 00 00 00 -999 -9 -9 -9 -9 -9 384.531 1.058 25 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2010 08 01 00 00 00 -999 -9 -9 -9 -9 -9 383.578 0.834 20 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2010 09 01 00 00 00 -999 -9 -9 -9 -9 -9 385.686 1.381 27 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2010 10 01 00 00 00 -999 -9 -9 -9 -9 -9 388.335 0.883 27 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2010 11 01 00 00 00 -999 -9 -9 -9 -9 -9 391.139 1.210 28 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2010 12 01 00 00 00 -999 -9 -9 -9 -9 -9 392.884 0.984 27 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2011 01 01 00 00 00 -999 -9 -9 -9 -9 -9 393.077 1.272 25 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2011 02 01 00 00 00 -999 -9 -9 -9 -9 -9 394.520 1.075 27 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2011 03 01 00 00 00 -999 -9 -9 -9 -9 -9 395.797 0.903 29 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2011 04 01 00 00 00 -999 -9 -9 -9 -9 -9 395.156 0.782 30 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2011 05 01 00 00 00 -999 -9 -9 -9 -9 -9 392.843 0.872 30 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2011 06 01 00 00 00 -999 -9 -9 -9 -9 -9 391.867 1.025 19 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2011 07 01 00 00 00 -999 -9 -9 -9 -9 -9 386.397 2.151 27 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2011 08 01 00 00 00 -999 -9 -9 -9 -9 -9 386.960 1.472 23 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2011 09 01 00 00 00 -999 -9 -9 -9 -9 -9 387.412 0.865 12 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2011 10 01 00 00 00 -999 -9 -9 -9 -9 -9 389.662 1.010 31 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2011 11 01 00 00 00 -999 -9 -9 -9 -9 -9 392.177 0.887 22 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2011 12 01 00 00 00 -999 -9 -9 -9 -9 -9 394.193 1.209 28 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2012 01 01 00 00 00 -999 -9 -9 -9 -9 -9 394.56 0.84 25 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2012 02 01 00 00 00 -999 -9 -9 -9 -9 -9 396.28 1.11 24 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2012 03 01 00 00 00 -999 -9 -9 -9 -9 -9 396.43 0.93 30 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2012 04 01 00 00 00 -999 -9 -9 -9 -9 -9 398.02 0.94 31 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2012 05 01 00 00 00 -999 -9 -9 -9 -9 -9 396.21 1.37 30 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2012 06 01 00 00 00 -999 -9 -9 -9 -9 -9 395.26 0.59 8 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2012 07 01 00 00 00 -999 -9 -9 -9 -9 -9 389.24 0.88 17 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2012 08 01 00 00 00 -999 -9 -9 -9 -9 -9 388.25 0.93 20 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2012 09 01 00 00 00 -999 -9 -9 -9 -9 -9 388.74 0.80 18 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2012 10 01 00 00 00 -999 -9 -9 -9 -9 -9 -999.999 -999.999 -9 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 3 2 9 1
+PRS 2012 11 01 00 00 00 -999 -9 -9 -9 -9 -9 394.33 0.97 15 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2012 12 01 00 00 00 -999 -9 -9 -9 -9 -9 396.79 0.89 30 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2013 01 01 00 00 00 -999 -9 -9 -9 -9 -9 398.8 1.68 27 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2013 02 01 00 00 00 -999 -9 -9 -9 -9 -9 400.9 1.10 20 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2013 03 01 00 00 00 -999 -9 -9 -9 -9 -9 401.0 0.75 30 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2013 04 01 00 00 00 -999 -9 -9 -9 -9 -9 401.1 0.91 27 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2013 05 01 00 00 00 -999 -9 -9 -9 -9 -9 399.1 0.97 28 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2013 06 01 00 00 00 -999 -9 -9 -9 -9 -9 396.8 0.79 16 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2013 07 01 00 00 00 -999 -9 -9 -9 -9 -9 389.7 1.14 20 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2013 08 01 00 00 00 -999 -9 -9 -9 -9 -9 388.9 1.16 25 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2013 09 01 00 00 00 -999 -9 -9 -9 -9 -9 391.3 1.95 24 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2013 10 01 00 00 00 -999 -9 -9 -9 -9 -9 395.0 0.82 25 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2013 11 01 00 00 00 -999 -9 -9 -9 -9 -9 398.2 1.58 16 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2013 12 01 00 00 00 -999 -9 -9 -9 -9 -9 398.1 0.76 28 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2014 01 01 00 00 00 -999 -9 -9 -9 -9 -9 400.0 1.41 30 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2014 02 01 00 00 00 -999 -9 -9 -9 -9 -9 401.8 0.83 27 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2014 03 01 00 00 00 -999 -9 -9 -9 -9 -9 402.0 1.16 28 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2014 04 01 00 00 00 -999 -9 -9 -9 -9 -9 402.0 0.58 30 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2014 05 01 00 00 00 -999 -9 -9 -9 -9 -9 400.9 1.31 23 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2014 06 01 00 00 00 -999 -9 -9 -9 -9 -9 397.6 1.14 25 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2014 07 01 00 00 00 -999 -9 -9 -9 -9 -9 393.9 2.30 19 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2014 08 01 00 00 00 -999 -9 -9 -9 -9 -9 390.7 1.24 24 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2014 09 01 00 00 00 -999 -9 -9 -9 -9 -9 393.0 1.65 20 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2014 10 01 00 00 00 -999 -9 -9 -9 -9 -9 396.5 0.62 31 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2014 11 01 00 00 00 -999 -9 -9 -9 -9 -9 398.6 1.20 26 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2014 12 01 00 00 00 -999 -9 -9 -9 -9 -9 400.6 1.01 25 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2015 01 01 00 00 00 -999 -9 -9 -9 -9 -9 402.228 1.206 29 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2015 02 01 00 00 00 -999 -9 -9 -9 -9 -9 403.090 0.941 24 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2015 03 01 00 00 00 -999 -9 -9 -9 -9 -9 403.569 0.967 28 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2015 04 01 00 00 00 -999 -9 -9 -9 -9 -9 404.046 0.627 28 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2015 05 01 00 00 00 -999 -9 -9 -9 -9 -9 402.345 1.188 31 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2015 06 01 00 00 00 -999 -9 -9 -9 -9 -9 -999.999 -999.999 -9 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 3 2 9 1
+PRS 2015 07 01 00 00 00 -999 -9 -9 -9 -9 -9 396.882 1.343 29 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2015 08 01 00 00 00 -999 -9 -9 -9 -9 -9 393.961 0.917 31 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2015 09 01 00 00 00 -999 -9 -9 -9 -9 -9 395.067 1.472 20 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2015 10 01 00 00 00 -999 -9 -9 -9 -9 -9 399.272 1.607 23 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2015 11 01 00 00 00 -999 -9 -9 -9 -9 -9 402.008 1.060 27 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2015 12 01 00 00 00 -999 -9 -9 -9 -9 -9 403.451 0.810 30 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2016 01 01 00 00 00 -999 -9 -9 -9 -9 -9 406.2 0.797 30 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2016 02 01 00 00 00 -999 -9 -9 -9 -9 -9 406.9 1.098 24 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2016 03 01 00 00 00 -999 -9 -9 -9 -9 -9 407.7 0.999 31 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2016 04 01 00 00 00 -999 -9 -9 -9 -9 -9 407.1 0.504 27 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2016 05 01 00 00 00 -999 -9 -9 -9 -9 -9 405.2 1.119 28 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2016 06 01 00 00 00 -999 -9 -9 -9 -9 -9 402.1 1.020 15 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2016 07 01 00 00 00 -999 -9 -9 -9 -9 -9 400.0 1.125 27 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2016 08 01 00 00 00 -999 -9 -9 -9 -9 -9 397.9 1.025 26 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2016 09 01 00 00 00 -999 -9 -9 -9 -9 -9 399.4 1.355 22 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2016 10 01 00 00 00 -999 -9 -9 -9 -9 -9 403.0 1.148 28 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2016 11 01 00 00 00 -999 -9 -9 -9 -9 -9 405.2 1.097 28 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2016 12 01 00 00 00 -999 -9 -9 -9 -9 -9 406.0 1.112 31 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2017 01 01 00 00 00 -999 -9 -9 -9 -9 -9 408.4 1.42 30 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2017 02 01 00 00 00 -999 -9 -9 -9 -9 -9 408.8 1.03 27 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2017 03 01 00 00 00 -999 -9 -9 -9 -9 -9 409.5 0.81 31 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2017 04 01 00 00 00 -999 -9 -9 -9 -9 -9 410.4 0.85 29 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2017 05 01 00 00 00 -999 -9 -9 -9 -9 -9 409.1 1.31 31 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2017 06 01 00 00 00 -999 -9 -9 -9 -9 -9 407.0 1.49 18 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2017 07 01 00 00 00 -999 -9 -9 -9 -9 -9 402.1 0.94 29 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2017 08 01 00 00 00 -999 -9 -9 -9 -9 -9 399.6 1.08 16 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2017 09 01 00 00 00 -999 -9 -9 -9 -9 -9 400.0 0.95 11 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2017 10 01 00 00 00 -999 -9 -9 -9 -9 -9 405.1 0.50 18 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2017 11 01 00 00 00 -999 -9 -9 -9 -9 -9 406.6 1.04 24 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2017 12 01 00 00 00 -999 -9 -9 -9 -9 -9 408.9 1.13 27 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2018 01 01 00 00 00 -999 -9 -9 -9 -9 -9 409.6 0.85 31 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2018 02 01 00 00 00 -999 -9 -9 -9 -9 -9 411.7 0.85 16 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2018 03 01 00 00 00 -999 -9 -9 -9 -9 -9 413.2 0.72 23 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2018 04 01 00 00 00 -999 -9 -9 -9 -9 -9 413.3 0.92 16 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2018 05 01 00 00 00 -999 -9 -9 -9 -9 -9 408.9 1.05 26 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 2 9 1
+PRS 2018 06 01 00 00 00 -999 -9 -9 -9 -9 -9 407.7 1.54 28 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 3 18 153
+PRS 2018 07 01 00 00 00 -999 -9 -9 -9 -9 -9 403.5 1.55 30 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 3 18 153
+PRS 2018 08 01 00 00 00 -999 -9 -9 -9 -9 -9 401.9 0.77 22 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 3 18 153
+PRS 2018 09 01 00 00 00 -999 -9 -9 -9 -9 -9 403.5 1.05 23 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 3 18 153
+PRS 2018 10 01 00 00 00 -999 -9 -9 -9 -9 -9 406.4 1.11 29 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 3 18 153
+PRS 2018 11 01 00 00 00 -999 -9 -9 -9 -9 -9 409.5 1.29 26 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 3 18 153
+PRS 2018 12 01 00 00 00 -999 -9 -9 -9 -9 -9 411.0 0.81 31 45.9353408813 7.7073101997 3490 3480 10 -999.999 -999.999 1 3 18 153
