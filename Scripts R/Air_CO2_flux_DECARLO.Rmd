@@ -51,9 +51,7 @@ SOMLIT_carbo_chemistry <- read_csv("../Data/data_pH_steeve.csv")
 SOMLIT_carbo_chemistry_surf <- SOMLIT_carbo_chemistry %>% 
   dplyr::filter(depth==0) %>% 
   select(sampling_date, salinity, temperature, ta, dic, NO2, NO3, Chla, pH_calc, pCO2) %>% 
-  rename(pCO2_water_uatm = pCO2) %>% 
-  filter(sampling_date <= "2018-12-31") %>% 
-  mutate(sampling_date = as.character(sampling_date)) %>% 
+  rename(pCO2_water_uatm = pCO2, datetime = sampling_date) %>%
   mutate(salinity = case_when(salinity < 35 ~ NA_real_ , TRUE ~ salinity))
 
 SOMLIT_carbo_chemistry_50m <- SOMLIT_carbo_chemistry %>% 
@@ -78,7 +76,10 @@ atmospheric_co2_MONTE_CIMONE <- atmospheric_co2_MONTE_CIMONE %>%
   mutate(CO2_ppm = case_when(CO2_ppm == -999.990 ~ NA_real_ , TRUE ~ CO2_ppm)) %>%
   select(datetime, CO2_ppm)
 
-atmospheric_co2_MONTE_CIMONE <- atmospheric_co2_MONTE_CIMONE[-c(1:994),]
+#data par heure > calcul data moyenne par jour
+atmospheric_co2_MONTE_CIMONE <- atmospheric_co2_MONTE_CIMONE %>% 
+  group_by(datetime) %>% 
+  summarise(CO2_ppm = mean(CO2_ppm, na.rm=TRUE))
 
 ##
 ```
@@ -363,35 +364,132 @@ Azur_wind_2022 <- Azur_wind_2022 %>% reframe (date=X1, `wind speed` = case_when(
                                                                                 TRUE ~ (X2*0.514444681)))
 
 
-#fusion (2007-2018) : Azur_wind_RAW = wind speed en m/s 2007-2018)
+#fusion (2007-2018) : Azur_wind_RAW = wind speed en m/s 2007-janvier 2022)
 
 Azur_wind_RAW <- rbind(Azur_wind_2007, Azur_wind_2008, Azur_wind_2009, Azur_wind_2010,
                        Azur_wind_2011, Azur_wind_2012, Azur_wind_2013, Azur_wind_2014,
                        Azur_wind_2015, Azur_wind_2016, Azur_wind_2016, Azur_wind_2017,
-                       Azur_wind_2018)
+                       Azur_wind_2018, Azur_wind_2019, Azur_wind_2020, Azur_wind_2021,
+                       Azur_wind_2022)
+
+Azur_wind_RAW <- Azur_wind_RAW %>% 
+  mutate(datetime = format(date, format="%Y-%m-%d")) %>% 
+  mutate(datetime = as.POSIXct(datetime)) %>% 
+  rename(wind_speed_ms = `wind speed`) %>% 
+  select(datetime, wind_speed_ms)
+
 
 ```
 
 Wind speed (m/s) par heure \>\> calcul moyenne wind speed par jour
 
 ```{r moyenne wind speed par jour, echo=FALSE, warning=FALSE, message=FALSE}
+
+#calcul mean + replace 9999 par NA
 Azur_wind_daily <- Azur_wind_RAW %>% 
-  mutate(day = format(date, format="%Y-%m-%d")) %>% 
-  group_by(day) %>% 
-  mutate(mean_daily = mean(`wind speed`)) %>% 
-  reframe(sampling_date=day, wind_mean_daily = mean_daily) %>% 
-  select(-day)
+  group_by(datetime) %>% 
+  mutate(wind_speed_ms = mean(wind_speed_ms)) %>% 
+  mutate(wind_speed_ms = case_when(wind_speed_ms == -9999 ~ NA_real_ , TRUE ~ wind_speed_ms))
 
 Azur_wind_daily <- distinct(Azur_wind_daily)
 
+#plot visualiser les outliers
+Azur_wind_daily %>% 
+  ggplot() +
+  aes(x=datetime, y=wind_speed_ms) +
+  geom_boxplot() + 
+  xlab(label = "") +
+  ylab(label = "") +
+  theme(legend.position="none")+
+  ggtitle("wind_speed_ms boxplot (outliers)") 
+
+outliers_wind <- boxplot.stats(Azur_wind_daily$wind_speed_ms)
+
+#remplacer les outliers par des NA
+Azur_wind_daily[Azur_wind_daily$wind_speed_ms %in% outliers_wind$out, "wind_speed_ms"] = NA
+
+#summary(Azur_wind_daily) # 1012 NA
+
+
+```
+
+
+```{r distribution des NA wind speed, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+##visualisation NA 
+Data_wind_NA_plot <- ggplot_na_distribution(Azur_wind_daily$wind_speed_ms)
+Data_wind_NA_plot
+#statsNA(Azur_wind_daily$wind_speed_ms) # bcp de NA : 20% du dataset
+#ggplot_na_gapsize(Azur_wind_daily$wind_speed_ms, orientation="vertical")
+
+#plot nb NA par années
+Data_wind_NA_plot_year <- Azur_wind_daily %>% 
+  dplyr::mutate(Year = format(datetime, format="%Y"),
+                Month = format(datetime, format="%m-%d")) %>% 
+  dplyr::group_by(Year, Month) 
+
+Data_wind_NA_plot_year$wind_speed_ms[is.na(Data_wind_NA_plot_year$wind_speed_ms)] <- "NA"
+
+Data_wind_NA_plot_year %>% 
+  dplyr::filter(wind_speed_ms == "NA") %>% 
+  dplyr::group_by(Year) %>% 
+  dplyr::summarise(number_of_NA = n()) %>% 
+  ggplot(aes(x = Year, y = number_of_NA))  +
+  geom_segment(aes(x = Year, xend = Year, y = 0, yend = number_of_NA), 
+               color = "grey", linewidth = 2) +
+  geom_point(size = 5, fill = "#EE6677", shape = 21, color = "black") +
+  coord_flip() +
+  scale_x_discrete(name = "") +
+  scale_y_continuous(name = "NA occurences", limits = c(0,200), breaks = seq(0, 200, 20))
+
+##
+```
+
+```{r linear interpolation Data wind speed, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+Data_wind_interpol <- na_interpolation(Azur_wind_daily$wind_speed_ms, option = "linear")
+
+ggplot_na_imputations(x_with_na = Azur_wind_daily$wind_speed_ms, x_with_imputations = Data_wind_interpol)
+
+#creation data frame Data pCO2 air (ppm) interpolee
+Data_wind_interpol <- data.frame(datetime = Azur_wind_daily$datetime, wind_speed_ms = Data_wind_interpol) # 0 NA
+
+
+```
+
+
+```{r regroupement data : pCO2 water + pCO2 air + wind speed, echo=FALSE, warning=FALSE, message=FALSE}
 
 #integration azur_wind_daily avec DATA
-DATA <- left_join(DATA, Azur_wind_daily, by = as.character("sampling_date"))
+
+SOMLIT_carbo_chemistry_surf <- SOMLIT_carbo_chemistry_surf %>% 
+  mutate(datetime = as.character(datetime))
+Data_air_CO2_interpol <- Data_air_CO2_interpol %>% 
+  mutate(datetime = as.character(datetime))
+Data_wind_interpol <- Data_wind_interpol %>% 
+  mutate(datetime = as.character(datetime))
+
+DATA <- left_join(SOMLIT_carbo_chemistry_surf, Data_air_CO2_interpol, by = "datetime")
+DATA <- left_join(DATA, Data_wind_interpol, by = "datetime")
 
 DATA <- DATA %>% 
-  mutate(sampling_date = as.POSIXct(sampling_date))
+  mutate(datetime = as.POSIXct(datetime)) %>% 
+  rename(pCO2_air_ppm = pCO2_ppm)
 
-Azur_wind_daily
+#summary(DATA$pCO2_water_uatm) #95
+#summary(DATA$pCO2_air_ppm) # 0NA
+#summary(DATA$temperature) # 47 NA
+
+
+```
+
+
+```{r interpolations variables du dataset, echo=FALSE, warning=FALSE, message=FALSE}
+
+DATA$pCO2_water_uatm <- na_interpolation(DATA$pCO2_water_uatm, option = "linear")
+DATA$wind_speed_ms <- na_interpolation(DATA$wind_speed_ms, option = "linear")
+DATA$temperature <- na_interpolation(DATA$temperature, option = "linear")
+DATA$salinity <- na_interpolation(DATA$salinity, option = "linear")
 ```
 
 
@@ -403,13 +501,13 @@ Azur_wind_daily
 plot_pCO2_water <- DATA %>% 
   ggplot() + 
   ggtitle("Water pCO2 (uatm) according to time") +
-  aes(x=sampling_date, y=pCO2_water_uatm) + 
+  aes(x=datetime, y=pCO2_water_uatm) + 
   geom_point(size=1, col='#357AB7')
 
 plot_pCO2_air <- DATA %>% 
   ggplot() +
   ggtitle("Air pCO2 (ppm) according to time ") +
-  aes(x=sampling_date, y=pCO2_air_ppm) +
+  aes(x=datetime, y=pCO2_air_ppm) +
   geom_point(size=1, col='#EED153')
 
 plot_pCO2_water
@@ -417,17 +515,17 @@ plot_pCO2_air
 ```
 
 
-#### Plot pCO2 water VS pCO2 atmosphere (ppm)
+#### Regroupement des 2 plots
 
 ```{r Plot pCO2 water VS pCO2 atmosphere (ppm), echo=FALSE, warning=FALSE, message=FALSE}
 
 plot_pCO2_water_vs_air <- DATA %>% 
   ggplot() + 
-  ggtitle("Water and atmosphere pCO2 (ppm) according to time") +
-  geom_point(aes(x=sampling_date, y=pCO2_water_ppm), size=1, col='#357AB7') + 
-  geom_point(aes(x=sampling_date, y=pCO2_air_ppm), size=1, col='#EED153') + 
+  ggtitle("Water and atmosphere pCO2 according to time") +
+  geom_point(aes(x=datetime, y=pCO2_water_uatm), size=1, col='#357AB7') + 
+  geom_point(aes(x=datetime, y=pCO2_air_ppm), size=1, col='#EED153') + 
   scale_x_datetime(name="") + 
-  scale_y_continuous(name="pCO2 (ppm)")
+  scale_y_continuous(name="pCO2")
 
 plot_pCO2_water_vs_air
 
@@ -443,15 +541,15 @@ plot_pCO2_water_vs_air
 Tmean <- mean(DATA$temperature, na.rm=T) #18.70
 
 T_norm_pCO2_sw <- DATA %>% 
-  dplyr::mutate(T_norm_pCO2_sw = pCO2_water_ppm * exp(0.0423*(Tmean-temperature)))
+  dplyr::mutate(T_norm_pCO2_sw = pCO2_water_uatm * exp(0.0423*(Tmean-temperature)))
 
 #integration au dataset
 DATA <- DATA %>% 
-  dplyr::mutate(T_norm_pCO2_sw = pCO2_water_ppm * exp(0.0423*(Tmean-temperature)))
+  dplyr::mutate(T_norm_pCO2_sw = pCO2_water_uatm * exp(0.0423*(Tmean-temperature)))
 
 ```
 
-#### pCO2 at Point B : 2007-2018
+#### pCO2 at Point B : 2007-2021
 
 (Figure 5.a DE CARLO)
 
@@ -462,15 +560,15 @@ DATA <- DATA %>%
 
 DATA %>% 
   ggplot() +
-  ggtitle("pCO2 at Point B : 2007-2018") +
-  geom_line(aes(x=sampling_date, y=pCO2_air_ppm), col='darkgreen') +
-  geom_point(aes(x=sampling_date, y=pCO2_water_ppm), col='blue', size=0.8) +
-  geom_line(aes(x=sampling_date, y=T_norm_pCO2_sw), col='red') +
+  ggtitle("pCO2 at Point B : 2007-2021") +
+  geom_line(aes(x=datetime, y=pCO2_air_ppm), col='darkgreen') +
+  geom_line(aes(x=datetime, y=pCO2_water_uatm), col='blue') +
+  geom_line(aes(x=datetime, y=T_norm_pCO2_sw), col='red') +
   scale_x_datetime(name="") +
   scale_y_continuous(name="")
 ```
 
-#### Annual cycle of pCO2 (2007-2018)
+#### Annual cycle of pCO2 (2007-2021)
 
 (Figure 5.b DE CARLO)
 
@@ -479,18 +577,18 @@ DATA %>%
 *(rajouter legende plot)*
 
 ```{r Figure 5.b DE CARLO, echo=FALSE, warning=FALSE, message=FALSE}
-#annual cycle of pCO2 (2007-2018)
+#annual cycle of pCO2 (2007-2021)
 
 DATA %>% 
   ggplot() +
-  geom_line(aes(x= as.Date(yday(sampling_date), "1970-01-01"), y=pCO2_water_ppm, 
-                group = factor(year(sampling_date)), 
-                color = factor(year(sampling_date))), linewidth = 0.75) +
+  geom_line(aes(x= as.Date(yday(datetime), "1970-01-01"), y=pCO2_water_uatm, 
+                group = factor(year(datetime)), 
+                color = factor(year(datetime))), linewidth = 0.75) +
   scale_colour_viridis_d() +
   scale_x_date(date_breaks="months", date_labels="%b", name = "") +
   labs(x="Months",colour="") +
   theme_bw() +
-  scale_y_continuous(name = "pCO2 water (ppm)") 
+  scale_y_continuous(name = "pCO2 water (uatm)") 
 ```
 
 #### Calcul de TpCO2 seawater Correspond aux temperature effects on pCO2 water variations
@@ -501,7 +599,7 @@ DATA %>%
 #formula : TpCO2 = pCO2mean * exp[0.0423(Tobs - Tmean)]
 
 #calcul de pCO2mean :
-pCO2mean <- mean(DATA$pCO2_water_ppm, na.rm=T) #411.17
+pCO2mean <- mean(DATA$pCO2_water_uatm, na.rm=T) #408.80
 
 #calcul de TpCO2 :
 TpCO2 <- DATA %>% 
@@ -520,21 +618,21 @@ DATA <- DATA %>%
 
 -   delta pCO2(bio) : correspond aux biological effects = pCO2 water - TpCO2
 
--   delta pCO2 = pCO2 water - pCO2 air (ppm)
+-   delta pCO2 = pCO2 water - pCO2 air 
 
 ```{r Calcul des deltas, echo=TRUE, warning=FALSE, message=FALSE}
 ###Calcul des deltas
 
 #calcul delta pCO2(T) = pCO2obs - pCO2(N)
-delta_pCO2_T <- DATA$pCO2_water_ppm - DATA$T_norm_pCO2_sw
+delta_pCO2_T <- DATA$pCO2_water_uatm - DATA$T_norm_pCO2_sw
 
 #Calcul pCO2(bio) = pCO2obs - pCO2(T-driven) ou TpCO2
-delta_pCO2_bio <- DATA$pCO2_water_ppm - DATA$TpCO2
+delta_pCO2_bio <- DATA$pCO2_water_uatm - DATA$TpCO2
 
 #integration au dataset
 DATA <- DATA %>% 
-  dplyr::mutate(delta_pCO2_T = pCO2_water_ppm - T_norm_pCO2_sw,
-                delta_pCO2_bio = pCO2_water_ppm - TpCO2)
+  dplyr::mutate(delta_pCO2_T = pCO2_water_uatm - T_norm_pCO2_sw,
+                delta_pCO2_bio = pCO2_water_uatm - TpCO2)
 
 ##
 ```
@@ -554,38 +652,40 @@ DATA <- DATA %>%
 DATA %>% 
   ggplot() + 
   ggtitle("Temperature and biological effects on pCO2 variations") +
-  geom_point(aes(x=sampling_date, y=delta_pCO2_T), col='darkgreen', size=0.9) +
-  geom_point(aes(x=sampling_date, y=delta_pCO2_bio), col='#EED153', size=0.9) + 
+  geom_point(aes(x=datetime, y=delta_pCO2_T), col='darkgreen', size=0.9) +
+  geom_point(aes(x=datetime, y=delta_pCO2_bio), col='#EED153', size=0.9) + 
   scale_x_datetime(name="") + 
-  scale_y_continuous(name="deltas pCO2 (ppm)")
+  scale_y_continuous(name="deltas pCO2")
 ##
 
 ```
 
-```{r calcul flux wanninkhof 2014}
+```{r calcul flux wanninkhof 2014, echo=FALSE, warning=FALSE, message=FALSE}
 
 #Formula : F = 7.7 * U^2 * delta_pCO2
-#unit : mol/m2/y, ici mol/m2/d car moyenne wind speed par jour
+#unit : mol/m2/y, ici mol/m2/y 
 
 #delta_pCO2 :
-delta_pCO2 <- DATA$pCO2_water_ppm - DATA$pCO2_air_ppm
-DATA <- DATA %>% mutate(delta_pCO2 = pCO2_water_ppm - pCO2_air_ppm)
+delta_pCO2 <- DATA$pCO2_water_uatm - DATA$pCO2_air_ppm
+DATA <- DATA %>% mutate(delta_pCO2 = pCO2_water_uatm - pCO2_air_ppm)
 
 #F en mol/m2/day
-Flux_wan_2014 <- 0.00077 * DATA$wind_mean_daily^2 * DATA$delta_pCO2
+Flux_wan_2014 <- 0.00077 * DATA$wind_speed_ms^2 * DATA$delta_pCO2
 
 #integration au dataset
-DATA <- DATA %>% mutate(Flux_wan_2014 = 0.00077 * wind_mean_daily * delta_pCO2)
-
+DATA <- DATA %>% mutate(Flux_wan_2014 = 0.00077 * wind_speed_ms^2 * delta_pCO2)
+ summary(Flux_wan_2014)
+ 
+which.max(Flux_wan_2014)
 
 ```
 
 
-```{r outliers flux wanninkhof 2014}
+```{r outliers flux wanninkhof 2014, echo=FALSE, warning=FALSE, message=FALSE}
 #plot visualiser les outliers
 DATA %>% 
   ggplot() +
-  aes(x=sampling_date, y=Flux_wan_2014) +
+  aes(x=datetime, y=Flux_wan_2014) +
   geom_boxplot() + 
   xlab(label = "") +
   ylab(label = "") +
@@ -595,173 +695,28 @@ DATA %>%
 #recuperation des outliers (47 outliers)
 
 outliers_2014 <- boxplot.stats(DATA$Flux_wan_2014)
-outliers_2014_index <- which(DATA$Flux_wan_2014 %in% c(outliers_2014$out))
+
 
 #remplacer les outliers Flux_wan_2014 par des NA 
-DATA[DATA$Flux_wan_2014 %in% outliers_2014$out, "Flux_wan_2014"] = NA
 
-#summary(DATA$Flux_wan_2014)
+#DATA[DATA$Flux_wan_2014 %in% outliers_2014$out, "Flux_wan_2014"] = NA
+
+
 ```
 
 ```{r plot flux}
 #plot flux wanninkhof 2014 en mmol/m2/d
 DATA %>% 
   ggplot() +
-  aes(x=sampling_date, y=Flux_wan_2014) +
+  aes(x=datetime, y=Flux_wan_2014) +
   geom_line(size=0.7) + 
   scale_x_datetime(name="") +
-  scale_y_continuous(name="Flux (mmol/m²/day)") +
+  scale_y_continuous(name="Flux (mmol/m²/year)") +
   ggtitle("CO2 fluxes ocean-atmosphere (Wanninkhof 2014)")
 ```
 
 
 
 
-```{r calcul flux formule DE CARLO + package marelac}
-#delta_pCO2 :
-delta_pCO2 <- DATA$pCO2_water_ppm - DATA$pCO2_air_ppm
-DATA <- DATA %>% mutate(delta_pCO2 = pCO2_water_ppm - pCO2_air_ppm)
 
-#Formula DE CARLO : test pour 25 °C
-2073.1 - (125.62*25) + (3.6276 * 25^2) - (0.043219 * 25^3) #524.5531
-#package marelac : test pour 25 °C
-gas_schmidt(t=25, species="CO2") #524.553125
-
-#test ok
-#confirmation regression lineaire entre les 2 variables
-Sc_test <- gas_schmidt(t=DATA$temperature, species="CO2")
-
-
-
-```
-
-
-
-
-
-
-
-
-
-#### CO2 fluxes
-
-Calcul de F - part 1
-
-1 : calcul de delta pCO2 (ppm)
-
-2: calcul de Sc
-
-3 : calcul de K600
-
-4: calcul de k
-
-```{r Calcul CO2 fluxes-part1, echo=TRUE, warning=FALSE, message=FALSE}
-#calcul delta pCO2 (uatm) = pCO2sw - pCO2air
-
-delta_pCO2 <- DATA$pCO2_water_ppm - DATA$pCO2_air_ppm
-DATA <- DATA %>% mutate(delta_pCO2 = pCO2_water_ppm - pCO2_air_ppm)
-
-#calcul du Schmidt number (SC)
-#formula : Sc = 2073.1 - (125.62*T) + (3.6276 * T^2) - (0.043219 * T^3)
- Sc <- 2073.1 - (125.62*DATA$temperature) + (3.6276 * DATA$temperature^2) - (0.043219 * DATA$temperature^3)
- DATA <- DATA %>% mutate(Sc = 2073.1 - (125.62*temperature) + (3.6276 * temperature^2) - (0.043219 * temperature^3))
-
-###utilisation de getSchmidt vs Sc article : 
-getSchmidt(temperature=25, gas="CO2") #  ne pas prendre cette valeur
-#vs
-2073.1 - (125.62*25) + (3.6276 * 25^2) - (0.043219 * 25^3) #Sc = 524.5531
-
-#calcul K600 (m.s-1)
-#formula : K600 = 0.266 * U^2 avec U : wind velocity at 10m
-
-K600 <- 0.266 * DATA$wind_mean_daily^2
-DATA <- DATA %>% mutate(K600 = 0.266*wind_mean_daily^2)
-
-#calcul de gaz transfert velocity k (m.s-1)
-#formula : k = K * (Sc / 600)^-1/2
-
-k <- K600 * (Sc/600)^(-1/2)
-DATA <- DATA %>% mutate(k = K600 * (Sc/600)^(-1/2))
-
-```
-
-#### Calcul de F - part 2
-
-alpha = solubility of CO2 in seawater at a specific temperature and salinity
-
-Table of the solubility coefficients (10\^-2 moles/l/atm) according to temperature and salinity = mmol/m3/atm
-
-```{r creation table solubility coef (Weiss 1974), echo=TRUE, warning=FALSE, message=FALSE}
-
-coef_solubility_alpha <- read_table("../Data/coef_solubility_alpha_weiss_1974.txt")
-coef_solubility_alpha
-
-```
-
-```{r essais, echo=FALSE, warning=FALSE, message=FALSE}
-#creation colonne salinity arrondie
-DATA <- DATA %>% 
-  mutate(rounded_salinity = round(salinity, 0))
-
-#creation colonne temperature arrondie
-DATA <- DATA %>% 
-  mutate(rounded_temperature = round(temperature,0))
-
-
-```
-
-##### Essai calcul F avec alpha = 2.912\*10\^-2 pour une temperature de 24°C et une salinite de 35
-
-```{r Calcul CO2 fluxes-part2 (alpha), echo=TRUE, warning=FALSE, message=FALSE}
-
-#on part du principe que alpha = 2.912*10^-2 (unity : mmol.m-3.atm)
-#calcul de F
-#formula : F = k * alpha * deltapCO2
-
-F <- k * (2.912*10^(-2)) * delta_pCO2
-
-DATA <- DATA %>% mutate(Flux_CO2 = k * (2.912*10^(-2)) * delta_pCO2)
-
-```
-
-##### Visualisation des outliers dans Flux_CO2
-
--   remplacement des outliers par NA
-
-```{r outliers Flux_CO2, echo=FALSE, warning=FALSE, message=FALSE}
-
-#plot visualiser les outliers
-DATA %>% 
-  ggplot() +
-  aes(x=sampling_date, y=Flux_CO2) +
-  geom_boxplot() + 
-  xlab(label = "") +
-  ylab(label = "") +
-  theme(legend.position="none")+
-  ggtitle("Flux_CO2 boxplot (outliers)") 
-
-#recuperation des outliers (101 outliers)
-
-outliers <- boxplot.stats(DATA$Flux_CO2)
-outliers_index <- which(DATA$Flux_CO2 %in% c(outliers$out))
-
-#remplacer les outliers Flux_CO2 par des NA (337 NA)
-DATA[DATA$Flux_CO2 %in% outliers$out, "Flux_CO2"] = NA
-
-#summary(DATA$Flux_CO2)
-
-```
-
-#### Plot flux CO2 air \~ eau
-
-```{r plot flux CO2 air-eau, echo=FALSE, warning=FALSE, message=FALSE}
-
-DATA %>% 
-  ggplot() +
-  aes(x=sampling_date, y=Flux_CO2*10^(-3)) +
-  geom_point(size=1) + 
-  scale_x_datetime(name="") +
-  scale_y_continuous(name="Flux (mol C/m²/day)") +
-  ggtitle("Days CO2 fluxes ocean-atmosphere")
-```
 
