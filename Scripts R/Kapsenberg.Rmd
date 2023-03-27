@@ -57,7 +57,7 @@ Mytheme <- function(size_labs = 6, face_font="plain", ...) {
 ##
 ```
 
-##### Table of monthly means (2007-2015) - surface data
+##### [Table of monthly means (2007-2015) - surface data]{style="color:blue"}
 
 ➝ Comparaison supplement, Tab S1 (Kapsenberg) same period : results ok
 
@@ -82,7 +82,7 @@ monthly_means_0m_0715 <- ungroup(data_0715) %>%
 monthly_means_0m_0715
 ```
 
-##### Table of time series anomalies regression analyses (2007-2015) - surface data
+##### [Table of time series anomalies regression analyses (2007-2015) - surface data]{style="color:green"}
 
 ➝ Comparison Table 2 (Kapsenberg) same period : results ok
 
@@ -373,7 +373,7 @@ plot_pCO2_0715
 plot_ano_pCO2_0715
 ```
 
-##### Table of monthly means (2007-2015) - 50m data
+##### [Table of monthly means (2007-2015) - 50m data]{style="color:blue"}
 
 ➝ Comparaison supplement, Tab S1 (Kapsenberg) same period : results ok
 
@@ -398,7 +398,7 @@ monthly_means_50m_0715 <- ungroup(data_0715_50m) %>%
 monthly_means_50m_0715
 ```
 
-##### Table of time series anomalies regression analyses (2007-2015) - 50m data
+##### [Table of time series anomalies regression analyses (2007-2015) - 50m data]{style="color:green"}
 
 ➝ Comparison Table 2 (Kapsenberg) same period: results ok (sauf pour la pCO2)
 
@@ -687,7 +687,7 @@ plot_pCO2_0715_50m
 plot_ano_pCO2_0715_50m
 ```
 
-##### Table of monthly means (2007-2022) \_ surface data
+##### [Table of monthly means (2007-2022) \_ surface data]{style="color:blue"}
 
 *(rajouter les SD)*
 
@@ -720,7 +720,7 @@ monthly_means_0m_0722
 
 ```
 
-##### Table of time series anomaly regression analyses (2007-2022) - surface data
+##### [Table of time series anomaly regression analyses (2007-2022) - surface data]{style="color:green"}
 
 ```{r calculate anomalies + regression 2007-2022 - surface, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -875,7 +875,7 @@ reg_ano_surf2
 
 #### Plot of anomalies : Temperature (2007-2022) - surface
 
-```{r, plot anomalies temperature - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+```{r, plot anomalies temperature 2007-2022 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
 plot_ano_temp2 <- ggplot(data = ano_0m_0722, aes(x = sampling_date, y = Temperature_ano), na.rm=TRUE) +
   scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
@@ -894,7 +894,7 @@ plot_temp_0722 <- data_0722 %>%
   geom_point(size=1) +
   scale_x_datetime(name="") +
   scale_y_continuous(name="Temp. (°C)") +
-  ggtitle("Time series observations of temperature (2007-2022)")
+  ggtitle("Time series observations at 0m of temperature (2007-2022)")
 
 plot_temp_0722
 plot_ano_temp2
@@ -954,7 +954,7 @@ plot_ano_ph2
 
 #### Plot of anomalies : alcalinity (2007-2022) - surface
 
-```{r, plot anomalies alcalinity 2007-2015 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+```{r, plot anomalies alcalinity 2007-2022 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
 plot_ano_ta_0722 <- ggplot(data = ano_0m_0722, aes(x = sampling_date, y = ta_ano), na.rm=TRUE) +
   scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
@@ -1006,7 +1006,7 @@ plot_pCO2_0722
 plot_ano_pCO22
 ```
 
-##### Table of monthly means (2007-2022) - 50m data
+##### [Table of monthly means (2007-2022) - 50m data]{style="color:blue"}
 
 *(rajouter les SD)*
 
@@ -1031,7 +1031,7 @@ monthly_means_50m_0722
 
 ```
 
-##### Table of time series anomaly regression analyses (2007-2022) - 50m data
+##### [Table of time series anomaly regression analyses (2007-2022) - 50m data]{style="color:green"}
 
 ```{r calculate anomalies + regression 2007-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
