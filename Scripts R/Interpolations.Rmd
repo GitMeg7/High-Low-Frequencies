@@ -1,0 +1,385 @@
+---
+title: "Interpolation"
+author: "Mégane"
+date: "2023-03-27"
+output: html_document
+---
+
+# Kapsenberg analyse trend temperature + salinity 1992-2022
+
+## With interpolation
+
+```{r libraries, echo=FALSE, warning=FALSE, message=FALSE}
+library("readr")
+library("viridis")
+library("scales")
+library("lubridate")
+library("gsignal")
+library("FactoMineR")
+library("factoextra")
+library("gplots")
+library("heatwaveR")
+library("dplyr")
+library("imputeTS")
+library("Metrics")
+library("tidyr")
+library("tseries")
+library("forecast")
+library("tsDyn")
+library("tsoutliers")
+library("seacarb")
+library("lmodel2")
+library("lmtest")
+library("stringr")
+```
+
+```{r import data chemistry (0m et 50m) + periode 2007-2015, echo=FALSE, warning=FALSE, message=FALSE}
+
+data_raw <- read_csv("../Data/data_pH_steeve.csv")
+data_raw_surf <- data_raw %>% filter(depth==0) %>% 
+  mutate(datetime = as.character(sampling_date))
+data_raw_prof <- data_raw %>% filter(depth==50)%>% 
+  mutate(datetime = as.character(sampling_date))
+
+
+```
+
+```{r import data temperature + salinity Point B - surface, echo=FALSE, warning=FALSE, message=FALSE}
+
+####Data filled SAMIR (B > B+ quand B+ empty), mean profondeur 1 - 3m
+##period : 05/1992 - 05/2022
+RAW_SOMLIT_1m <- readRDS("../Data/rh_B_Bplus_1m_mean.rds")
+###tri
+SOMLIT_1m <- RAW_SOMLIT_1m %>%
+  dplyr::select(datetime, mean_temp_rhBplus_B, mean_sal_rhBplus_B) %>% 
+  mutate(datetime = format(datetime, format = "%Y-%m-%d"))
+
+SOMLIT_1m = SOMLIT_1m %>% arrange(datetime)
+
+
+####Rename
+SOMLIT_1m <- SOMLIT_1m %>%
+  dplyr::rename(temperature = mean_temp_rhBplus_B,
+                salinity = mean_sal_rhBplus_B)
+
+
+
+```
+
+```{r import data temperature + salinity Point B - year 2022 - surface, echo=FALSE, warning=FALSE, message=FALSE}
+
+#period : 2022
+Data_TS_2022 <- read_delim("../Data/PtB_data_TS_2022.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+#select depth = 1m
+#46 observations
+#3 NA
+Data_TS_2022_surf <- Data_TS_2022 %>% 
+  dplyr::filter(Data_TS_2022$Depth == 1) %>% 
+  mutate(datetime = as.character(Date)) %>% 
+  rename(temperature = T, salinity = S) %>% 
+  filter(Date > "2022-05-02") #pour eviter les doublons avec l annee 2022
+
+
+#select date, T et S
+Data_TS_2022_surf <- Data_TS_2022_surf %>%
+  dplyr::select(datetime, temperature, salinity)
+
+
+#select salinity > 35 and 9999 by NA
+Data_TS_2022_surf <- dplyr::mutate(Data_TS_2022_surf, salinity = case_when(salinity <= 35 ~ NA_real_ , TRUE ~ salinity),
+                              temperature = case_when(temperature >= 999 ~ NA_real_ ,TRUE ~ temperature),
+                              salinity = case_when(salinity >= 999 ~ NA_real_ ,TRUE ~ salinity))
+
+#fusionner les 2 datasets (SOMLIT_1m + Data_TS_2022) = Data_SOMLIT_9222
+
+Data_SOMLIT_9222_surf <- rbind(SOMLIT_1m, Data_TS_2022_surf)
+
+
+```
+
+#### Data surface - Interpolations
+
+➜ Temperature and Salinity by dataset Pt B + complete year of 2022
+
+```{r fusion Data_SOMLIT_9222 with data_raw_surf - data salinity + temperature, echo=FALSE, warning=FALSE, message=FALSE}
+
+combined_data_surf <- full_join(data_raw_surf, Data_SOMLIT_9222_surf, by = "datetime")
+
+combined_data_surf = combined_data_surf %>% arrange(datetime)
+
+#temperature
+combined_data_surf$temperature.x[is.na(combined_data_surf$temperature.x)] <- "NA"
+combined_data_surf$temperature.y <- as.character(combined_data_surf$temperature.y)
+
+combined_data_surf <- combined_data_surf %>% 
+  mutate(temperature = case_when(temperature.x == "NA" ~ temperature.y , TRUE ~ temperature.x))
+
+#salinity
+combined_data_surf$salinity.x[is.na(combined_data_surf$salinity.x)] <- "NA"
+combined_data_surf$salinity.y <- as.character(combined_data_surf$salinity.y)
+
+combined_data_surf <- combined_data_surf %>% 
+  mutate(temperature = case_when(temperature.x == "NA" ~ temperature.y , TRUE ~ temperature.x),
+         salinity = case_when(salinity.x == "NA" ~ salinity.y , TRUE ~ salinity.x))
+
+combined_data_surf <- combined_data_surf %>% 
+  select(datetime, salinity, temperature, ta, dic, NO2, NO3, Chla, year, monthd, pH_calc, pCO2) %>% 
+  mutate(datetime = as.POSIXct(datetime), salinity = as.numeric(salinity), temperature = as.numeric(temperature))
+
+
+```
+
+##### Linear interpolations
+
+➜ [Salinity]{style="color:purple"} (1992-2022)
+
+```{r interpolation salinity 0m 1992-2022, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+#visualisation NA
+#ggplot_na_distribution(combined_data_surf$salinity)
+#statsNA(combined_data_surf$salinity) # percentage of NA : 5%
+
+
+#interpolation
+salinity_interpol <- na_interpolation(combined_data_surf$salinity)
+ggplot_na_imputations(x_with_na = combined_data_surf$salinity, x_with_imputations = salinity_interpol)
+
+#ne garder que le 2e plot ?
+
+combined_data_surf$salinity <- na_interpolation(combined_data_surf$salinity)
+
+```
+
+➜ [Temperature]{style="color:red"} (1992-2022)
+
+```{r interpolation temperature 0m 1992-2022, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+#temperature
+#ggplot_na_distribution(combined_data_surf$temperature)
+#statsNA(combined_data_surf$temperature) # percentage of NA : 5%
+
+
+#temperature
+temperature_interpol <- na_interpolation(combined_data_surf$temperature)
+ggplot_na_imputations(x_with_na = combined_data_surf$temperature, x_with_imputations = temperature_interpol)
+
+
+combined_data_surf$temperature <- na_interpolation(combined_data_surf$temperature)
+```
+
+➜ [pH]{style="color:lightblue"} (2007- 2021)
+
+```{r interpolation pH 0m 2007-2021, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+#pH
+#ggplot_na_distribution(data_raw_surf$pH_calc)
+#statsNA(data_raw_surf$pH_calc) # percentage of NA : 12%
+
+#pH
+pH_interpol <- na_interpolation(data_raw_surf$pH_calc)
+ggplot_na_imputations(x_with_na = data_raw_surf$pH_calc, x_with_imputations = pH_interpol)
+
+data_raw_surf$pH_calc <- na_interpolation(data_raw_surf$pH_calc)
+
+```
+
+➜ [Alcalinity]{style="color:green"}
+
+```{r interpolation alcalinity 0m 2007-2021, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+#alcalinity
+#ggplot_na_distribution(data_raw_surf$ta)
+#statsNA(data_raw_surf$ta) # percentage of NA : 10%
+
+#alcalinity
+alcalinity_interpol <- na_interpolation(data_raw_surf$ta)
+ggplot_na_imputations(x_with_na = data_raw_surf$ta, x_with_imputations = alcalinity_interpol)
+
+data_raw_surf$ta <- na_interpolation(data_raw_surf$ta)
+```
+
+➜ [pCO2]{style="color:brown"}
+
+```{r interpolation pCO2 0m 2007-2021, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+#pCO2
+#ggplot_na_distribution(data_raw_surf$pCO2)
+#statsNA(data_raw_surf$pCO2) # percentage of NA : 12%
+
+#pCO2
+pCO2_interpol <- na_interpolation(data_raw_surf$pCO2)
+ggplot_na_imputations(x_with_na = data_raw_surf$pCO2, x_with_imputations = pCO2_interpol)
+
+data_raw_surf$CO2 <- na_interpolation(data_raw_surf$pCO2)
+```
+
+
+#### Data 50m - Interpolations
+
+➜ Temperature and Salinity by dataset Pt B + complete year of 2022
+
+
+```{r import data temperature + salinity Point B - 50m, echo=FALSE, warning=FALSE, message=FALSE}
+
+####Data filled SAMIR (B > B+ quand B+ empty), mean profondeur 50m
+##period : 05/1992 - 05/2022
+RAW_SOMLIT_50m <- readRDS("../Data/rh_B_Bplus_50m_mean.rds")
+###tri
+SOMLIT_50m <- RAW_SOMLIT_50m %>%
+  dplyr::select(datetime, mean_temp_rhBplus_B, mean_sal_rhBplus_B) %>% 
+  mutate(datetime = format(datetime, format = "%Y-%m-%d"))
+
+SOMLIT_50m = SOMLIT_50m %>% arrange(datetime)
+
+
+####Rename
+SOMLIT_50m <- SOMLIT_50m %>%
+  dplyr::rename(temperature = mean_temp_rhBplus_B,
+                salinity = mean_sal_rhBplus_B)
+
+
+```
+
+
+```{r import data temperature + salinity Point B - year 2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE}
+
+
+#select depth = 50m
+Data_TS_2022_prof <- Data_TS_2022 %>% 
+  dplyr::filter(Data_TS_2022$Depth == 50) %>% 
+  mutate(datetime = as.character(Date)) %>% 
+  rename(temperature = T, salinity = S) %>% 
+  filter(Date > "2022-05-02") #pour eviter les doublons avec l annee 2022
+
+
+#select date, T et S
+Data_TS_2022_prof <- Data_TS_2022_prof %>%
+  dplyr::select(datetime, temperature, salinity)
+
+
+#select salinity > 35 and 9999 by NA
+Data_TS_2022_prof <- dplyr::mutate(Data_TS_2022_prof, salinity = case_when(salinity <= 35 ~ NA_real_ , TRUE ~ salinity),
+                                   salinity = case_when(salinity > 39 ~ NA_real_ , TRUE ~ salinity),
+                              temperature = case_when(temperature >= 999 ~ NA_real_ ,TRUE ~ temperature),
+                              salinity = case_when(salinity >= 999 ~ NA_real_ ,TRUE ~ salinity))
+
+#fusionner les 2 datasets (SOMLIT_1m + Data_TS_2022) = Data_SOMLIT_9222
+
+Data_SOMLIT_9222_prof <- rbind(SOMLIT_50m, Data_TS_2022_prof)
+```
+
+
+
+```{r fusion Data_SOMLIT_9222_prof with data_raw_prof - data salinity + temperature, echo=FALSE, warning=FALSE, message=FALSE}
+
+combined_data_prof <- full_join(data_raw_prof, Data_SOMLIT_9222_prof, by = "datetime")
+
+combined_data_prof = combined_data_prof %>% arrange(datetime)
+
+#temperature
+combined_data_prof$temperature.x[is.na(combined_data_prof$temperature.x)] <- "NA"
+combined_data_prof$temperature.y <- as.character(combined_data_prof$temperature.y)
+
+combined_data_prof <- combined_data_prof %>% 
+  mutate(temperature = case_when(temperature.x == "NA" ~ temperature.y , TRUE ~ temperature.x))
+
+#salinity
+combined_data_prof$salinity.x[is.na(combined_data_prof$salinity.x)] <- "NA"
+combined_data_prof$salinity.y <- as.character(combined_data_prof$salinity.y)
+
+combined_data_prof <- combined_data_prof %>% 
+  mutate(temperature = case_when(temperature.x == "NA" ~ temperature.y , TRUE ~ temperature.x),
+         salinity = case_when(salinity.x == "NA" ~ salinity.y , TRUE ~ salinity.x))
+
+combined_data_prof <- combined_data_prof %>% 
+  select(datetime, salinity, temperature, ta, dic, NO2, NO3, Chla, year, monthd, pH_calc, pCO2) %>% 
+  mutate(datetime = as.POSIXct(datetime), salinity = as.numeric(salinity), temperature = as.numeric(temperature))
+
+
+```
+
+##### Linear interpolations
+
+➜ [Salinity]{style="color:purple"} (1992-2022)
+
+```{r interpolation salinity 50m 1992-2022, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+#visualisation NA
+#ggplot_na_distribution(combined_data_prof$salinity)
+#statsNA(combined_data_prof$salinity) # percentage of NA : 4%
+
+
+#interpolation
+salinity_interpol_50 <- na_interpolation(combined_data_prof$salinity)
+ggplot_na_imputations(x_with_na = combined_data_prof$salinity, x_with_imputations = salinity_interpol_50)
+
+#ne garder que le 2e plot ?
+
+combined_data_prof$salinity <- na_interpolation(combined_data_prof$salinity)
+
+```
+
+➜ [Temperature]{style="color:red"} (1992-2022)
+
+```{r interpolation temperature 50m 1992-2022, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+#temperature
+#ggplot_na_distribution(combined_data_prof$temperature)
+#statsNA(combined_data_prof$temperature) # percentage of NA : 3%
+
+
+#temperature
+temperature_interpol_50 <- na_interpolation(combined_data_prof$temperature)
+ggplot_na_imputations(x_with_na = combined_data_prof$temperature, x_with_imputations = temperature_interpol_50)
+
+
+combined_data_prof$temperature <- na_interpolation(combined_data_prof$temperature)
+```
+
+➜ [pH]{style="color:lightblue"} (2007- 2021)
+
+```{r interpolation pH 50m 2007-2021, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+#pH
+#ggplot_na_distribution(data_raw_prof$pH_calc)
+#statsNA(data_raw_prof$pH_calc) # percentage of NA : 10%
+
+#pH
+pH_interpol_50 <- na_interpolation(data_raw_prof$pH_calc)
+ggplot_na_imputations(x_with_na = data_raw_prof$pH_calc, x_with_imputations = pH_interpol_50)
+
+data_raw_prof$pH_calc <- na_interpolation(data_raw_prof$pH_calc)
+
+```
+
+➜ [Alcalinity]{style="color:green"}
+
+```{r interpolation alcalinity 50m 2007-2021, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+#alcalinity
+#ggplot_na_distribution(data_raw_prof$ta)
+#statsNA(data_raw_prof$ta) # percentage of NA : 9%
+
+#alcalinity
+alcalinity_interpol_50 <- na_interpolation(data_raw_prof$ta)
+ggplot_na_imputations(x_with_na = data_raw_prof$ta, x_with_imputations = alcalinity_interpol_50)
+
+data_raw_prof$ta <- na_interpolation(data_raw_prof$ta)
+```
+
+➜ [pCO2]{style="color:brown"}
+
+```{r interpolation pCO2 50m 2007-2021, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+#pCO2
+#ggplot_na_distribution(data_raw_prof$pCO2)
+#statsNA(data_raw_prof$pCO2) # percentage of NA : 10%
+
+#pCO2
+pCO2_interpol_50 <- na_interpolation(data_raw_prof$pCO2)
+ggplot_na_imputations(x_with_na = data_raw_prof$pCO2, x_with_imputations = pCO2_interpol_50)
+
+data_raw_prof$pCO2 <- na_interpolation(data_raw_prof$pCO2)
+```
