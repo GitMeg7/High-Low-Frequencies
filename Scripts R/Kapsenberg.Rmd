@@ -5,7 +5,7 @@ date: "2023-03-20"
 output: html_document
 ---
 
-## Kapsenberg
+# Time series trends analysis by residuals (substracting climatological monthly means)
 
 ```{r libraries, echo=FALSE, warning=FALSE, message=FALSE}
 library("readr")
@@ -35,11 +35,11 @@ data_raw <- read_csv("../Data/data_pH_steeve.csv")
 data_raw_surf <- data_raw %>% filter(depth==0)
 data_raw_prof <- data_raw %>% filter(depth==50)
 
-data_0715 <- data_raw_surf %>% filter(sampling_date < "2016-01-05") #470 valeurs
-data_0715_50m <- data_raw_prof %>% filter(sampling_date < "2016-01-05") #462 valeurs
+data_0715 <- data_raw_surf %>% filter(sampling_date < "2016-01-05") #470 values
+data_0715_50m <- data_raw_prof %>% filter(sampling_date < "2016-01-05") #462 values
 
 
-##
+#theme for plots :
 Mytheme <- function(size_labs = 6, face_font="plain", ...) {
   theme_bw() +
     theme(axis.text.x = element_text(face=face_font, size=size_labs, color="black"),
@@ -57,13 +57,13 @@ Mytheme <- function(size_labs = 6, face_font="plain", ...) {
 ##
 ```
 
-#### Table of monthly means (2007-2015) - surface data
+##### Table of monthly means (2007-2015) - surface data
 
-Comparaison supplement, Tab S1 (Kapsenberg) Même période : résultats ok
+➝ Comparaison supplement, Tab S1 (Kapsenberg) same period : results ok
 
 *(Rajouter les SD)*
 
-```{r Calcul monthly means 0715_surface, echo=FALSE, warning=FALSE, message=FALSE}
+```{r Calcul monthly means 0715 - surface, echo=FALSE, warning=FALSE, message=FALSE}
 
 monthly_means_0m_0715 <- ungroup(data_0715) %>% 
   group_by(monthd) %>%
@@ -82,9 +82,9 @@ monthly_means_0m_0715 <- ungroup(data_0715) %>%
 monthly_means_0m_0715
 ```
 
-#### Table of time series anomalies regression analyses (2007-2015) - surface data
+##### Table of time series anomalies regression analyses (2007-2015) - surface data
 
-Comparaison Table 2 (Kapsenberg) Même période : résultats ok
+➝ Comparison Table 2 (Kapsenberg) same period : results ok
 
 ```{r anomalies + regressions 2007-2015 (Kapsenberg) - surface, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -239,8 +239,8 @@ reg_ano_surf
 
 #### Plot of anomalies : temperature (2007-2015) - surface
 
-```{r, plot anomalies temperature 1, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
-# Plot anomalies
+```{r, plot anomalies temperature 2007-2015 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
 #Anomalies 0 m
 plot_ano_temp_0715 <- ggplot(data = ano_0m_0715, aes(x = sampling_date, y = Temperature_ano), na.rm=TRUE) +
   scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
@@ -260,7 +260,7 @@ plot_temp_0715 <- data_0715 %>%
   geom_point(size=1) +
   scale_x_datetime(name="") +
   scale_y_continuous(name="Temp. (°C)") +
-  ggtitle("Time series observations of temperature (°C) 2007-2015")
+  ggtitle("Time series observations at 0m of temperature (°C) 2007-2015")
 
 plot_temp_0715
 plot_ano_temp_0715
@@ -269,7 +269,8 @@ plot_ano_temp_0715
 
 #### Plot of anomalies : salinity (2007-2015) - surface
 
-```{r, plot anomalies salinity 1, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+```{r, plot anomalies salinity 2007-2015 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
 plot_ano_sal_0715 <- ggplot(data = ano_0m_0715, aes(x = sampling_date, y = Salinity_ano), na.rm=TRUE) +
   scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   scale_y_continuous(breaks=c(-2,-1,0,0.5)) +
@@ -286,7 +287,7 @@ plot_sal_0715 <- data_0715 %>%
   geom_point(size=1) +
   scale_x_datetime(name="") +
   scale_y_continuous(name="Salinity") +
-  ggtitle("Time series observations of salinity 2007-2015")
+  ggtitle("Time series observations at 0m of salinity 2007-2015")
 
 plot_sal_0715
 plot_ano_sal_0715
@@ -294,7 +295,7 @@ plot_ano_sal_0715
 
 #### Plot of anomalies : pH (2007-2015) - surface
 
-```{r, plot anomalies pH 1, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+```{r, plot anomalies pH 2007-2015 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
 plot_ano_ph_0715 <- ggplot(data = ano_0m_0715, aes(x = sampling_date, y = pH_calc_ano), na.rm=TRUE) +
   scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
@@ -313,15 +314,42 @@ plot_ph_0715 <- data_0715 %>%
   geom_point(size=1) +
   scale_x_datetime(name="") +
   scale_y_continuous(name="pH") +
-  ggtitle("Time series observations of pH (2007-2015)")
+  ggtitle("Time series observations at 0m of pH (2007-2015)")
 
 plot_ph_0715
 plot_ano_ph_0715
 ```
 
+#### Plot of anomalies : alcalinity (2007-2015) - surface
+
+```{r, plot anomalies alcalinity 2007-2015 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+plot_ano_ta_0715 <- ggplot(data = ano_0m_0715, aes(x = sampling_date, y = ta_ano), na.rm=TRUE) +
+  scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  geom_point(colour="blue", na.rm=TRUE, size=1) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title=NULL,x="",y=expression(paste(pCO[2], " (",mu, "atm)"))) +
+  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano_0m_0715$ta_ano, na.rm=TRUE), 
+           label="", colour="black", size=9, fontface="plain") +
+  coord_fixed() +
+  Mytheme(size_labs = 8) +
+  theme(axis.text.x=element_blank())
+
+plot_ta_0715 <- data_0715 %>% 
+  ggplot() +
+  aes(x=sampling_date, y=ta) + 
+  geom_point(size=1) +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Alcalinity (umol/kg") +
+  ggtitle("Time series observations at 0m of alcalinity (2007-2015)")
+
+plot_ta_0715
+plot_ano_ta_0715
+```
+
 #### Plot of anomalies : pCO2 (2007-2015) - surface
 
-```{r, plot anomalies CO2 1, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+```{r, plot anomalies CO2 1 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 plot_ano_pCO2_0715 <- ggplot(data = ano_0m_0715, aes(x = sampling_date, y = pCO2_ano), na.rm=TRUE) +
   scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_point(colour="blue", na.rm=TRUE, size=1) + 
@@ -345,14 +373,13 @@ plot_pCO2_0715
 plot_ano_pCO2_0715
 ```
 
+##### Table of monthly means (2007-2015) - 50m data
 
-#### Table of monthly means (2007-2015) - 50m data
-
-Comparaison supplement, Tab S1 (Kapsenberg) Même période : résultats ok 
+➝ Comparaison supplement, Tab S1 (Kapsenberg) same period : results ok
 
 *(Rajouter les SD)*
 
-```{r Calcul monthly means 0715_50m, echo=FALSE, warning=FALSE, message=FALSE}
+```{r Calcul monthly means 0715 - 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
 monthly_means_50m_0715 <- ungroup(data_0715_50m) %>% 
   group_by(monthd) %>%
@@ -371,9 +398,9 @@ monthly_means_50m_0715 <- ungroup(data_0715_50m) %>%
 monthly_means_50m_0715
 ```
 
-#### Table of time series anomalies regression analyses (2007-2015) - 50m data
+##### Table of time series anomalies regression analyses (2007-2015) - 50m data
 
-Comparaison Table 2 (Kapsenberg) Même période : résultats ok sauf pour la pCO2
+➝ Comparison Table 2 (Kapsenberg) same period: results ok (sauf pour la pCO2)
 
 ```{r anomalies + regressions 2007-2015 (Kapsenberg) - 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -525,8 +552,8 @@ reg_ano_50
 
 #### Plot of anomalies : temperature (2007-2015) - 50m
 
-```{r, plot anomalies temperature 1 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
-# Plot anomalies
+```{r, plot anomalies temperature 2007-2015 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
 #Anomalies 50 m
 plot_ano_temp_0715_50m <- ggplot(data = ano_50m_0715, aes(x = sampling_date, y = Temperature_ano), na.rm=TRUE) +
   scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
@@ -555,7 +582,8 @@ plot_ano_temp_0715_50m
 
 #### Plot of anomalies : salinity (2007-2015) - 50m
 
-```{r, plot anomalies salinity 1 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+```{r, plot anomalies salinity 2007-2015 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
 plot_ano_sal_0715_50m <- ggplot(data = ano_50m_0715, aes(x = sampling_date, y = Salinity_ano), na.rm=TRUE) +
   scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   scale_y_continuous(breaks=c(-2,-1,0,0.5)) +
@@ -580,7 +608,7 @@ plot_ano_sal_0715_50m
 
 #### Plot of anomalies : pH (2007-2015) - 50m
 
-```{r, plot anomalies pH 1 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+```{r, plot anomalies pH 2007-2015 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
 plot_ano_ph_0715_50m <- ggplot(data = ano_50m_0715, aes(x = sampling_date, y = pH_calc_ano), na.rm=TRUE) +
   scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
@@ -605,9 +633,37 @@ plot_ph_0715_50m
 plot_ano_ph_0715_50m
 ```
 
+#### Plot of anomalies : alcalinity (2007-2015) - 50m
+
+```{r, plot anomalies alcalinity 2007-2015 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+plot_ano_ta_0715_50m <- ggplot(data = ano_50m_0715, aes(x = sampling_date, y = ta_ano), na.rm=TRUE) +
+  scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  geom_point(colour="blue", na.rm=TRUE, size=1) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title=NULL,x="",y=expression(paste(pCO[2], " (",mu, "atm)"))) +
+  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano_50m_0715$ta_ano, na.rm=TRUE), 
+           label="", colour="black", size=9, fontface="plain") +
+  coord_fixed() +
+  Mytheme(size_labs = 8) +
+  theme(axis.text.x=element_blank())
+
+plot_ta_0715_50m <- data_0715_50m %>% 
+  ggplot() +
+  aes(x=sampling_date, y=ta) + 
+  geom_point(size=1) +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Alcalinity (umol/kg") +
+  ggtitle("Time series observations at 50m of alcalinity (2007-2015)")
+
+plot_ta_0715_50m
+plot_ano_ta_0715_50m
+```
+
 #### Plot of anomalies : pCO2 (2007-2015) - 50m
 
-```{r, plot anomalies CO2 1 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+```{r, plot anomalies CO2 2007-2015 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
 plot_ano_pCO2_0715_50m <- ggplot(data = ano_50m_0715, aes(x = sampling_date, y = pCO2_ano), na.rm=TRUE) +
   scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_point(colour="blue", na.rm=TRUE, size=1) + 
@@ -631,7 +687,9 @@ plot_pCO2_0715_50m
 plot_ano_pCO2_0715_50m
 ```
 
+##### Table of monthly means (2007-2022) \_ surface data
 
+*(rajouter les SD)*
 
 ```{r import data 2007-2022 at 0m and 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -639,15 +697,9 @@ data_0722 <- data_raw_surf %>% filter(sampling_date < "2022-01-11")#774 valeurs
 data_0722_50m <- data_raw_prof %>% filter(sampling_date < "2022-01-11")#752 valeurs
 
 
-
 ```
 
-#### Table of monthly means (2007-2022) _ surface data
-
-*(rajouter les SD)*
-
-```{r calculate monthly means 2007-2022_surface, echo=FALSE, warning=FALSE, message=FALSE}
-
+```{r calculate monthly means 2007-2022 - surface, echo=FALSE, warning=FALSE, message=FALSE}
 
 monthly_means_0m_0722 <- ungroup(data_0722) %>% 
   group_by(monthd) %>%
@@ -668,7 +720,7 @@ monthly_means_0m_0722
 
 ```
 
-####Table of time series anomaly regression analyses (2007-2022) - surface data
+##### Table of time series anomaly regression analyses (2007-2022) - surface data
 
 ```{r calculate anomalies + regression 2007-2022 - surface, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -850,7 +902,7 @@ plot_ano_temp2
 
 #### Plot of anomalies : salinity (2007-2022) - surface
 
-```{r, plot anomalies salinity - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+```{r, plot anomalies salinity 2007-2022 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 plot_ano_sal2 <- ggplot(data = ano_0m_0722, aes(x = sampling_date, y = Salinity_ano), na.rm=TRUE) +
   scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   scale_y_continuous(breaks=c(-2,-1,0,0.5)) +
@@ -867,7 +919,7 @@ plot_sal_0722 <- data_0722 %>%
   geom_point(size=1) +
   scale_x_datetime(name="") +
   scale_y_continuous(name="Salinity") +
-  ggtitle("Time series observations of salinity (2007-2022)")
+  ggtitle("Time series observations at 0m of salinity (2007-2022)")
 
 plot_sal_0722
 plot_ano_sal2
@@ -875,7 +927,7 @@ plot_ano_sal2
 
 #### Plot of anomalies : pH (2007-2022) - surface
 
-```{r, plot anomalies pH - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+```{r, plot anomalies pH 2007-2022 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
 plot_ano_ph2 <- ggplot(data = ano_0m_0722, aes(x = sampling_date, y = pH_calc_ano), na.rm=TRUE) +
   scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
@@ -894,15 +946,42 @@ plot_ph_0722 <- data_0722 %>%
   geom_point(size=1) +
   scale_x_datetime(name="") +
   scale_y_continuous(name="pH") +
-  ggtitle("Time series observations of pH (2007-2022)")
+  ggtitle("Time series observations at 0m of pH (2007-2022)")
 
 plot_ph_0722
 plot_ano_ph2
 ```
 
+#### Plot of anomalies : alcalinity (2007-2022) - surface
+
+```{r, plot anomalies alcalinity 2007-2015 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+plot_ano_ta_0722 <- ggplot(data = ano_0m_0722, aes(x = sampling_date, y = ta_ano), na.rm=TRUE) +
+  scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  geom_point(colour="blue", na.rm=TRUE, size=1) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title=NULL,x="",y=expression(paste(pCO[2], " (",mu, "atm)"))) +
+  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano_0m_0722$ta_ano, na.rm=TRUE), 
+           label="", colour="black", size=9, fontface="plain") +
+  coord_fixed() +
+  Mytheme(size_labs = 8) +
+  theme(axis.text.x=element_blank())
+
+plot_ta_0722 <- data_0722 %>% 
+  ggplot() +
+  aes(x=sampling_date, y=ta) + 
+  geom_point(size=1) +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Alcalinity (umol/kg") +
+  ggtitle("Time series observations at 0m of alcalinity (2007-2022)")
+
+plot_ta_0722
+plot_ano_ta_0722
+```
+
 #### Plot of anomalies : pCO2 (2007-2022) - surface
 
-```{r, plot anomalies CO2 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+```{r, plot anomalies CO2 2007-2015 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
 plot_ano_pCO22 <- ggplot(data = ano_0m_0722, aes(x = sampling_date, y = pCO2_ano), na.rm=TRUE) +
   scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
@@ -921,19 +1000,17 @@ plot_pCO2_0722 <- data_0722 %>%
   geom_point(size=1) +
   scale_x_datetime(name="") +
   scale_y_continuous(name="pCO2 (uatm)") +
-  ggtitle("Time series observations of pCO2 (2007-2022)")
+  ggtitle("Time series observations at 0m of pCO2 (2007-2022)")
 
 plot_pCO2_0722
 plot_ano_pCO22
 ```
 
-
-#### Table of monthly means (2007-2022) _ 50m data
+##### Table of monthly means (2007-2022) - 50m data
 
 *(rajouter les SD)*
 
 ```{r calculate monthly means 2007-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE}
-
 
 monthly_means_50m_0722 <- ungroup(data_0722_50m) %>% 
   group_by(monthd) %>%
@@ -954,7 +1031,7 @@ monthly_means_50m_0722
 
 ```
 
-####Table of time series anomaly regression analyses (2007-2022) - 50m data
+##### Table of time series anomaly regression analyses (2007-2022) - 50m data
 
 ```{r calculate anomalies + regression 2007-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -1106,7 +1183,7 @@ reg_ano_50m2
 
 #### Plot of anomalies : Temperature (2007-2022) - 50m
 
-```{r, plot anomalies temperature - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+```{r, plot anomalies temperature 2007-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
 plot_ano_temp2_50m <- ggplot(data = ano_50m_0722, aes(x = sampling_date, y = Temperature_ano), na.rm=TRUE) +
   scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
@@ -1133,7 +1210,8 @@ plot_ano_temp2_50m
 
 #### Plot of anomalies : salinity (2007-2022) - 50m
 
-```{r, plot anomalies salinity - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+```{r, plot anomalies salinity 2007-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
 plot_ano_sal2_50m <- ggplot(data = ano_50m_0722, aes(x = sampling_date, y = Salinity_ano), na.rm=TRUE) +
   scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   scale_y_continuous(breaks=c(-2,-1,0,0.5)) +
@@ -1158,7 +1236,7 @@ plot_ano_sal2_50m
 
 #### Plot of anomalies : pH (2007-2022) - 50m
 
-```{r, plot anomalies pH - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+```{r, plot anomalies pH 2007-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
 plot_ano_ph2_50m <- ggplot(data = ano_50m_0722, aes(x = sampling_date, y = pH_calc_ano), na.rm=TRUE) +
   scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
@@ -1183,9 +1261,37 @@ plot_ph_0722_50m
 plot_ano_ph2_50m
 ```
 
+#### Plot of anomalies : alcalinity (2007-2022) - 50m
+
+```{r, plot anomalies alcalinity 2007-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+plot_ano_ta_0722_50m <- ggplot(data = ano_50m_0722, aes(x = sampling_date, y = ta_ano), na.rm=TRUE) +
+  scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  geom_point(colour="blue", na.rm=TRUE, size=1) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title=NULL,x="",y=expression(paste(pCO[2], " (",mu, "atm)"))) +
+  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano_50m_0722$ta_ano, na.rm=TRUE), 
+           label="", colour="black", size=9, fontface="plain") +
+  coord_fixed() +
+  Mytheme(size_labs = 8) +
+  theme(axis.text.x=element_blank())
+
+plot_ta_0722_50m <- data_0722_50m %>% 
+  ggplot() +
+  aes(x=sampling_date, y=ta) + 
+  geom_point(size=1) +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Alcalinity (umol/kg") +
+  ggtitle("Time series observations at 50m of alcalinity (2007-2022)")
+
+plot_ta_0722_50m
+plot_ano_ta_0722_50m
+
+```
+
 #### Plot of anomalies : pCO2 (2007-2022) - 50m
 
-```{r, plot anomalies CO2 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+```{r, plot anomalies CO2 2007-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
 plot_ano_pCO22_50m <- ggplot(data = ano_50m_0722, aes(x = sampling_date, y = pCO2_ano), na.rm=TRUE) +
   scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
@@ -1209,4 +1315,3 @@ plot_pCO2_0722_50m <- data_0722_50m %>%
 plot_pCO2_0722_50m
 plot_ano_pCO22_50m
 ```
-
