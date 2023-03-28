@@ -709,7 +709,7 @@ outliers_2014 <- boxplot.stats(DATA$Flux_wan_2014)
 DATA %>% 
   ggplot() +
   aes(x=datetime, y=Flux_wan_2014) +
-  geom_line(size=0.7) + 
+  geom_line(linewidth=0.7) + 
   scale_x_datetime(name="") +
   scale_y_continuous(name="Flux (mmol/m²/year)") +
   ggtitle("CO2 fluxes ocean-atmosphere (Wanninkhof 2014)")

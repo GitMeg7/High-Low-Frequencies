@@ -1317,3 +1317,558 @@ plot_pCO2_0722_50m <- data_0722_50m %>%
 plot_pCO2_0722_50m
 plot_ano_pCO22_50m
 ```
+
+## Trend analysis by residuals on temperature and salinity : period 1992-2022
+
+
+```{r import data temperature + salinity Point B - 0m et 50m, echo=FALSE, warning=FALSE, message=FALSE}
+
+data_raw_surf <- data_raw %>% filter(depth==0) %>% 
+  mutate(datetime = as.character(sampling_date))
+data_raw_prof <- data_raw %>% filter(depth==50)%>% 
+  mutate(datetime = as.character(sampling_date))
+
+##
+
+####Data filled SAMIR (B > B+ quand B+ empty), mean profondeur 1 - 3m
+##period : 05/1992 - 05/2022
+
+##surface
+RAW_SOMLIT_1m <- readRDS("../Data/rh_B_Bplus_1m_mean.rds")
+###tri
+SOMLIT_1m <- RAW_SOMLIT_1m %>%
+  dplyr::select(datetime, mean_temp_rhBplus_B, mean_sal_rhBplus_B) %>% 
+  mutate(datetime = format(datetime, format = "%Y-%m-%d"))
+
+SOMLIT_1m = SOMLIT_1m %>% arrange(datetime)
+
+
+####Rename
+SOMLIT_1m <- SOMLIT_1m %>%
+  dplyr::rename(temperature = mean_temp_rhBplus_B,
+                salinity = mean_sal_rhBplus_B)
+
+##
+
+##50m
+RAW_SOMLIT_50m <- readRDS("../Data/rh_B_Bplus_50m_mean.rds")
+###tri
+SOMLIT_50m <- RAW_SOMLIT_50m %>%
+  dplyr::select(datetime, mean_temp_rhBplus_B, mean_sal_rhBplus_B) %>% 
+  mutate(datetime = format(datetime, format = "%Y-%m-%d"))
+
+SOMLIT_50m = SOMLIT_50m %>% arrange(datetime)
+
+
+####Rename
+SOMLIT_50m <- SOMLIT_50m %>%
+  dplyr::rename(temperature = mean_temp_rhBplus_B,
+                salinity = mean_sal_rhBplus_B)
+```
+
+
+```{r data temperature + salinity Point B - year 2022 - 0m et 50m, echo=FALSE, warning=FALSE, message=FALSE}
+
+#period : 2022
+
+##surface
+Data_TS_2022 <- read_delim("../Data/PtB_data_TS_2022.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+#select depth = 1m
+#46 observations
+#3 NA
+Data_TS_2022_surf <- Data_TS_2022 %>% 
+  dplyr::filter(Data_TS_2022$Depth == 1) %>% 
+  mutate(datetime = as.character(Date)) %>% 
+  rename(temperature = T, salinity = S) %>% 
+  filter(Date > "2022-05-02") #pour eviter les doublons avec l annee 2022
+
+
+#select date, T et S
+Data_TS_2022_surf <- Data_TS_2022_surf %>%
+  dplyr::select(datetime, temperature, salinity)
+
+
+#select salinity > 35 and 9999 by NA
+Data_TS_2022_surf <- dplyr::mutate(Data_TS_2022_surf, salinity = case_when(salinity <= 35 ~ NA_real_ , TRUE ~ salinity),
+                              temperature = case_when(temperature >= 999 ~ NA_real_ ,TRUE ~ temperature),
+                              salinity = case_when(salinity >= 999 ~ NA_real_ ,TRUE ~ salinity))
+
+#fusionner les 2 datasets (SOMLIT_1m + Data_TS_2022) = Data_SOMLIT_9222
+
+Data_SOMLIT_9222_surf <- rbind(SOMLIT_1m, Data_TS_2022_surf)
+
+##
+
+##50m
+#select depth = 50m
+Data_TS_2022_prof <- Data_TS_2022 %>% 
+  dplyr::filter(Data_TS_2022$Depth == 50) %>% 
+  mutate(datetime = as.character(Date)) %>% 
+  rename(temperature = T, salinity = S) %>% 
+  filter(Date > "2022-05-02") #pour eviter les doublons avec l annee 2022
+
+
+#select date, T et S
+Data_TS_2022_prof <- Data_TS_2022_prof %>%
+  dplyr::select(datetime, temperature, salinity)
+
+
+#select salinity > 35 and 9999 by NA
+Data_TS_2022_prof <- dplyr::mutate(Data_TS_2022_prof, salinity = case_when(salinity <= 35 ~ NA_real_ , TRUE ~ salinity),
+                                   salinity = case_when(salinity > 39 ~ NA_real_ , TRUE ~ salinity),
+                              temperature = case_when(temperature >= 999 ~ NA_real_ ,TRUE ~ temperature),
+                              salinity = case_when(salinity >= 999 ~ NA_real_ ,TRUE ~ salinity))
+
+#fusionner les 2 datasets (SOMLIT_1m + Data_TS_2022) = Data_SOMLIT_9222
+
+Data_SOMLIT_9222_prof <- rbind(SOMLIT_50m, Data_TS_2022_prof)
+
+```
+
+
+```{r creation dataset fusion de Data_SOMLIT_9222 with data_raw -  salinity + temperature - 0m et 50m, echo=FALSE, warning=FALSE, message=FALSE}
+
+##surface
+combined_data_surf <- full_join(data_raw_surf, Data_SOMLIT_9222_surf, by = "datetime")
+
+combined_data_surf = combined_data_surf %>% arrange(datetime)
+
+#temperature
+combined_data_surf$temperature.x[is.na(combined_data_surf$temperature.x)] <- "NA"
+combined_data_surf$temperature.y <- as.character(combined_data_surf$temperature.y)
+
+combined_data_surf <- combined_data_surf %>% 
+  mutate(temperature = case_when(temperature.x == "NA" ~ temperature.y , TRUE ~ temperature.x))
+
+#salinity
+combined_data_surf$salinity.x[is.na(combined_data_surf$salinity.x)] <- "NA"
+combined_data_surf$salinity.y <- as.character(combined_data_surf$salinity.y)
+
+combined_data_surf <- combined_data_surf %>% 
+  mutate(temperature = case_when(temperature.x == "NA" ~ temperature.y , TRUE ~ temperature.x),
+         salinity = case_when(salinity.x == "NA" ~ salinity.y , TRUE ~ salinity.x))
+
+combined_data_surf <- combined_data_surf %>% 
+  select(datetime, salinity, temperature, ta, dic, NO2, NO3, Chla, year, monthd, pH_calc, pCO2) %>% 
+  mutate(datetime = as.POSIXct(datetime), salinity = as.numeric(salinity), temperature = as.numeric(temperature)) %>% 
+  mutate(Month = format(datetime, format="%m"))
+
+##
+
+##50m
+combined_data_prof <- full_join(data_raw_prof, Data_SOMLIT_9222_prof, by = "datetime")
+
+combined_data_prof = combined_data_prof %>% arrange(datetime)
+
+#temperature
+combined_data_prof$temperature.x[is.na(combined_data_prof$temperature.x)] <- "NA"
+combined_data_prof$temperature.y <- as.character(combined_data_prof$temperature.y)
+
+combined_data_prof <- combined_data_prof %>% 
+  mutate(temperature = case_when(temperature.x == "NA" ~ temperature.y , TRUE ~ temperature.x))
+
+#salinity
+combined_data_prof$salinity.x[is.na(combined_data_prof$salinity.x)] <- "NA"
+combined_data_prof$salinity.y <- as.character(combined_data_prof$salinity.y)
+
+combined_data_prof <- combined_data_prof %>% 
+  mutate(temperature = case_when(temperature.x == "NA" ~ temperature.y , TRUE ~ temperature.x),
+         salinity = case_when(salinity.x == "NA" ~ salinity.y , TRUE ~ salinity.x))
+
+combined_data_prof <- combined_data_prof %>% 
+  select(datetime, salinity, temperature, ta, dic, NO2, NO3, Chla, year, monthd, pH_calc, pCO2) %>% 
+  mutate(datetime = as.POSIXct(datetime), salinity = as.numeric(salinity), temperature = as.numeric(temperature)) %>% 
+  mutate(Month = format(datetime, format="%m"))
+
+
+```
+
+##### [Table of monthly means for salinity and temperature (1992-2022) - 0m data]{style="color:blue"}
+
+```{r calculate monthly means 1992-2022 - 0m, echo=FALSE, warning=FALSE, message=FALSE}
+
+monthly_means_0m_9222 <- ungroup(combined_data_surf) %>% 
+  group_by(Month) %>%
+  summarise(
+    Salinity_month = mean(salinity, na.rm = TRUE),
+    Temperature_month = mean(temperature, na.rm = TRUE))
+
+monthly_means_0m_9222
+
+```
+
+##### [Table of salinity and temperature time series anomaly regression analyses (1992-2022) - 0m data]{style="color:green"}
+
+```{r calculate anomalies + regression on salinity and temperature (1992-2022) - 0m, echo=FALSE, warning=FALSE, message=FALSE}
+
+ano_ST_0m_9222 <- left_join(ungroup(combined_data_surf), monthly_means_0m_9222, by = "Month") %>%
+  mutate(
+    Salinity_ano = salinity - Salinity_month,
+    Temperature_ano = temperature - Temperature_month)
+
+# Regressions and tables of key parameters
+var_list_ST <-
+  c("salinity",
+    "temperature")
+
+lm.test_ST <- vector("list", length(var_list_ST))
+
+for(i in seq_along(var_list_ST)){
+  lm.test_ST[[i]] <- lm(reformulate(var_list_ST[i], "datetime"), data = ano_ST_0m_9222)
+}
+
+#cutoff_date <- "2016-01-01" #to limit regressions on complete years
+
+lms_ST <- lapply(var_list_ST, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
+             data = ano_ST_0m_9222))
+})
+
+reg_ST <- NULL
+for (i in 1:length(var_list_ST)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob_ST <-
+    pf(lms_ST[[i]]$fstatistic[1],
+       lms_ST[[i]]$fstatistic[2],
+       lms_ST[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg_ST <-
+    rbind(reg_ST, as.numeric(
+      c(
+        lms_ST[[i]]$coefficients[2, 1],
+        lms_ST[[i]]$coefficients[2, 2],
+        lms_ST[[i]]$coefficients[2, 4],
+        lms_ST[[i]]$coefficients[1, 1],
+        lms_ST[[i]]$coefficients[1, 2],
+        lms_ST[[i]]$coefficients[1, 4],
+        lms_ST[[i]]$fstatistic[1],
+        lms_ST[[i]]$fstatistic[3],
+        lms_ST[[i]]$r.squared,
+        prob_ST
+      )
+    ))
+}
+
+colnames(reg_ST) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+row.names(reg_ST) <- var_list_ST
+reg_ano_ST_0m_9222 <- reg_ST
+
+# Regression and table anomalies
+var_list_ST2 <-
+  c(
+    "Salinity_ano",
+    "Temperature_ano")
+
+lms_ST2 <- lapply(var_list_ST2, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), data = ano_ST_0m_9222))
+})
+
+reg_ST2 <- NULL
+for (i in 1:length(var_list_ST2)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob_ST2 <-
+    pf(lms_ST2[[i]]$fstatistic[1],
+       lms_ST2[[i]]$fstatistic[2],
+       lms_ST2[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg_ST2 <-
+    rbind(reg_ST2, as.numeric(
+      c(
+        lms_ST2[[i]]$coefficients[2, 1],
+        lms_ST2[[i]]$coefficients[2, 2],
+        lms_ST2[[i]]$coefficients[2, 4],
+        lms_ST2[[i]]$coefficients[1, 1],
+        lms_ST2[[i]]$coefficients[1, 2],
+        lms_ST2[[i]]$coefficients[1, 4],
+        lms_ST2[[i]]$fstatistic[1],
+        lms_ST2[[i]]$fstatistic[3],
+        lms_ST2[[i]]$r.squared,
+        prob_ST2
+      )
+    ))
+}
+colnames(reg_ST2) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+row.names(reg_ST2) <- var_list_ST2
+reg_ano_ST_0m_9222 <- reg_ST2
+
+reg_ano_ST_0m_9222
+
+```
+
+
+#### Plot of anomalies : Temperature (1992-2022) - 0m
+
+```{r plot anomalies temperature 1992-2022 - 0m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+plot_ano_temp_9222_0m <- ggplot(data = ano_ST_0m_9222, aes(x = datetime, y = Temperature_ano), na.rm=TRUE) +
+  scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  geom_point(colour="blue", na.rm=TRUE, size=1) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title=NULL,x="", y="Temp. (°C)") +
+  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano_ST_0m_9222$Temperature_ano, na.rm=TRUE), 
+           label="", colour="black", size=9, fontface="plain") +
+  coord_fixed() +
+  Mytheme(size_labs = 8) +
+  theme(axis.text.x=element_blank())
+
+plot_temp_9222_0m <- combined_data_surf %>% 
+  ggplot() +
+  aes(x=datetime, y=temperature) + 
+  geom_point(size=1) +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Temp. (°C)") +
+  ggtitle("Time series observations at 0m of temperature (1992-2022)")
+
+plot_temp_9222_0m
+plot_ano_temp_9222_0m
+
+```
+
+#### Plot of anomalies : salinity (1992-2022) - 0m
+
+```{r plot anomalies salinity 1992-2022 - 0m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+plot_ano_sal_9222_0m <- ggplot(data = ano_ST_0m_9222, aes(x = datetime, y = Salinity_ano), na.rm=TRUE) +
+  scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  scale_y_continuous(breaks=c(-2,-1,0,0.5)) +
+  geom_point(colour="blue", na.rm=TRUE, size=1) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title=NULL,x="", y="Salinity") +
+  coord_fixed() +
+  Mytheme(size_labs = 8) +
+  theme(axis.text.x=element_blank())
+
+plot_sal_9222_0m <- combined_data_surf %>% 
+  ggplot() +
+  aes(x=datetime, y=salinity) + 
+  geom_point(size=1) +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Salinity") +
+  ggtitle("Time series observations at 0m of salinity (1992-2022)")
+
+plot_sal_9222_0m
+plot_ano_sal_9222_0m
+
+```
+
+##### [Table of monthly means for salinity and temperature (1992-2022) - 50m data]{style="color:blue"}
+
+```{r calculate monthly means 1992-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE}
+
+monthly_means_50m_9222 <- ungroup(combined_data_prof) %>% 
+  group_by(Month) %>%
+  summarise(
+    Salinity_month = mean(salinity, na.rm = TRUE),
+    Temperature_month = mean(temperature, na.rm = TRUE))
+
+monthly_means_50m_9222
+
+```
+
+##### [Table of salinity and temperature time series anomaly regression analyses (1992-2022) - 50m data]{style="color:green"}
+
+```{r calculate anomalies + regression on salinity and temperature (1992-2022) - 50m, echo=FALSE, warning=FALSE, message=FALSE}
+
+ano_ST_50m_9222 <- left_join(ungroup(combined_data_prof), monthly_means_50m_9222, by = "Month") %>%
+  mutate(
+    Salinity_ano = salinity - Salinity_month,
+    Temperature_ano = temperature - Temperature_month)
+
+# Regressions and tables of key parameters
+var_list_ST <-
+  c("salinity",
+    "temperature")
+
+lm.test_ST <- vector("list", length(var_list_ST))
+
+for(i in seq_along(var_list_ST)){
+  lm.test_ST[[i]] <- lm(reformulate(var_list_ST[i], "datetime"), data = ano_ST_50m_9222)
+}
+
+#cutoff_date <- "2016-01-01" #to limit regressions on complete years
+
+lms_ST <- lapply(var_list_ST, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
+             data = ano_ST_50m_9222))
+})
+
+reg_ST <- NULL
+for (i in 1:length(var_list_ST)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob_ST <-
+    pf(lms_ST[[i]]$fstatistic[1],
+       lms_ST[[i]]$fstatistic[2],
+       lms_ST[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg_ST <-
+    rbind(reg_ST, as.numeric(
+      c(
+        lms_ST[[i]]$coefficients[2, 1],
+        lms_ST[[i]]$coefficients[2, 2],
+        lms_ST[[i]]$coefficients[2, 4],
+        lms_ST[[i]]$coefficients[1, 1],
+        lms_ST[[i]]$coefficients[1, 2],
+        lms_ST[[i]]$coefficients[1, 4],
+        lms_ST[[i]]$fstatistic[1],
+        lms_ST[[i]]$fstatistic[3],
+        lms_ST[[i]]$r.squared,
+        prob_ST
+      )
+    ))
+}
+
+colnames(reg_ST) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+row.names(reg_ST) <- var_list_ST
+reg_ano_ST_50m_9222 <- reg_ST
+
+# Regression and table anomalies
+var_list_ST2 <-
+  c(
+    "Salinity_ano",
+    "Temperature_ano")
+
+lms_ST2 <- lapply(var_list_ST2, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), data = ano_ST_50m_9222))
+})
+
+reg_ST2 <- NULL
+for (i in 1:length(var_list_ST2)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob_ST2 <-
+    pf(lms_ST2[[i]]$fstatistic[1],
+       lms_ST2[[i]]$fstatistic[2],
+       lms_ST2[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg_ST2 <-
+    rbind(reg_ST2, as.numeric(
+      c(
+        lms_ST2[[i]]$coefficients[2, 1],
+        lms_ST2[[i]]$coefficients[2, 2],
+        lms_ST2[[i]]$coefficients[2, 4],
+        lms_ST2[[i]]$coefficients[1, 1],
+        lms_ST2[[i]]$coefficients[1, 2],
+        lms_ST2[[i]]$coefficients[1, 4],
+        lms_ST2[[i]]$fstatistic[1],
+        lms_ST2[[i]]$fstatistic[3],
+        lms_ST2[[i]]$r.squared,
+        prob_ST2
+      )
+    ))
+}
+colnames(reg_ST2) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+row.names(reg_ST2) <- var_list_ST2
+reg_ano_ST_50m_9222 <- reg_ST2
+
+reg_ano_ST_50m_9222
+
+```
+
+
+#### Plot of anomalies : Temperature (1992-2022) - 50m
+
+```{r plot anomalies temperature 1992-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+plot_ano_temp_9222_50m <- ggplot(data = ano_ST_50m_9222, aes(x = datetime, y = Temperature_ano), na.rm=TRUE) +
+  scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  geom_point(colour="blue", na.rm=TRUE, size=1) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title=NULL,x="", y="Temp. (°C)") +
+  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano_ST_50m_9222$Temperature_ano, na.rm=TRUE), 
+           label="", colour="black", size=9, fontface="plain") +
+  coord_fixed() +
+  Mytheme(size_labs = 8) +
+  theme(axis.text.x=element_blank())
+
+plot_temp_9222_50m <- combined_data_prof %>% 
+  ggplot() +
+  aes(x=datetime, y=temperature) + 
+  geom_point(size=1) +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Temp. (°C)") +
+  ggtitle("Time series observations at 50m of temperature (1992-2022)")
+
+plot_temp_9222_50m
+plot_ano_temp_9222_50m
+
+```
+
+#### Plot of anomalies : salinity (1992-2022) - 50m
+
+```{r plot anomalies salinity 1992-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+plot_ano_sal_9222_50m <- ggplot(data = ano_ST_50m_9222, aes(x = datetime, y = Salinity_ano), na.rm=TRUE) +
+  scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  scale_y_continuous(breaks=c(-2,-1,0,0.5)) +
+  geom_point(colour="blue", na.rm=TRUE, size=1) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title=NULL,x="", y="Salinity") +
+  coord_fixed() +
+  Mytheme(size_labs = 8) +
+  theme(axis.text.x=element_blank())
+
+plot_sal_9222_50m <- combined_data_prof %>% 
+  ggplot() +
+  aes(x=datetime, y=salinity) + 
+  geom_point(size=1) +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Salinity") +
+  ggtitle("Time series observations at 50m of salinity (1992-2022)")
+
+plot_sal_9222_50m
+plot_ano_sal_9222_50m
+
+```
