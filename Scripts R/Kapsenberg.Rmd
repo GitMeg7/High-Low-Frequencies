@@ -7,6 +7,8 @@ output: html_document
 
 # Time series trends analysis by residuals (substracting climatological monthly means)
 
+Analysis on time series, without interpolations
+
 ```{r libraries, echo=FALSE, warning=FALSE, message=FALSE}
 library("readr")
 library("viridis")

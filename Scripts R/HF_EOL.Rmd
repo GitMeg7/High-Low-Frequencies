@@ -1,0 +1,95 @@
+---
+title: "HF EOL"
+author: "Mégane"
+date: "2023-03-28"
+output: html_document
+---
+
+```{r libraries, echo=FALSE, warning=FALSE, message=FALSE}
+
+library("readr")
+library("viridis")
+library("scales")
+library("lubridate")
+library("gsignal")
+library("FactoMineR")
+library("factoextra")
+library("gplots")
+library("heatwaveR")
+library("dplyr")
+library("imputeTS")
+library("Metrics")
+library("tidyr")
+library("tseries")
+library("forecast")
+library("tsDyn")
+library("tsoutliers")
+library("seacarb")
+library("lmodel2")
+library("lmtest")
+library("ggExtra")
+library("corrplot")
+library("ggcorrplot")
+library("marelac")
+
+```
+
+## Data EOL surface : temperature (°C), salinity (psu) and oxygen (mll)
+
+```{r importation Data EOL, echo=FALSE, warning=FALSE, message=FALSE}
+
+#period : septembre 2013-octobre 2022
+EOL_RAW <- read_csv("../Data/SEANOE_EOL.csv")  
+
+#tri
+EOL_RAW <- EOL_RAW %>% 
+  rename(temperature = temp_eol_c, salinity = sal_eol_psu, oxygen = oxy_eol_mll) %>% 
+  select(-...1)
+
+#summary(EOL_RAW) 
+#temperature : 0 NA
+#salinity : 34 NA
+# oxygen : 4793
+
+```
+
+```{r partie interpolation salinity, echo=FALSE, warning=FALSE, message=FALSE}
+
+#visualisation NA
+
+#ggplot_na_distribution(EOL_RAW$salinity)
+#statsNA(EOL_RAW$salinity) # percentage of NA : 0.07%
+
+
+#interpolation
+#salinity_interpol <- na_interpolation(EOL_RAW$salinity)
+#ggplot_na_imputations(x_with_na = EOL_RAW$salinity, x_with_imputations = salinity_interpol)
+##
+
+#EOL_RAW$salinity <- na_interpolation(EOL_RAW$salinity)
+
+```
+
+### Essai periode complete 2014-04-23 _ 2022-04-23 : data toutes les h
+
+```{r period 2014-04-23 _ 2022-04-23, echo=FALSE, warning=FALSE, message=FALSE}
+
+EOL_1422 <- EOL_RAW[c(97:42896),] 
+  
+
+
+EOL_1422 %>% ggplot() +
+  geom_line(aes(x= as.Date(yday(datetime), "1970-01-01"), 
+                y=temperature, 
+                group = factor(year(datetime)), 
+                color = factor(year(datetime))), 
+            size = 0.75) +
+  scale_colour_viridis_d() +
+  scale_x_date(date_breaks="months", date_labels="%b", name = "") +
+  labs(x="Month",colour="") +
+  theme_bw() +
+  scale_y_continuous(name = "Temperature (°C)")
+
+
+```
+
