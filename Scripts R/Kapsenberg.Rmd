@@ -67,7 +67,7 @@ Mytheme <- function(size_labs = 6, face_font="plain", ...) {
 
 *(Rajouter les SD)*
 
-```{r Calcul monthly means 0715 - surface, echo=FALSE, warning=FALSE, message=FALSE}
+```{r Calcul monthly means 0715 - surface, echo=TRUE, warning=FALSE, message=FALSE}
 
 monthly_means_0m_0715 <- ungroup(data_0715) %>% 
   group_by(monthd) %>%
@@ -90,7 +90,7 @@ monthly_means_0m_0715
 
 ➝ Comparison Table 2 (Kapsenberg) same period : results ok
 
-```{r anomalies + regressions 2007-2015 (Kapsenberg) - surface, echo=FALSE, warning=FALSE, message=FALSE}
+```{r anomalies + regressions 2007-2015 (Kapsenberg) - surface, echo=TRUE, warning=FALSE, message=FALSE}
 
 ano_0m_0715 <- left_join(ungroup(data_0715), monthly_means_0m_0715, by = "monthd") %>%
   mutate(
