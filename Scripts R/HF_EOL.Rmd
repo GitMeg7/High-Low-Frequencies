@@ -67,7 +67,8 @@ EOL_RAW <- read_csv("../Data/SEANOE_EOL.csv")
 #tri
 EOL_RAW <- EOL_RAW %>% 
   rename(temperature = temp_eol_c, salinity = sal_eol_psu, oxygen = oxy_eol_mll) %>% 
-  select(-...1)
+  select(-...1) %>% 
+  mutate(Month = format(datetime, format="%m"))
 
 #summary(EOL_RAW) 
 #temperature : 0 NA
@@ -129,7 +130,7 @@ EOL_RAW <- EOL_RAW %>%
 ```
 
 
-##### [Table of monthly means (2013-2022) - EOL temperature & salinity]{style="color:blue"}
+##### [Table and plot of monthly means (2013-2022) - EOL temperature & salinity]{style="color:blue"}
 
 ```{r calcul monthly means - temperature & salinity, echo=TRUE, warning=FALSE, message=FALSE}
 
@@ -144,12 +145,24 @@ monthly_means
 
 ```
 
+
+```{r plot monthly means - temperature & salinity, echo=TRUE, warning=FALSE, message=FALSE}
+
+EOL_monthly_means <- left_join(ungroup(EOL_RAW), monthly_means, by = "Month")
+
+EOL_monthly_means %>% 
+  ggplot() + 
+  geom_point(aes(x=datetime, y=temperature), size=1, col="lightblue") +
+  geom_point(aes(x=datetime, y=Temperature_month), size=0.8, col="pink") +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Temp. (°C)")
+```
+
+
+
 ##### [Table of time series anomalies regression analyses (2013-2022) - EOL temperature & salinity]{style="color:green"}
 
-```{r regression analysis - temperature & salinity, echo=TRUE, warning=FALSE, message=FALSE}
-
-EOL_RAW <- EOL_RAW %>% 
-  mutate(Month = format(datetime, format="%m"))
+```{r regression analysis - temperature & salinity, echo=FALSE, warning=FALSE, message=FALSE}
 
 anomalies <- left_join(ungroup(EOL_RAW), monthly_means, by = "Month") %>%
   mutate(Salinity_ano = salinity - Salinity_month,
@@ -330,7 +343,284 @@ plot_ano_sal
 ```
 
 
-## Part 2 : Trend analysis by autocorrelation
+## Part 2 : Trend analysis with raw dataset
+
+### Trend by linear regression
+
+
+
+```{r trend analysis by lm - temperature, echo=FALSE, warning=FALSE, message=FALSE}
+
+reg_raw_temp <- lm(data = EOL_RAW, temperature ~ unclass(datetime))
+slope_temp <- reg_raw_temp$coefficients[[2]]
+intercept_temp <- reg_raw_temp$coefficients[[1]]
+
+summary(reg_raw_temp)
+
+EOL_RAW %>% 
+  ggplot(aes(x=datetime, y=temperature), col="black") + 
+  geom_point(size=0.7) + 
+  geom_line() + 
+  geom_abline(aes(slope=slope_temp, intercept=intercept_temp), linetype = 1, col="red") +
+  ggtitle("EOL Temperature (°C) 2013-2022")+
+  Mytheme() +
+  labs(y="Temp. (°C)", x="")
+
+
+```
+
+
+```{r trend analysis by lm - salinity, echo=FALSE, warning=FALSE, message=FALSE}
+
+reg_raw_sal <- lm(data = EOL_RAW, salinity ~ unclass(datetime))
+slope_sal <- reg_raw_sal$coefficients[[2]]
+intercept_sal <- reg_raw_sal$coefficients[[1]]
+
+EOL_RAW %>% 
+  ggplot(aes(x=datetime, y=salinity), col="black") + 
+  geom_point(size=0.7) + 
+  geom_line() + 
+  geom_abline(aes(slope=slope_sal, intercept=intercept_sal), linetype = 1, col="red") +
+  ggtitle("EOL salinity 2013-2022")+
+  Mytheme() +
+  labs(y="Salinity", x="")
+
+
+```
+
+### Trend by WLS regression
+
+```{r trend analysis by WLS - temperature, echo=FALSE, warning=FALSE, message=FALSE}
+
+#define weights to use
+wt_temp <- 1 / lm(abs(reg_raw_temp$residuals) ~ reg_raw_temp$fitted.values)$fitted.values^2
+
+#perform weighted least squares regression
+wls_model_temp <- lm(temperature ~ unclass(datetime), data = EOL_RAW, weights=wt_temp)
+
+slope_temp2 <- wls_model_temp$coefficients[[2]]
+intercept_temp2 <- wls_model_temp$coefficients[[1]]
+
+#plot
+EOL_RAW %>% 
+  ggplot(aes(x=datetime, y=temperature), col="black") + 
+  geom_point(size=0.7) + 
+  geom_line() + 
+  geom_abline(aes(slope=slope_temp2, intercept=intercept_temp2), linetype = 1, col="red") +
+  ggtitle("EOL Temperature (°C) 2013-2022")+
+  Mytheme() +
+  labs(y="Temp. (°C)", x="")
+
+
+```
+
+
+## Number of days > 25°C
+
+```{r Heatwaves Robert, echo=FALSE, warning=FALSE, message=FALSE}
+
+#creation
+Exc_temp <- EOL_RAW %>% 
+  mutate(t = as.Date(datetime)) %>% 
+  rename(temp = temperature)
+
+Exc_25 <- exceedance(Exc_temp, threshold = 25, maxPadLength = 6)
+
+DF_exceedance_25 <- Exc_25$exceedance
+
+####
+
+#visualising exceedances
+exc_25_thresh <- Exc_25$threshold
+
+ggplot(data = exc_25_thresh, aes(x = t)) +
+  geom_flame(aes(y = temp, y2 = thresh, fill = "all"), show.legend = F) +
+  geom_line(aes(y = temp, colour = "temp")) +
+  geom_line(aes(y = thresh, colour = "thresh"), linewidth = 1.0) +
+  scale_colour_manual(name = "Line Colour",
+                      values = c("temp" = "black", "thresh" =  "forestgreen")) +
+  scale_fill_manual(name = "Event Colour", values = c("all" = "salmon")) +
+  guides(colour = guide_legend(override.aes = list(fill = NA))) +
+  scale_x_date(date_labels = "%b %Y", breaks="1 month") +
+  labs(y = expression(paste("Temperature [", degree, "C]")), x = NULL)
+
+####
+
+
+#visualising exceedances since 2018
+exc_25_thresh_2017 <- Exc_25$threshold %>% slice(4899:47268)
+
+ggplot(data = exc_25_thresh_2017, aes(x = t)) +
+  geom_flame(aes(y = temp, y2 = thresh, fill = "all"), show.legend = F) +
+  geom_line(aes(y = temp, colour = "temp")) +
+  geom_line(aes(y = thresh, colour = "thresh"), size = 1.0) +
+  scale_colour_manual(name = "Line Colour",
+                      values = c("temp" = "black", "thresh" =  "forestgreen")) +
+  scale_fill_manual(name = "Event Colour", values = c("all" = "salmon")) +
+  guides(colour = guide_legend(override.aes = list(fill = NA))) +
+  scale_x_date(date_labels = "%Y", breaks="1 year") +
+  labs(y = expression(paste("Temperature [", degree, "C]")), x = NULL)
+
+#record annee 2022 
+
+```
+
+## Comparison with pelagic data (Azur Buoy)
+
+
+```{r importation data SST AZUR BUOY, echo=FALSE, warning=FALSE, message=FALSE}
+
+#data SST Azur buoy (2011-2022)
+#observation toutes les 30min : 6 obs toutes les 10s
+#temperature in °C
+
+#annee 2011
+Azur_SST_2011 <- read_delim("../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2011.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2011 <- Azur_SST_2011 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2012
+Azur_SST_2012 <- read_delim("../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2012.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2012 <- Azur_SST_2012 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2013
+Azur_SST_2013 <- read_delim("../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2013.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2013 <- Azur_SST_2013 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2014
+Azur_SST_2014 <- read_delim("../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2014.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2014 <- Azur_SST_2014 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2015
+Azur_SST_2015 <- read_delim("../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2015.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2015 <- Azur_SST_2015 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2016
+Azur_SST_2016 <- read_delim("../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2016.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2016 <- Azur_SST_2016 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2017
+Azur_SST_2017 <- read_delim("../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2017.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2017 <- Azur_SST_2017 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2018
+Azur_SST_2018 <- read_delim("../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2018.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2018 <- Azur_SST_2018 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2019
+Azur_SST_2019 <- read_delim("../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2019.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2019 <- Azur_SST_2019 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2020
+Azur_SST_2020 <- read_delim("../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2020.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2020 <- Azur_SST_2020 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2021
+Azur_SST_2021 <- read_delim("../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2021.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2021 <- Azur_SST_2021 %>% rename(datetime=X1, SST=X2)
+##
+#annee 2022
+Azur_SST_2022 <- read_delim("../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2022.dat", 
+                            delim = ";", escape_double = FALSE, col_names = FALSE, 
+                            trim_ws = TRUE)
+
+Azur_SST_2022 <- Azur_SST_2022 %>% rename(datetime=X1, SST=X2)
+
+
+#fusion des tables : AZUR_SST_RAW
+#periode 2013-01-01 a 2022-08-12
+
+AZUR_SST_RAW <- rbind(Azur_SST_2013, Azur_SST_2014,
+                  Azur_SST_2015, Azur_SST_2016, Azur_SST_2017, Azur_SST_2018,
+                  Azur_SST_2019, Azur_SST_2020, Azur_SST_2021, Azur_SST_2022)
+
+AZUR_SST_RAW <- AZUR_SST_RAW %>% 
+  mutate(SST = case_when(SST < 0 ~ NA_real_ , TRUE ~ SST)) %>% 
+  mutate(Hour = format(datetime, format="%Y-%m-%d %H:00:00")) %>% 
+  group_by(Hour) %>% 
+  mutate(mean_SST = mean(SST))
+
+
+AZUR_SST_RAW <- AZUR_SST_RAW %>%
+  select(Hour, mean_SST) %>% 
+  rename(datetime = Hour, temp_pelag = mean_SST) %>% 
+  mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d %H:%M:%S"))
+
+AZUR_SST_RAW <- distinct(AZUR_SST_RAW)
+
+  
+##
+
+#fusion temp EOL / temp Azur
+
+pelagic_coast <- left_join(ungroup(EOL_RAW), AZUR_SST_RAW, by = "datetime")
+
+pelagic_coast <- pelagic_coast %>% 
+  mutate(temp_pelag = case_when(temp_pelag < 13 ~ NA_real_ , TRUE ~ temp_pelag)) %>% 
+  mutate(temp_pelag = case_when(temp_pelag > 35 ~ NA_real_ , TRUE ~ temp_pelag))
+
+#regarder et retirer les outliers de temp azur
+
+
+```
+
+
+```{r plot pelagic and costal temperatures, echo=FALSE, warning=FALSE, message=FALSE}
+
+pelagic_coast %>% 
+  ggplot() +
+  geom_point(aes(x=datetime, y=temperature), size=0.8, col="#A5260A") +
+  geom_point(aes(x=datetime, y=temp_pelag), size=0.8, col="#3A8EBA")
+
+
+```
+### Scatterplot pelagic vs costal temperatures
+
+```{r  scatterplot pelagic vs costal temperatures, echo=FALSE, warning=FALSE, message=FALSE}
+
+pelagic_coast %>% 
+  ggplot() +
+  aes(x=temp_pelag, y=temperature) +
+  geom_point() +
+  stat_smooth(method="lm", formula = y ~ x) +
+  scale_x_continuous(name="Pelagic Temp. (Azur)") +
+  scale_y_continuous(name="Coastal Temp. (EOL)")
+
+#faire une regression lm pour trouver pente + intercept
+
+```
 
 
 
