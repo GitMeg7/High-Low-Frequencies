@@ -676,7 +676,6 @@ Flux_wan_2014 <- 0.00077 * DATA$wind_speed_ms^2 * DATA$delta_pCO2
 DATA <- DATA %>% mutate(Flux_wan_2014 = 0.00077 * wind_speed_ms^2 * delta_pCO2)
  summary(Flux_wan_2014)
  
-which.max(Flux_wan_2014)
 
 ```
 

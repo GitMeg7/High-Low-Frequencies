@@ -31,6 +31,8 @@ library("ggExtra")
 library("corrplot")
 library("ggcorrplot")
 library("marelac")
+library("spectral")
+library("signal")
 
 ```
 
@@ -74,6 +76,12 @@ EOL_RAW <- EOL_RAW %>%
 #temperature : 0 NA
 #salinity : 34 NA
 # oxygen : 4793
+
+# a voir aussi en triant la data par espace temps regulier :
+# exemple : 
+# 1 : par jour
+# 2 : 2 fois par jour
+# 3 : par heure ?
 
 ```
 
@@ -341,9 +349,49 @@ plot_salinity <- EOL_RAW %>%
 plot_salinity
 plot_ano_sal
 ```
+## Part 2 : Trend analysis with Fourrier power spectral density
+
+```{r Fast Fourier Transform }
+
+fft <- fft(EOL_RAW$temperature)
+plot(abs(fft), type='l')
+
+```
 
 
-## Part 2 : Trend analysis with raw dataset
+
+
+
+
+
+
+
+
+
+
+## Part 3 : Trend analysis with autocorrelation
+
+```{r autocorrelation - temperature EOL, echo=FALSE, warning=FALSE, message=FALSE}
+
+acf(EOL_RAW$temperature, lag.max=365, type="correlation", plot=FALSE)
+#each value is positively associated to the previous one
+#more the lag increase, weaker is the association
+
+#acf plot :
+acf(EOL_RAW$temperature, lag.max=600, type="correlation", plot=TRUE)
+
+#a voir
+
+```
+
+
+
+
+
+
+
+
+## Part 4 : Trend analysis with raw dataset
 
 ### Trend by linear regression
 
@@ -591,7 +639,6 @@ pelagic_coast <- pelagic_coast %>%
   mutate(temp_pelag = case_when(temp_pelag < 13 ~ NA_real_ , TRUE ~ temp_pelag)) %>% 
   mutate(temp_pelag = case_when(temp_pelag > 35 ~ NA_real_ , TRUE ~ temp_pelag))
 
-#regarder et retirer les outliers de temp azur
 
 
 ```
@@ -608,6 +655,9 @@ pelagic_coast %>%
 ```
 ### Scatterplot pelagic vs costal temperatures
 
+Slope : 0.9993014
+Intercept : 0.7620216
+
 ```{r  scatterplot pelagic vs costal temperatures, echo=FALSE, warning=FALSE, message=FALSE}
 
 pelagic_coast %>% 
@@ -620,7 +670,12 @@ pelagic_coast %>%
 
 #faire une regression lm pour trouver pente + intercept
 
-```
+reg_pelagic_coast <- lm(data = pelagic_coast, temperature ~ temp_pelag)
+slope_pelagic_coast <- reg_pelagic_coast$coefficients[[2]]
+intercept_pelagic_coast <- reg_pelagic_coast$coefficients[[1]]
 
+#summary(reg_pelagic_coast)
+
+```
 
 

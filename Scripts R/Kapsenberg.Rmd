@@ -59,7 +59,7 @@ Mytheme <- function(size_labs = 6, face_font="plain", ...) {
 ##
 ```
 
-
+## Comparison with Kapsenberg results - period 2007-2015
 
 ##### [Table of monthly means (2007-2015) - surface data]{style="color:blue"}
 
@@ -691,7 +691,9 @@ plot_pCO2_0715_50m
 plot_ano_pCO2_0715_50m
 ```
 
-##### [Table of monthly means (2007-2022) \_ surface data]{style="color:blue"}
+## Method extension for 2007-2022 period
+
+##### [Table of monthly means (2007-2022) - surface data]{style="color:blue"}
 
 *(rajouter les SD)*
 
@@ -1320,6 +1322,8 @@ plot_pCO2_0722_50m
 plot_ano_pCO22_50m
 ```
 
+## Method extension for 1992-2022 period (only temperature & salinity)
+
 ## Trend analysis by residuals on temperature and salinity : period 1992-2022
 
 
@@ -1874,3 +1878,37 @@ plot_sal_9222_50m
 plot_ano_sal_9222_50m
 
 ```
+
+# Time series trend analysis by autocorrelation
+
+```{r autocorrelation - temperature surface}
+
+#missing values : interpolation temperature > temp2
+data_raw_surf <- data_raw_surf %>% 
+  mutate(temp2 = na_interpolation(temperature))
+
+summary(data_raw_surf$temp2) # 0 NA
+
+#Autocorrelation :
+acf(data_raw_surf$temp2, lag.max = 55, type="correlation", plot=FALSE)
+
+#cycle de 52 semaines
+
+
+
+```
+
+
+```{r fonction ts }
+
+
+s1 <- ts(data_raw_surf$temp2, start=2007, end=2022, frequency=52)
+
+plot(s1)
+
+decomp <- decompose(s1)
+
+plot(decomp)
+
+```
+
