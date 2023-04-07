@@ -884,10 +884,10 @@ reg_ano_surf2
 ```{r, plot anomalies temperature 2007-2022 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
 plot_ano_temp2 <- ggplot(data = ano_0m_0722, aes(x = sampling_date, y = Temperature_ano), na.rm=TRUE) +
-  scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  scale_x_datetime(date_breaks="5 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_point(colour="blue", na.rm=TRUE, size=1) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
-  labs(title=NULL,x="", y="Temp. (°C)") +
+  labs(title="Anomalies trend for temperature (2007-2022)",x="", y="Temp. (°C)") +
   annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano_0m_0722$Temperature_ano, na.rm=TRUE), 
            label="", colour="black", size=9, fontface="plain") +
   coord_fixed() +
@@ -897,7 +897,7 @@ plot_ano_temp2 <- ggplot(data = ano_0m_0722, aes(x = sampling_date, y = Temperat
 plot_temp_0722 <- data_0722 %>% 
   ggplot() +
   aes(x=sampling_date, y=temperature) + 
-  geom_point(size=1) +
+  geom_point(size=0.8) +
   scale_x_datetime(name="") +
   scale_y_continuous(name="Temp. (°C)") +
   ggtitle("Time series observations at 0m of temperature (2007-2022)")
@@ -910,11 +910,11 @@ plot_ano_temp2
 
 ```{r, plot anomalies salinity 2007-2022 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 plot_ano_sal2 <- ggplot(data = ano_0m_0722, aes(x = sampling_date, y = Salinity_ano), na.rm=TRUE) +
-  scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  scale_x_datetime(date_breaks="5 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   scale_y_continuous(breaks=c(-2,-1,0,0.5)) +
   geom_point(colour="blue", na.rm=TRUE, size=1) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
-  labs(title=NULL,x="", y="Salinity") +
+  labs(title="Anomalies trend for salinity (2007-2022)",x="", y="Salinity") +
   coord_fixed() +
   Mytheme(size_labs = 8) +
   theme(axis.text.x=element_blank())
@@ -936,10 +936,10 @@ plot_ano_sal2
 ```{r, plot anomalies pH 2007-2022 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
 plot_ano_ph2 <- ggplot(data = ano_0m_0722, aes(x = sampling_date, y = pH_calc_ano), na.rm=TRUE) +
-  scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  scale_x_datetime(date_breaks="5 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_point(colour="blue", na.rm=TRUE, size=1) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
-  labs(title=NULL, x="", y=expression(paste(pH[T]," calculated"))) +
+  labs(title="Anomalies trend for pH (2007-2022)", x="", y="pH") +
   annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano_0m_0722$pH_calc_ano, na.rm=TRUE), 
            label="", colour="black", size=9, fontface="plain") +
   coord_fixed() +
@@ -990,10 +990,10 @@ plot_ano_ta_0722
 ```{r, plot anomalies CO2 2007-2015 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
 plot_ano_pCO22 <- ggplot(data = ano_0m_0722, aes(x = sampling_date, y = pCO2_ano), na.rm=TRUE) +
-  scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  scale_x_datetime(date_breaks="5 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_point(colour="blue", na.rm=TRUE, size=1) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
-  labs(title=NULL,x="",y=expression(paste(pCO[2], " (",mu, "atm)"))) +
+  labs(title="Anomalies trend for pCO2 (2007-2022)",x="",y=expression(paste(pCO[2], " (",mu, "atm)"))) +
   annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano_0m_0722$pCO2_ano, na.rm=TRUE), 
            label="", colour="black", size=9, fontface="plain") +
   coord_fixed() +

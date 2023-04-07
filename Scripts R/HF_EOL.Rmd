@@ -59,6 +59,7 @@ Mytheme <- function(size_labs = 6, face_font="plain", ...) {
 
 # Data EOL surface : temperature (°C), salinity (psu) and oxygen (mll)
 
+
 ## Part 1 : Trend analysis by residuals
 
 ```{r importation Data EOL, echo=FALSE, warning=FALSE, message=FALSE}
@@ -84,6 +85,89 @@ EOL_RAW <- EOL_RAW %>%
 # 3 : par heure ?
 
 ```
+
+
+
+```{r visualisation data temperature EOL, echo=FALSE, message=FALSE, warning=FALSE}
+
+EOL_RAW %>% 
+  ggplot() +
+  aes(x=datetime, y=temperature) + 
+  geom_point(size=0.6, col="#22427C") + 
+  scale_x_datetime(name="") + 
+  scale_y_continuous(name="Temp. (°C)") + 
+  ggtitle("High frequency surface data of temperature (2013-2022)")
+
+
+```
+```{r importation data SOMLIT, echo=FALSE, message=FALSE, warning=FALSE}
+
+#periode janvier 2007 - septembre 2022 :
+SOMLIT <- read_delim("../Data/Somlit_Extraction_ctd_dernier.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+#selection profondeur 1m (a refaire avec moyenne de 1 a 3m)
+SOMLIT <- SOMLIT %>% 
+  dplyr::filter(PROFONDEUR == 1) %>% 
+  select(DATE, TEMPERATURE, SALINITE) %>% 
+  rename(datetime = DATE, temp_Pt_B = TEMPERATURE, sal_Pt_B = SALINITE) %>% 
+  mutate(datetime=format(datetime, format="%Y-%m-%d")) %>% 
+  mutate(datetime = as.POSIXct(datetime))
+
+#select dans EOL
+EOL <- EOL_RAW %>% 
+  select(datetime, temperature, salinity) %>% 
+  mutate(datetime=format(datetime, format="%Y-%m-%d")) %>% 
+  mutate(datetime = as.POSIXct(datetime))
+
+#fusion
+fusion <- full_join(EOL, SOMLIT)
+fusion <- fusion %>% arrange(datetime) %>% 
+  dplyr::filter(datetime > "2013-09-01" & datetime < "2022-09-14") %>% 
+  mutate(temp_Pt_B = case_when(temp_Pt_B >= 999 ~ NA_real_ ,TRUE ~ temp_Pt_B))
+
+
+```
+
+
+
+```{r visualisation data temperature EOL vs SOMLIT, echo=FALSE, message=FALSE, warning=FALSE}
+
+fusion %>% 
+  ggplot() +
+  geom_point(aes(x=datetime, y=temperature), size=0.7, col="red") + 
+  geom_point(aes(x=datetime, y=temp_Pt_B), size=1, col="#22427C") + 
+  scale_x_datetime(name="") + 
+  scale_y_continuous(name="Temp. (°C)") + 
+  ggtitle("HF (EOL) vs LF (Point B) surface data of temperature (2013-2022)")
+
+#comment relier les points
+```
+
+```{r scatterplot}
+
+fusion_scatterplot <- left_join(SOMLIT, EOL, by="datetime")
+fusion_scatterplot <- fusion_scatterplot %>% 
+  dplyr::filter(datetime > "2013-09-01" & datetime < "2022-09-14") %>% 
+  mutate(temp_Pt_B = case_when(temp_Pt_B >= 999 ~ NA_real_ ,TRUE ~ temp_Pt_B))
+
+#scatterplot EOL/SOMLIT
+fusion_scatterplot %>% 
+  ggplot() + 
+  ggtitle("Scatter plot EOL vs Point B") +
+  aes(x=temp_Pt_B, y=temperature) + 
+  geom_point(size=0.8) + 
+  geom_smooth(method=lm) + 
+  scale_x_continuous(name="Temperature Point B") + 
+  scale_y_continuous(name="Temperature EOL")
+
+summary(lm(fusion_scatterplot$temperature ~ fusion_scatterplot$temp_Pt_B))
+
+```
+
+
+
+
 
 
 ##### Interpolation - EOL data
@@ -489,8 +573,8 @@ ggplot(data = exc_25_thresh, aes(x = t)) +
                       values = c("temp" = "black", "thresh" =  "forestgreen")) +
   scale_fill_manual(name = "Event Colour", values = c("all" = "salmon")) +
   guides(colour = guide_legend(override.aes = list(fill = NA))) +
-  scale_x_date(date_labels = "%b %Y", breaks="1 month") +
-  labs(y = expression(paste("Temperature [", degree, "C]")), x = NULL)
+  scale_x_date(date_labels = "%Y", breaks="1 year") +
+  labs(y = "Temp. (°C)", x = NULL, title="Consecutive days > 25°C (2013-2022)")
 
 ####
 
@@ -675,6 +759,17 @@ slope_pelagic_coast <- reg_pelagic_coast$coefficients[[2]]
 intercept_pelagic_coast <- reg_pelagic_coast$coefficients[[1]]
 
 #summary(reg_pelagic_coast)
+
+```
+
+
+
+
+```{r}
+
+
+
+
 
 ```
 

@@ -252,6 +252,15 @@ Data_air_CO2_interpol <- data.frame(datetime = Data_air_CO2$datetime, pCO2_ppm =
 
 ```
 
+```{r conversion dry mol fraction pCO2 air}
+
+Data_air_CO2_interpol <- Data_air_CO2_interpol %>% 
+  mutate(pCO2_good = x2pCO2(S=35, T=25, Patm=1.0, xCO2=pCO2_ppm))
+
+```
+
+
+
 
 ```{r data wind speed, echo=FALSE, warning=FALSE, message=FALSE}
 ##Data wind speed (10m)
@@ -474,7 +483,7 @@ DATA <- left_join(DATA, Data_wind_interpol, by = "datetime")
 
 DATA <- DATA %>% 
   mutate(datetime = as.POSIXct(datetime)) %>% 
-  rename(pCO2_air_ppm = pCO2_ppm)
+  rename(pCO2_air_uatm = pCO2_good)
 
 #summary(DATA$pCO2_water_uatm) #95
 #summary(DATA$pCO2_air_ppm) # 0NA
@@ -506,8 +515,8 @@ plot_pCO2_water <- DATA %>%
 
 plot_pCO2_air <- DATA %>% 
   ggplot() +
-  ggtitle("Air pCO2 (ppm) according to time ") +
-  aes(x=datetime, y=pCO2_air_ppm) +
+  ggtitle("Air pCO2 (uatm) according to time ") +
+  aes(x=datetime, y=pCO2_air_uatm) +
   geom_point(size=1, col='#EED153')
 
 plot_pCO2_water
@@ -521,11 +530,11 @@ plot_pCO2_air
 
 plot_pCO2_water_vs_air <- DATA %>% 
   ggplot() + 
-  ggtitle("Water and atmosphere pCO2 according to time") +
-  geom_point(aes(x=datetime, y=pCO2_water_uatm), size=1, col='#357AB7') + 
-  geom_point(aes(x=datetime, y=pCO2_air_ppm), size=1, col='#EED153') + 
+  ggtitle("Water and atmosphere pCO2 according to time (2007-2022)") +
+  geom_point(aes(x=datetime, y=pCO2_water_uatm), size=1, col='#357AB7') +
+  geom_point(aes(x=datetime, y=pCO2_air_uatm), size=1, col='#EED153') + 
   scale_x_datetime(name="") + 
-  scale_y_continuous(name="pCO2")
+  scale_y_continuous(name="pCO2² (µatm)")
 
 plot_pCO2_water_vs_air
 
@@ -666,8 +675,8 @@ DATA %>%
 #unit : mol/m2/y, ici mol/m2/y 
 
 #delta_pCO2 :
-delta_pCO2 <- DATA$pCO2_water_uatm - DATA$pCO2_air_ppm
-DATA <- DATA %>% mutate(delta_pCO2 = pCO2_water_uatm - pCO2_air_ppm)
+delta_pCO2 <- DATA$pCO2_water_uatm - DATA$pCO2_air_uatm
+DATA <- DATA %>% mutate(delta_pCO2 = pCO2_water_uatm - pCO2_air_uatm)
 
 #F en mol/m2/day
 Flux_wan_2014 <- 0.00077 * DATA$wind_speed_ms^2 * DATA$delta_pCO2
@@ -714,8 +723,56 @@ DATA %>%
   ggtitle("CO2 fluxes ocean-atmosphere (Wanninkhof 2014)")
 ```
 
+#periode + frequence de chaque data set dans un tableau
+
+
+#comparaison des 3 lieux de pco2 water sur un mm plot 
+
+#tendance sur delta pCO2 ? 
+
+#changer les echelles des graphiques 
+
+#plot de toutes les donnees atmospheriques de tous les lieux, voir a quoi ca ressemble, si les courbes sont identiques
+
+#faire par periode de 10ans pour 1992-2022, voir l'évolution de la tendance
+
+#partie autocorrelation, voir avec SAMIR ?
+script FRED ?
+
+
+```{r essai}
+
+SC <- gas_schmidt(t=SOMLIT_carbo_chemistry_surf$temperature, species="CO2")
+
+k <- 0.251*DATA$wind_speed_ms^2*(SC/660)^-0.5 #en cm/heure
+
+#K0 <- K0(S=SOMLIT_carbo_chemistry_surf$salinity, T=SOMLIT_carbo_chemistry_surf$temperature, P=0, Patm=1, warn="y")
+
+K0 <- exp(-58.0931+90.5069*(100/(SOMLIT_carbo_chemistry_surf$temperature+273.16))
+          +22.294*log((SOMLIT_carbo_chemistry_surf$temperature+273.16)/100) +
+          SOMLIT_carbo_chemistry_surf$salinity*(0.027766-0.025888*
+          ((SOMLIT_carbo_chemistry_surf$temperature+273.16)/100)+0.0051313*
+            ((SOMLIT_carbo_chemistry_surf$temperature+273.16)/100)^2))
+
+K0 <- K0/1000000
+
+F <- k*K0*delta_pCO2
 
 
 
+DATA <- DATA %>% mutate(F = k*K0*delta_pCO2)
 
+```
+
+```{r new}
+
+DATA %>% 
+  ggplot() +
+  aes(x=datetime, y=F) +
+  geom_line(linewidth=0.6) + 
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Flux (mol C/m²/h)") +
+  ggtitle("CO2 fluxes ocean-atmosphere (Wanninkhof 2014)")
+
+```
 
