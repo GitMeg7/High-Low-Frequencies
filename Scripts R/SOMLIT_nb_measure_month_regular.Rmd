@@ -1,0 +1,450 @@
+---
+title: 'SOMLIT : nb de mesure /mois régulier'
+author: "Mégane"
+date: "2023-04-17"
+output: html_document
+---
+
+
+```{r libraries, echo=FALSE, warning=FALSE, message=FALSE}
+library("readr")
+library("viridis")
+library("scales")
+library("lubridate")
+library("gsignal")
+library("FactoMineR")
+library("factoextra")
+library("gplots")
+library("heatwaveR")
+library("dplyr")
+library("imputeTS")
+library("Metrics")
+library("tidyr")
+library("tseries")
+library("forecast")
+library("tsDyn")
+library("tsoutliers")
+library("seacarb")
+library("lmodel2")
+library("lmtest")
+library("ggExtra")
+library("corrplot")
+library("ggcorrplot")
+library("marelac")
+library("kableExtra")
+library("stringr")
+library("berryFunctions")
+```
+
+## Importation data carbo chemistry (Point B SOMLIT) : 2007-2022 complete
+
+```{r importation data pCO2 water, echo=FALSE, warning=FALSE, message=FALSE}
+
+###Importation des donnees
+##Data pCO2 water
+#a partir de janvier 2007 jusqu'a janvier 2023
+
+SOMLIT_carbo_chemistry <- read_delim("../Data/DATA_SOMLIT_07-23.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+#on retire les data 2023 pour avoir les annees completes sur 2007-2022 :
+SOMLIT_carbo_chemistry <- SOMLIT_carbo_chemistry[-c(1622:1631),]
+
+#creation variables Year.Month (omit the day) :
+SOMLIT_carbo_chemistry <- SOMLIT_carbo_chemistry %>% 
+  mutate(Year.Month = format(sampling_date, format="%Y-%m"),
+         Year.Month = as.POSIXct(paste(Year.Month, "-01", sep = ""), format = "%Y-%m-%d"))
+
+
+
+
+#MAJ year + month (NAs)
+SOMLIT_carbo_chemistry$year <- substr(SOMLIT_carbo_chemistry$sampling_date, 1, 4) 
+SOMLIT_carbo_chemistry$year <- as.numeric(SOMLIT_carbo_chemistry$year)
+
+SOMLIT_carbo_chemistry$month <- format(SOMLIT_carbo_chemistry$sampling_date, format = "%m")
+SOMLIT_carbo_chemistry$month <- as.numeric(SOMLIT_carbo_chemistry$month)
+##
+
+```
+
+### **Clean-up**  
+  
+```{r cleanup, echo=FALSE, warning=FALSE, message=FALSE}
+
+#suppression lignes NA :
+SOMLIT_carbo_chemistry <- SOMLIT_carbo_chemistry[-c(784, 818, 827, 866, 873, 884, 961, 978, 989, 1032, 1047, 1062, 1105,
+                                                    1112, 1135, 1142, 1153),]
+#1604 obs
+##
+surf <- SOMLIT_carbo_chemistry %>% 
+  dplyr::filter(depth==0)
+
+prof <- SOMLIT_carbo_chemistry %>% 
+  dplyr::filter(depth==50)
+
+#2 obs de diff
+##
+
+#ajout de 2 obs 50m : 2007-07-24 & 2014-09-30
+
+SOMLIT_carbo_chemistry <- insertRows(SOMLIT_carbo_chemistry, 58, new = NA)
+
+SOMLIT_carbo_chemistry <- SOMLIT_carbo_chemistry %>% 
+  mutate(sampling_date = str_replace_na(sampling_date, replacement = "NA"),
+         depth = str_replace_na(depth, replacement = "NA")) %>% 
+  mutate(sampling_date = str_replace(sampling_date, "NA", "2007-07-24"),
+         depth = str_replace(depth, "NA", "50"))
+
+SOMLIT_carbo_chemistry <- insertRows(SOMLIT_carbo_chemistry, 804, new = NA)
+
+SOMLIT_carbo_chemistry <- SOMLIT_carbo_chemistry %>% 
+  mutate(sampling_date = str_replace_na(sampling_date, replacement = "NA"),
+         depth = str_replace_na(depth, replacement = "NA")) %>% 
+  mutate(sampling_date = str_replace(sampling_date, "NA", "2014-09-30"),
+         depth = str_replace(depth, "NA", "50"))
+##
+
+#suplementary MAJ
+
+#ajout row 2021-09-21 for 50m
+SOMLIT_carbo_chemistry <- insertRows(SOMLIT_carbo_chemistry, 1490, new = NA)
+
+SOMLIT_carbo_chemistry <- SOMLIT_carbo_chemistry %>% 
+  mutate(sampling_date = str_replace_na(sampling_date, replacement = "NA"),
+         depth = str_replace_na(depth, replacement = "NA")) %>% 
+  mutate(sampling_date = str_replace(sampling_date, "NA", "2021-09-21"),
+         depth = str_replace(depth, "NA", "50"))
+
+#ajout row 2022-05-10 for 0m
+SOMLIT_carbo_chemistry <- insertRows(SOMLIT_carbo_chemistry, 1547, new = NA)
+
+SOMLIT_carbo_chemistry <- SOMLIT_carbo_chemistry %>% 
+  mutate(sampling_date = str_replace_na(sampling_date, replacement = "NA"),
+         depth = str_replace_na(depth, replacement = "NA")) %>% 
+  mutate(sampling_date = str_replace(sampling_date, "NA", "2022-05-10"),
+         depth = str_replace(depth, "NA", "0"))
+##
+
+#ajout row 2021-08-10 for 50m
+SOMLIT_carbo_chemistry <- insertRows(SOMLIT_carbo_chemistry, 1480, new = NA)
+
+SOMLIT_carbo_chemistry <- SOMLIT_carbo_chemistry %>% 
+  mutate(sampling_date = str_replace_na(sampling_date, replacement = "NA"),
+         depth = str_replace_na(depth, replacement = "NA")) %>% 
+  mutate(sampling_date = str_replace(sampling_date, "NA", "2021-08-10"),
+         depth = str_replace(depth, "NA", "50"))
+
+#ajout row 2021-08-17 for 50m
+SOMLIT_carbo_chemistry <- insertRows(SOMLIT_carbo_chemistry, 1482, new = NA)
+
+SOMLIT_carbo_chemistry <- SOMLIT_carbo_chemistry %>% 
+  mutate(sampling_date = str_replace_na(sampling_date, replacement = "NA"),
+         depth = str_replace_na(depth, replacement = "NA")) %>% 
+  mutate(sampling_date = str_replace(sampling_date, "NA", "2021-08-17"),
+         depth = str_replace(depth, "NA", "50"))
+##
+
+#ajout row 2022-05-17 for 0m
+SOMLIT_carbo_chemistry <- insertRows(SOMLIT_carbo_chemistry, 1551, new = NA)
+
+SOMLIT_carbo_chemistry <- SOMLIT_carbo_chemistry %>% 
+  mutate(sampling_date = str_replace_na(sampling_date, replacement = "NA"),
+         depth = str_replace_na(depth, replacement = "NA")) %>% 
+  mutate(sampling_date = str_replace(sampling_date, "NA", "2022-05-17"),
+         depth = str_replace(depth, "NA", "0"))
+
+#ajout row 2022-05-24 for 0m
+SOMLIT_carbo_chemistry <- insertRows(SOMLIT_carbo_chemistry, 1553, new = NA)
+
+SOMLIT_carbo_chemistry <- SOMLIT_carbo_chemistry %>% 
+  mutate(sampling_date = str_replace_na(sampling_date, replacement = "NA"),
+         depth = str_replace_na(depth, replacement = "NA")) %>% 
+  mutate(sampling_date = str_replace(sampling_date, "NA", "2022-05-24"),
+         depth = str_replace(depth, "NA", "0"))
+##
+#804 obs for 0m & 804 obs for 50m
+
+#format date in POSIXct
+SOMLIT_carbo_chemistry <- SOMLIT_carbo_chemistry %>% 
+  mutate(sampling_date = as.POSIXct(sampling_date))
+
+
+
+#MAJ year + month (NAs)
+SOMLIT_carbo_chemistry$year <- substr(SOMLIT_carbo_chemistry$sampling_date, 1, 4) 
+SOMLIT_carbo_chemistry$year <- as.numeric(SOMLIT_carbo_chemistry$year)
+
+SOMLIT_carbo_chemistry$month <- format(SOMLIT_carbo_chemistry$sampling_date, format = "%m")
+SOMLIT_carbo_chemistry$month <- as.numeric(SOMLIT_carbo_chemistry$month)
+##
+
+```
+
+
+
+
+### **Nombre de mesures SOMLIT par mois**  
+  
+
+```{r Nombre de mesures SOMLIT par mois with outliers, echo=FALSE, warning=FALSE, message=FALSE}
+
+#number of measure by year :
+Nb_by_year <- summarise(group_by(SOMLIT_carbo_chemistry, year), NB_OBS_Y=n()) 
+# must be 104 or 106
+
+#number of measure by month by year :
+Nb_by_month <- summarise(group_by(SOMLIT_carbo_chemistry, Year.Month), NB_OBS_M=n()) 
+#must be 8 or 10
+
+#POSIXct format :
+Nb_by_month <- Nb_by_month %>% 
+  mutate(Year.Month = as.POSIXct(paste(Year.Month, "-01", sep = ""), format = "%Y-%m-%d"))
+
+
+#plot number of measure by month (2007-2022)
+Nb_by_month %>% 
+  ggplot() +
+  aes(x=Year.Month, y=NB_OBS_M) +
+  geom_line(group=1) + 
+  scale_x_datetime(name="", date_breaks = "2 years", labels = year) + 
+  scale_y_continuous(name="", n.breaks = 6 ) +
+  ggtitle("Evolution of number of observations by month at Point B (2007-2022)")
+  
+
+```
+
+### **Nombre de mesures SOMLIT par mois (without outliers)**  
+  
+
+
+→ Le nombre de mesures par mois varie principalement entre 8 et 10 mesures/mois   
+  
+Parfois : nombre de mesures par mois inférieur à 8  
+Il faudra donc rajouter manuellement une mesure (NA)  
+  
+  
+**Nombre de mesures par mois < 8**  
+  
+→ 19 months concerned  
+  
+```{r filtre inf 8, echo=FALSE, warning=FALSE, message=FALSE}
+
+#filter les valeurs dans Nb_by_month < 8
+
+inf_8 <- which(Nb_by_month$NB_OBS_M < 8)
+inf_8_dates <- format(Nb_by_month$Year.Month[inf_8], format="%Y-%m")
+inf_8_dates
+##
+
+
+```
+
+#### *Measure SOMLIT every tuesday*  
+  
+→ Fill in the gaps: adding lines  
+  
+**60 values missing (30 values per depth)  
+  
+
+```{r ajout de lignes - part 1, echo=FALSE, warning=FALSE, message=FALSE}
+
+#test <- SOMLIT_carbo_chemistry %>% complete(., week, month, year)
+
+#creation d'une fonction qui compte le nombre de mardi par mois et par annee :
+countTuesday <- function(y, m) { 
+  fr <- as.Date(paste(y, m, "01", sep="-")) 
+  to <- fr + 31       
+  dt <- seq(fr, to, by="1 day")      
+  df <- data.frame(date=dt, mon=as.POSIXlt(dt)$mon, wday=as.POSIXlt(dt)$wday)  
+  df <- subset(df, df$wday==2 & df$mon==df[1,"mon"])         
+  return(nrow(df))
+}
+
+#creation matrix, 12 lignes pour 12 mois, 16 colonnes pour 16 annees (2077-2022)
+number_of_tuesday <- matrix(nrow = 12, ncol = 16)
+
+#creation de la boucle :
+
+for (i in 2007:2022) {
+  for (j in 1:12) {
+    number_of_tuesday[j,(i-2006)] <- countTuesday(i, j)
+  }
+}
+
+
+#nb observations attendues : number_of_tuesday = 4 or 5 measures by month
+#ColSums : 52 or 53 measures by year
+#sum(ColSums) : dans tout le dataset (x2 because 0 & 50m) = 1670
+print(paste("Lenght of table expected :", sum(colSums(number_of_tuesday))*2))
+
+##
+
+#creation dataset nb de mardi / mois et / annee de SOMLIT (= obs)
+table_avg_dataset <-
+  table(SOMLIT_carbo_chemistry$year, SOMLIT_carbo_chemistry$month)/2 
+
+#transpose (changement des colonnes en lignes)
+table_avg_dataset <- table_avg_dataset %>% as.matrix.data.frame() %>% t()
+
+
+
+#creation dataset nb de mardi /mois et /annee theorique (=theo)
+comparison_table <- matrix(nrow = 12, ncol = 16)
+
+##
+
+#comparaison des 2 datasets (theo vs obs), si difference = alors manque une observation chez SOMLIT ("!")
+
+for (i in 1:16) {
+  for (j in 1:12) {
+    if (table_avg_dataset[j,i] - number_of_tuesday[j,i] == 0) { comparison_table[j,i] = 0} 
+    else if (number_of_tuesday[j,i] - table_avg_dataset[j,i] == 1) { comparison_table[j,i] = 1} 
+    else if (number_of_tuesday[j,i] - table_avg_dataset[j,i] == 2) { comparison_table[j,i] = 2}
+    else if (number_of_tuesday[j,i] - table_avg_dataset[j,i] == 3) { comparison_table[j,i] = 3}
+    else if (number_of_tuesday[j,i] - table_avg_dataset[j,i] == 4) { comparison_table[j,i] = 4}
+    else {comparison_table[j,i] = 0}
+  }
+}
+
+comparison_table #each number corresponds to one or more missing value 
+
+```
+
+
+```{r ajout de lignes - part 2, echo=FALSE, warning=FALSE, message=FALSE}
+
+#creation d'une liste (sac), contenant 16 autres listes (nb annee), contenant elles-meme 12 listes
+missing_data <- list(vector("list", 12), vector("list", 12), vector("list", 12), 
+                     vector("list", 12), vector("list", 12), vector("list", 12), 
+                     vector("list", 12), vector("list", 12), vector("list", 12), 
+                     vector("list", 12), vector("list", 12), vector("list", 12), 
+                     vector("list", 12), vector("list", 12), vector("list", 12), 
+                     vector("list", 12))
+
+#creation d'une boucle : pour chaque valeur manquante ("!")
+#creation d'une ligne contenant le year + le month du year et month contenant la data manquante
+
+for (i in 1:16) {
+  for (j in 1:12) {
+    if (comparison_table[j,i] == 1) {
+      missing_data[[i]][[j]] <- data.frame(year = i, month = j)}
+    else if (comparison_table[j,i] == 2) {
+      missing_data[[i]][[j]] <- data.frame(year = rep(i,2), month = rep(j,2)) }
+      else if (comparison_table[j,i] == 3) {
+        missing_data[[i]][[j]] <- data.frame(year = rep(i,3), month = rep(j,3)) }
+    else {
+      missing_data[[i]][[j]] <- data.frame(year = NA, month = NA) }
+  }
+}
+
+#rajout colonne depth, alternance entre 0 et 50
+#repetition 0,50 44 fois
+missing_data <- missing_data %>% bind_rows() %>% na.omit()
+missing_data <- data.frame(missing_data, depth = rep(c(0,50), each = 31))
+
+#remplacement des termes 
+#annee
+missing_data$year[missing_data$year == 1] = "2007"
+missing_data$year[missing_data$year == 2] = "2008"
+missing_data$year[missing_data$year == 3] = "2009"
+missing_data$year[missing_data$year == 4] = "2010"
+missing_data$year[missing_data$year == 5] = "2011"
+missing_data$year[missing_data$year == 6] = "2012"
+missing_data$year[missing_data$year == 7] = "2013"
+missing_data$year[missing_data$year == 8] = "2014"
+missing_data$year[missing_data$year == 9] = "2015"
+missing_data$year[missing_data$year == 10] = "2016"
+missing_data$year[missing_data$year == 11] = "2017"
+missing_data$year[missing_data$year == 12] = "2018"
+missing_data$year[missing_data$year == 13] = "2019"
+missing_data$year[missing_data$year == 14] = "2020"
+missing_data$year[missing_data$year == 15] = "2021"
+missing_data$year[missing_data$year == 16] = "2022"
+
+#mois
+missing_data$month[missing_data$month == 1] = "01"
+missing_data$month[missing_data$month == 2] = "02"
+missing_data$month[missing_data$month == 3] = "03"
+missing_data$month[missing_data$month == 4] = "04"
+missing_data$month[missing_data$month == 5] = "05"
+missing_data$month[missing_data$month == 6] = "06"
+missing_data$month[missing_data$month == 7] = "07"
+missing_data$month[missing_data$month == 8] = "08"
+missing_data$month[missing_data$month == 9] = "09"
+missing_data$month[missing_data$month == 10] = "10"
+missing_data$month[missing_data$month == 11] = "11"
+missing_data$month[missing_data$month == 12] = "12"
+
+missing_data$temperature = 999999
+
+#merge nouvelle table avec SOMLIT
+SOMLIT_carbo_chemistry_missing_value <- merge(SOMLIT_carbo_chemistry, missing_data, 
+                                              by = c("year", "month", "depth", "temperature"), all = T)
+
+SOMLIT_carbo_chemistry_missing_value$temperature[SOMLIT_carbo_chemistry_missing_value$temperature == 999999] = NA
+
+
+#new tab complete :
+SOMLIT_carbo_chemistry_missing_value = SOMLIT_carbo_chemistry_missing_value %>% arrange(year, month, sampling_date)
+
+#verification for both depths
+table(SOMLIT_carbo_chemistry_missing_value$year, SOMLIT_carbo_chemistry_missing_value$depth)
+
+#save :
+write.table(SOMLIT_carbo_chemistry_missing_value, "DATA_SOMLIT_07-23_CLEAN.csv", sep=";", col.names = TRUE, row.names = FALSE)
+
+```
+
+  
+### **Nombre de mesures SOMLIT par mois - TAB CLEAN**  
+  
+
+```{r Nombre de mesures SOMLIT par mois tab clean, echo=FALSE, warning=FALSE, message=FALSE}
+
+#MAJ year + month (numeric)
+ 
+SOMLIT_carbo_chemistry_missing_value$year <- as.numeric(SOMLIT_carbo_chemistry_missing_value$year)
+SOMLIT_carbo_chemistry_missing_value$month <- as.numeric(SOMLIT_carbo_chemistry_missing_value$month)
+
+
+#number of measure by year :
+Nb_by_year_final <- summarise(group_by(SOMLIT_carbo_chemistry_missing_value, year), NB_OBS_Y=n())
+# must be 104 or 106
+
+SOMLIT_carbo_chemistry_missing_value <- SOMLIT_carbo_chemistry_missing_value %>% 
+  mutate(month = case_when(month == 1 ~ paste("0", month, sep=""), TRUE ~ month)) #a continuer
+
+mutate(month = paste(month["1":"9"], paste("0")))
+
+
+##
+
+test2 <- SOMLIT_carbo_chemistry_missing_value %>% 
+  unite(col=datetime, c("year", "month"), sep="-") %>% 
+  mutate(Year.Month = as.POSIXct(paste(datetime, "-01", sep = ""), format = "%Y-%m-%d")) 
+
+
+#number of measure by month by year :
+Nb_by_month_final <- summarise(group_by(test2, Year.Month), NB_OBS_M=n()) 
+#must be 8 or 10
+
+Nb_by_month_final <- Nb_by_month_final %>% 
+  mutate(Year.Month = as.Date(paste(Year.Month, "-01", sep = ""), format = "%Y-%m-%d"))
+##
+
+view_2021 <- SOMLIT_carbo_chemistry_missing_value %>% dplyr::filter(year == "2020")
+table(SOMLIT_carbo_chemistry$depth, SOMLIT_carbo_chemistry$year)
+for (i in 1:12) {print(countTuesday(2020,i))}
+
+#plot number of measure by month (2077-2022)
+Nb_by_month_final %>% 
+  ggplot() +
+  aes(x=Year.Month, y=NB_OBS_M) +
+  geom_line(group=1) + 
+  scale_x_date(name="", date_breaks = "2 years", labels = year) + 
+  scale_y_continuous(name="", limits=c(0,11)) +
+  ggtitle("Evolution of number of observations by month at Point B (2007-2022)")
+  
+
+```

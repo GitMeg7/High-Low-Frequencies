@@ -56,12 +56,6 @@ Mytheme <- function(size_labs = 6, face_font="plain", ...) {
 ```
 
 
-
-# Data EOL surface : temperature (°C), salinity (psu) and oxygen (mll)
-
-
-## Part 1 : Trend analysis by residuals
-
 ```{r importation Data EOL, echo=FALSE, warning=FALSE, message=FALSE}
 
 #period : septembre 2013-octobre 2022
@@ -71,7 +65,8 @@ EOL_RAW <- read_csv("../Data/SEANOE_EOL.csv")
 EOL_RAW <- EOL_RAW %>% 
   rename(temperature = temp_eol_c, salinity = sal_eol_psu, oxygen = oxy_eol_mll) %>% 
   select(-...1) %>% 
-  mutate(Month = format(datetime, format="%m"))
+  mutate(Year.Month = format(datetime, format="%Y-%m"),
+         Year = format(datetime, format="%Y"))
 
 #summary(EOL_RAW) 
 #temperature : 0 NA
@@ -86,6 +81,53 @@ EOL_RAW <- EOL_RAW %>%
 
 ```
 
+## **Nombre de mesures EOL**  
+  
+- per year :  
+  
+  
+
+```{r Nombre de mesures EOL par an, echo=FALSE, warning=FALSE, message=FALSE}
+
+#number of measure by year :
+Nb_by_year <- summarise(group_by(EOL_RAW, Year), NB_OBS_Y=n()) 
+
+
+#plot number of measure by year (2013-2022)
+Nb_by_year %>% 
+  ggplot() +
+  aes(x=Year, y=NB_OBS_Y) +
+  geom_point() +
+  geom_line(group=1) + 
+  scale_x_discrete(name="") + 
+  scale_y_continuous(name="") +
+  ggtitle("Evolution of number of observations by year at EOL buoy (2007-2022)")
+
+```
+  
+- per month :  
+  
+
+
+```{r Nombre de mesures EOL par mois, echo=FALSE, warning=FALSE, message=FALSE}
+
+#number of measure by month :
+Nb_by_month <- summarise(group_by(EOL_RAW, Year.Month), NB_OBS_M=n()) 
+
+Nb_by_month <- Nb_by_month %>% 
+  mutate(Year.Month = as.Date(paste(Year.Month, "-01", sep = ""), format = "%Y-%m-%d"))
+
+
+#plot number of measure by month (2077-2022)
+Nb_by_month %>% 
+  ggplot() +
+  aes(x=Year.Month, y=NB_OBS_M) +
+  geom_point() +
+  geom_line(group=1) + 
+  scale_x_date(name="") + 
+  scale_y_continuous(name="") +
+  ggtitle("Evolution of number of observations by month at Point P (2007-2022)")
+```
 
 
 ```{r visualisation data temperature EOL, echo=FALSE, message=FALSE, warning=FALSE}
@@ -168,8 +210,6 @@ summary(lm(fusion_scatterplot$temperature ~ fusion_scatterplot$temp_Pt_B))
 
 
 
-
-
 ##### Interpolation - EOL data
 
 ```{r partie interpolation temperature, echo=FALSE, warning=FALSE, message=FALSE}
@@ -221,6 +261,10 @@ summary(lm(fusion_scatterplot$temperature ~ fusion_scatterplot$temp_Pt_B))
 
 ```
 
+# Data EOL surface : temperature (°C), salinity (psu) and oxygen (mll)
+
+
+## Part 1 : Trend analysis by residuals
 
 ##### [Table and plot of monthly means (2013-2022) - EOL temperature & salinity]{style="color:blue"}
 

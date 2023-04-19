@@ -830,6 +830,28 @@ plot(SOMLIT_1m_o2_convert_wX_outliers$datetime,
 
 #visiblement :une saisonnalité ? une baisse au cours du temps ?
 
+#######################################################################################
+#plot visualiser les outliers
+DATA %>% 
+  ggplot() +
+  aes(x=datetime, y=Flux_wan_2014) +
+  geom_boxplot() + 
+  xlab(label = "") +
+  ylab(label = "") +
+  theme(legend.position="none")+
+  ggtitle("Flux_CO2 boxplot (outliers)") 
+
+#recuperation des outliers (47 outliers)
+
+outliers_2014 <- boxplot.stats(DATA$Flux_wan_2014)
+
+
+#remplacer les outliers Flux_wan_2014 par des NA 
+
+#DATA[DATA$Flux_wan_2014 %in% outliers_2014$out, "Flux_wan_2014"] = NA
+
+#####################################################################################
+
 
 
 #regression lineaire sur donnees oxygen sans outliers

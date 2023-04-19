@@ -1,0 +1,1141 @@
+---
+title: "Air_sea_CO2_flux_final"
+author: "Mégane"
+date: "2023-04-17"
+output: html_document
+---
+
+# **Air--Sea CO~2~ Flux -- Article DE CARLO**  
+*period : 2007-2022 complete*  
+  
+Data used :  
+
+-   pCO~2~ water (µatm)\
+    Frequency : Weekly
+
+-   pCO~2~ air (µpm)\
+    Frequency : Hourly
+
+-   wind speed 10m (m/s)\
+    Frequency : Hourly
+
+```{r libraries, echo=FALSE, warning=FALSE, message=FALSE}
+library("readr")
+library("viridis")
+library("scales")
+library("lubridate")
+library("gsignal")
+library("FactoMineR")
+library("factoextra")
+library("gplots")
+library("heatwaveR")
+library("dplyr")
+library("imputeTS")
+library("Metrics")
+library("tidyr")
+library("tseries")
+library("forecast")
+library("tsDyn")
+library("tsoutliers")
+library("seacarb")
+library("lmodel2")
+library("lmtest")
+library("ggExtra")
+library("corrplot")
+library("ggcorrplot")
+library("marelac")
+library("kableExtra")
+library("stringr")
+library("berryFunctions")
+```
+
+## Importation data carbo chemistry - pCO~2~ water (Point B SOMLIT)
+
+```{r importation data pCO2 water, echo=FALSE, warning=FALSE, message=FALSE}
+
+###Importation des donnees
+##Data pCO2 water
+#a partir de janvier 2007 jusqu'a janvier 2023
+
+SOMLIT_carbo_chemistry <- read_delim("../Data/DATA_SOMLIT_07-23.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+#on retire les data 2023 pour avoir les annees completes sur 2007-2022 :
+SOMLIT_carbo_chemistry <- SOMLIT_carbo_chemistry[-c(1622:1631),]
+
+#differenciation surface / 50m
+#interpolation salinity + temperature (surface) :
+
+SOMLIT_carbo_chemistry_surf <- SOMLIT_carbo_chemistry %>% 
+  dplyr::filter(depth==0) %>% 
+  select(sampling_date, salinity, temperature, ta, dic, NO2, NO3, Chla, pH_calc, pCO2) %>% 
+  rename(pCO2_w = pCO2, datetime = sampling_date) %>%
+  mutate(Year = format(datetime, format="%Y"),
+         Year.Month = format(datetime, format="%Y-%m"),
+         salinity = case_when(salinity < 35 ~ NA_real_ , TRUE ~ salinity))
+
+##SOMLIT_carbo_chemistry_50m <- SOMLIT_carbo_chemistry %>% 
+  #dplyr::filter(depth==50)
+
+
+summary(SOMLIT_carbo_chemistry_surf)
+
+```
+
+### **Nombre de mesures SOMLIT par mois**  
+  
+
+```{r Nombre de mesures SOMLIT par mois, echo=FALSE, warning=FALSE, message=FALSE}
+
+#number of measure by year :
+Nb_by_year <- summarise(group_by(SOMLIT_carbo_chemistry_surf, Year), NB_OBS_Y=n()) 
+
+#number of measure by month :
+Nb_by_month <- summarise(group_by(SOMLIT_carbo_chemistry_surf, Year.Month), NB_OBS_M=n()) 
+
+Nb_by_month <- Nb_by_month %>% 
+  mutate(Year.Month = as.Date(paste(Year.Month, "-01", sep = ""), format = "%Y-%m-%d"))
+
+
+#plot number of measure by month (2077-2022)
+Nb_by_month %>% 
+  ggplot() +
+  aes(x=Year.Month, y=NB_OBS_M) +
+  geom_line(group=1) + 
+  scale_x_date(name="") + 
+  scale_y_continuous(name="") +
+  ggtitle("Evolution of number of observations by month at Point P (2007-2022)")
+  
+
+
+##kable(NAs_by_year, digits = c(0,0), padding = 0, caption="Number of days without atmospheric CO2 data.")
+```
+
+
+
+### Visualisation and linear interpolation of salinity and temperature data (Point B - 2007-2022)  
+  
+→ *possibilité de rajouter des données jusqu'en décembre 2022 pour salinité + température (voire script "SOMLIT_2022")*  
+
+  
+##### Salinity (74 NA) & Temperature (79 NA) :  
+  
+
+```{r interpolation of salinity and temperature, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center', fig.show='hold'}
+
+#Salinity : 74 NA
+ggplot_na_distribution(SOMLIT_carbo_chemistry_surf$salinity, x_axis_labels = SOMLIT_carbo_chemistry_surf$datetime, xlab = "", ylab="Salinity (psu)", title="Point B - Salinity time series (2007-2022)")
+
+
+#Temperature : 79 NA
+ggplot_na_distribution(SOMLIT_carbo_chemistry_surf$temperature, x_axis_labels = SOMLIT_carbo_chemistry_surf$datetime, xlab = "", ylab="Temp. (°C)", title="Point B - Temperature time series (2007-2022)")
+
+```
+
+##### pH_calc & pCO~2~ water (95 NA each) :  
+  
+
+```{r interpolation of pH_calc and pCO2w, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center', fig.show='hold'}
+
+#pH_calc : 95 NA
+ggplot_na_distribution(SOMLIT_carbo_chemistry_surf$pH_calc, x_axis_labels = SOMLIT_carbo_chemistry_surf$datetime, xlab = "", ylab="pH", title="Point B - pH_calc time series (2007-2022)")
+
+#pCO2w : 95 NA
+ggplot_na_distribution(SOMLIT_carbo_chemistry_surf$pCO2_w, x_axis_labels = SOMLIT_carbo_chemistry_surf$datetime, xlab = "", ylab="pCO2 (µatm)", title="Point B - pCO2 water time series (2007-2022)")
+```
+
+
+```{r interpolation salinity, temperature, pH_calc & pCO2w, echo=FALSE, warning=FALSE, message=FALSE}
+
+SOMLIT_carbo_chemistry_surf <- SOMLIT_carbo_chemistry_surf %>% 
+  mutate(salinity = na_interpolation(salinity, option="linear"),
+         temperature = na_interpolation(temperature, option="linear"),
+         pH_calc = na_interpolation(pH_calc, option="linear"),
+         pCO2_w = na_interpolation(pCO2_w, option="linear"))
+```
+
+
+
+
+
+
+
+## Importation data pCO~2~ atmosphere (ICOS)
+
+→ 5 sites\
+→ Frequency : hourly\
+→ Selection of data taken at 09:00 AM
+
+1 : Monte Cimone (8m) - 2011-2022\
+2 : Plateau Rosa (10m) - 2007-2022\
+3 : Corse Ersa (40m) - 2013-2020\
+4 : Observatoire Haute Provence (10m) - 2014-2020\
+5 : Lampedusa (10) - 2006-2022
+
+```{r importation data air Monte Cimone (8m), echo=FALSE, warning=FALSE, message=FALSE}
+#unity (umol/mol, soit ppm)
+#a 1atm (surface), ppm = uatm
+
+### MONTE CIMONE
+atmospheric_co2_MONTE_CIMONE <- read_delim("../Data/atmospheric_co2_MONTE_CIMONE_fev_2011_2022.CO2", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+#selection of 09:00 AM data :
+atmospheric_co2_MONTE_CIMONE <- atmospheric_co2_MONTE_CIMONE %>% 
+  unite(col='datetime', c('Year', 'Month', 'Day'), sep='-') %>%
+  unite(col='time', c('Hour', 'Minute'), sep=':') %>% 
+  filter(time == "09:00")
+
+#data sorting :
+atmospheric_co2_MONTE_CIMONE <- atmospheric_co2_MONTE_CIMONE %>% 
+  mutate(datetime = format(datetime, format="%Y-%m-%d")) %>% 
+  mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>%
+  rename(CO2_MC = co2) %>% 
+  mutate(CO2_MC = case_when(CO2_MC == -999.990 ~ NA_real_ , TRUE ~ CO2_MC)) %>%
+  select(datetime, CO2_MC)
+
+####################
+
+### PLATEAU ROSA
+atmospheric_co2_PLATEAU_ROSA <- read_delim("../Data/atmospheric_co2_PLATEAU_ROSA_2007_2022.CO2", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+#selection of 09:00 AM data :
+atmospheric_co2_PLATEAU_ROSA <- atmospheric_co2_PLATEAU_ROSA %>% 
+  unite(col='datetime', c('Year', 'Month', 'Day'), sep='-') %>% 
+  unite(col='time', c('Hour', 'Minute'), sep=':') %>% 
+  filter(time == "09:00")
+
+#data sorting :
+atmospheric_co2_PLATEAU_ROSA <- atmospheric_co2_PLATEAU_ROSA %>% 
+  mutate(datetime = format(datetime, format="%Y-%m-%d")) %>% 
+  mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>%
+  rename(CO2_PR = co2) %>% 
+  mutate(CO2_PR = case_when(CO2_PR == -999.990 ~ NA_real_ , TRUE ~ CO2_PR)) %>% 
+  select(datetime, CO2_PR)
+
+####################
+
+#CORSE ERSA
+atmospheric_co2_CORSE <- read_delim("../Data/atmospheric_co2_CORSE_RAW_2013_2020.CO2", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+#selection of 09:00 AM data :
+atmospheric_co2_CORSE <- atmospheric_co2_CORSE %>% 
+  unite(col='datetime', c('Year', 'Month', 'Day'), sep='-') %>% 
+  unite(col='time', c('Hour', 'Minute'), sep=':') %>% 
+  filter(time == "09:00")
+
+#data sorting :
+atmospheric_co2_CORSE <- atmospheric_co2_CORSE %>% 
+  mutate(datetime = format(datetime, format="%Y-%m-%d")) %>% 
+  mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>%
+  rename(CO2_CORSE = co2) %>% 
+  mutate(CO2_CORSE = case_when(CO2_CORSE == -999.990 ~ NA_real_ , TRUE ~ CO2_CORSE)) %>% 
+  select(datetime, CO2_CORSE)
+
+####################
+
+#OBSERVATOIRE HAUTE PROVENCE
+atmospheric_co2_HAUTE_PROV <- read_delim("../Data/atmospheric_co2_HAUTE_PROVENCE_RAW_2014_2020.CO2", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+#selection of 09:00 AM data :
+atmospheric_co2_HAUTE_PROV <- atmospheric_co2_HAUTE_PROV %>% 
+  unite(col='datetime', c('Year', 'Month', 'Day'), sep='-') %>% 
+  unite(col='time', c('Hour', 'Minute'), sep=':') %>% 
+  filter(time == "09:00")
+
+#data sorting :
+atmospheric_co2_HAUTE_PROV <- atmospheric_co2_HAUTE_PROV %>% 
+  mutate(datetime = format(datetime, format="%Y-%m-%d")) %>% 
+  mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>%
+  rename(CO2_HP = co2) %>% 
+  mutate(CO2_HP = case_when(CO2_HP == -999.990 ~ NA_real_ , TRUE ~ CO2_HP)) %>% 
+  select(datetime, CO2_HP)
+
+#LAMPEDUSA
+atmospheric_co2_LAMPEDUSA <- read_delim("../Data/atmospheric_co2_LAMPEDUSA_2006_2022.CO2", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+#selection of 09:00 AM data :
+atmospheric_co2_LAMPEDUSA <- atmospheric_co2_LAMPEDUSA %>% 
+  unite(col='datetime', c('Year', 'Month', 'Day'), sep='-') %>% 
+  unite(col='time', c('Hour', 'Minute'), sep=':') %>% 
+  filter(time == "09:00")
+
+#data sorting :
+atmospheric_co2_LAMPEDUSA <- atmospheric_co2_LAMPEDUSA %>% 
+  mutate(datetime = format(datetime, format="%Y-%m-%d")) %>% 
+  mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>%
+  rename(CO2_LAMP = co2) %>% 
+  mutate(CO2_LAMP = case_when(CO2_LAMP == -999.990 ~ NA_real_ , TRUE ~ CO2_LAMP)) %>% 
+  select(datetime, CO2_LAMP)
+
+##
+```
+
+```{r summary 5 sites atmospheric pCO2 NA values, echo=FALSE, warning=FALSE, message=FALSE}
+
+#merge of 5 sites data : pCO2_air
+pCO2_atmos <- left_join(atmospheric_co2_LAMPEDUSA, atmospheric_co2_MONTE_CIMONE, by="datetime")
+pCO2_atmos <- left_join(pCO2_atmos, atmospheric_co2_PLATEAU_ROSA, by="datetime") 
+pCO2_atmos <- left_join(pCO2_atmos, atmospheric_co2_CORSE, by="datetime")
+pCO2_atmos <- left_join(pCO2_atmos, atmospheric_co2_HAUTE_PROV, by="datetime")
+
+#summary :
+summary(pCO2_atmos)
+#faire plutot 1 par 1 et regrouper toutes les tables dans un mm chunck
+
+```
+
+## Visualisation 5 sites atmospheric pCO~2~
+
+```{r Visualisation 5 sites atmospheric pCO2, echo=FALSE, warning=FALSE, message=FALSE}
+
+
+#creation column for legend
+pCO2_atmos_long <- pCO2_atmos %>% 
+  rename(Corsica = CO2_CORSE, `Haute Provence` = CO2_HP, Lampedusa = CO2_LAMP, `Monte Cimone` = CO2_MC, `Plateau Rosa` = CO2_PR) %>% 
+  pivot_longer(cols=Lampedusa:`Haute Provence`, names_to = "Legend", values_to = "value")
+
+#plot
+pCO2_atmos_long %>% 
+  ggplot() +
+  ggtitle("Atmospheric pCO2 of 5 sites (ICOS) according to time (with NA values)") +
+  geom_point(aes(x=datetime, y=value, color= Legend), size=0.5) +
+  scale_y_continuous(name="Atmospheric pCO2 (µatm") + 
+  scale_x_datetime(name="")
+
+
+
+
+```
+
+## Visualisation 5 sites atmospheric pCO~2~ NA values
+
+#### 1 : **Lampedusa site (2006-2022)**
+
+Number of NA : 1805
+
+```{r visualisation LAMPEDUSA NA values, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center', fig.show='hold'}
+
+#LAMPEDUSA : 1805 NA
+ggplot_na_distribution(atmospheric_co2_LAMPEDUSA$CO2_LAMP, x_axis_labels = atmospheric_co2_LAMPEDUSA$datetime, xlab = "", ylab="Atmospheric pCO2 (µatm)", title="Lampedusa site - atmospheric pCO2 (2006-2022)")
+
+
+#plot nb NA par années
+atmospheric_co2_LAMPEDUSA_NA_plot <- atmospheric_co2_LAMPEDUSA %>% 
+  dplyr::mutate(Year = format(datetime, format="%Y"),
+                Month = format(datetime, format="%m-%d")) %>% 
+  dplyr::group_by(Year, Month) 
+
+atmospheric_co2_LAMPEDUSA_NA_plot$CO2_LAMP[is.na(atmospheric_co2_LAMPEDUSA_NA_plot$CO2_LAMP)] <- "NA"
+
+atmospheric_co2_LAMPEDUSA_NA_plot %>% 
+  dplyr::filter(CO2_LAMP == "NA") %>% 
+  dplyr::group_by(Year) %>% 
+  dplyr::summarise(number_of_NA = n()) %>% 
+  ggplot(aes(x = Year, y = number_of_NA))  +
+  ggtitle("NA occurences by year - Lampedusa site") +
+  geom_segment(aes(x = Year, xend = Year, y = 0, yend = number_of_NA), 
+               color = "grey", linewidth = 2) +
+  geom_point(size = 5, fill = "#EE6677", shape = 21, color = "black") +
+  coord_flip() +
+  scale_x_discrete(name = "") +
+  scale_y_continuous(name = "NA number", limits = c(0,300), breaks = seq(0, 300, 50))
+
+```
+
+#### 2 : **Plateau Rosa site (2007-2022)**
+
+Number of NA : 1354
+
+```{r visualisation PLATEAU ROSA NA values, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6, fig.height=4, fig.align='center', fig.show='hold'}
+
+#PLATEAU ROSA : 1262 NA
+ggplot_na_distribution(atmospheric_co2_PLATEAU_ROSA$CO2_PR, x_axis_labels = atmospheric_co2_PLATEAU_ROSA$datetime, 
+                       xlab = "", ylab="Atmospheric pCO2 (µatm)", title="Plateau Rosa site - atmospheric pCO2 (2007-2022)")
+
+
+#plot nb NA par années
+atmospheric_co2_PLATEAU_ROSA_NA_plot <- atmospheric_co2_PLATEAU_ROSA %>% 
+  dplyr::mutate(Year = format(datetime, format="%Y"),
+                Month = format(datetime, format="%m-%d")) %>% 
+  dplyr::group_by(Year, Month) 
+
+atmospheric_co2_PLATEAU_ROSA_NA_plot$CO2_PR[is.na(atmospheric_co2_PLATEAU_ROSA_NA_plot$CO2_PR)] <- "NA"
+
+atmospheric_co2_PLATEAU_ROSA_NA_plot %>% 
+  dplyr::filter(CO2_PR == "NA") %>% 
+  dplyr::group_by(Year) %>% 
+  dplyr::summarise(number_of_NA = n()) %>% 
+  ggplot(aes(x = Year, y = number_of_NA))  +
+  ggtitle("NA occurences by year - Plateau Rosa site") +
+  geom_segment(aes(x = Year, xend = Year, y = 0, yend = number_of_NA), 
+               color = "grey", linewidth = 2) +
+  geom_point(size = 5, fill = "#EE6677", shape = 21, color = "black") +
+  coord_flip() +
+  scale_x_discrete(name = "") +
+  scale_y_continuous(name = "NA number", limits = c(0,200), breaks = seq(0, 200, 50))
+
+```
+
+#### 3 : **Monte Cimone site (2011-2022)**
+
+Number of NA : 2356
+
+```{r visualisation MONTE CIMONE NA values, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4, fig.align='center', fig.show='hold'}
+
+#MONTE CIMONE : 738 NA
+ggplot_na_distribution(atmospheric_co2_MONTE_CIMONE$CO2_MC, x_axis_labels = atmospheric_co2_MONTE_CIMONE$datetime, 
+                       xlab = "", ylab="Atmospheric pCO2 (µatm)", title="Monte Cimone site - atmospheric pCO2 (2007-2022)")
+
+
+#plot nb NA par années
+atmospheric_co2_MC_NA_plot <- atmospheric_co2_MONTE_CIMONE %>% 
+  dplyr::mutate(Year = format(datetime, format="%Y"),
+                Month = format(datetime, format="%m-%d")) %>% 
+  dplyr::group_by(Year, Month) 
+
+atmospheric_co2_MC_NA_plot$CO2_MC[is.na(atmospheric_co2_MC_NA_plot$CO2_MC)] <- "NA"
+
+atmospheric_co2_MC_NA_plot %>% 
+  dplyr::filter(CO2_MC == "NA") %>% 
+  dplyr::group_by(Year) %>% 
+  dplyr::summarise(number_of_NA = n()) %>% 
+  ggplot(aes(x = Year, y = number_of_NA))  +
+  ggtitle("NA occurences by year - Monte Cimone site") +
+  geom_segment(aes(x = Year, xend = Year, y = 0, yend = number_of_NA), 
+               color = "grey", linewidth = 2) +
+  geom_point(size = 5, fill = "#EE6677", shape = 21, color = "black") +
+  coord_flip() +
+  scale_x_discrete(name = "") +
+  scale_y_continuous(name = "NA number", limits = c(0,200), breaks = seq(0, 200, 50))
+
+```
+
+#### 4 : **Corsica site (2013-2022)**
+
+Number of NA : 3398
+
+```{r visualisation CORSICA NA values, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center', fig.show='hold'}
+
+#CORSICA : 511 NA
+ggplot_na_distribution(atmospheric_co2_CORSE$CO2_CORSE, x_axis_labels = atmospheric_co2_CORSE$datetime, xlab = "", 
+                       ylab="Atmospheric pCO2 (µatm)", title="Corsica site - atmospheric pCO2 (2013-2022)")
+
+
+#plot nb NA par années
+atmospheric_co2_CORSICA_NA_plot <- atmospheric_co2_CORSE %>% 
+  dplyr::mutate(Year = format(datetime, format="%Y"),
+                Month = format(datetime, format="%m-%d")) %>% 
+  dplyr::group_by(Year, Month) 
+
+atmospheric_co2_CORSICA_NA_plot$CO2_CORSE[is.na(atmospheric_co2_CORSICA_NA_plot$CO2_CORSE)] <- "NA"
+
+atmospheric_co2_CORSICA_NA_plot %>% 
+  dplyr::filter(CO2_CORSE == "NA") %>% 
+  dplyr::group_by(Year) %>% 
+  dplyr::summarise(number_of_NA = n()) %>% 
+  ggplot(aes(x = Year, y = number_of_NA))  +
+  ggtitle("NA occurences by year - Corsica site") +
+  geom_segment(aes(x = Year, xend = Year, y = 0, yend = number_of_NA), 
+               color = "grey", linewidth = 2) +
+  geom_point(size = 5, fill = "#EE6677", shape = 21, color = "black") +
+  coord_flip() +
+  scale_x_discrete(name = "") +
+  scale_y_continuous(name = "NA number", limits = c(0,150), breaks = seq(0, 150, 50))
+
+```
+
+#### 5 : **Haute-Provence observatory site (2014-2022)**
+
+Number of NA : 3086
+
+```{r visualisation HAUTE PROVENCE NA values, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center', fig.show='hold'}
+
+#HAUTE PROVENCE : 204 NA
+ggplot_na_distribution(atmospheric_co2_HAUTE_PROV$CO2_HP, x_axis_labels = atmospheric_co2_HAUTE_PROV$datetime, xlab = "",
+                       ylab="Atmospheric pCO2 (µatm)", title="Haute Provence site - atmospheric pCO2 (2014-2022)")
+
+
+#plot nb NA par années
+atmospheric_co2_HP_NA_plot <- atmospheric_co2_HAUTE_PROV %>% 
+  dplyr::mutate(Year = format(datetime, format="%Y"),
+                Month = format(datetime, format="%m-%d")) %>% 
+  dplyr::group_by(Year, Month) 
+
+atmospheric_co2_HP_NA_plot$CO2_HP[is.na(atmospheric_co2_HP_NA_plot$CO2_HP)] <- "NA"
+
+atmospheric_co2_HP_NA_plot %>% 
+  dplyr::filter(CO2_HP == "NA") %>% 
+  dplyr::group_by(Year) %>% 
+  dplyr::summarise(number_of_NA = n()) %>% 
+  ggplot(aes(x = Year, y = number_of_NA))  +
+  ggtitle("NA occurences by year - Haute Provence site") +
+  geom_segment(aes(x = Year, xend = Year, y = 0, yend = number_of_NA), 
+               color = "grey", linewidth = 2) +
+  geom_point(size = 5, fill = "#EE6677", shape = 21, color = "black") +
+  coord_flip() +
+  scale_x_discrete(name = "") +
+  scale_y_continuous(name = "NA number", limits = c(0,50), breaks = seq(0, 50, 50))
+
+
+```
+
+## Cross interpolations of 5 sites atmospheric pCO~2~ data  
+  
+### Cross interpolation between Corsica and Haute Provence datasets :  
+  
+
+```{r Cross interpolations of Corsica-Haute Provence, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center'}
+
+atmospheric_co2_CORSE$CO2_CORSE[is.na(atmospheric_co2_CORSE$CO2_CORSE)] <- "NA"
+atmospheric_co2_HAUTE_PROV$CO2_HP[is.na(atmospheric_co2_HAUTE_PROV$CO2_HP)] <- "NA"
+
+pCO2_CORSE_HP <- left_join(atmospheric_co2_CORSE, atmospheric_co2_HAUTE_PROV, by="datetime")
+
+#pCO2 CORSE_HP : 2013-2022
+pCO2_CORSE_HP <- pCO2_CORSE_HP %>% 
+  mutate(CORSE_HP = case_when(CO2_CORSE == "NA" ~ CO2_HP, TRUE ~ CO2_CORSE)) %>% 
+  mutate(CORSE_HP = as.numeric(CORSE_HP))
+
+summary(pCO2_CORSE_HP$CORSE_HP) #189 NA
+
+ggplot_na_distribution(pCO2_CORSE_HP$CORSE_HP, x_axis_labels = pCO2_CORSE_HP$datetime, xlab = "",
+                       ylab="Atmospheric pCO2 (µatm)", title="Cross Corsica/Haute Provence sites - atmospheric pCO2 (2013-2022)")
+
+```
+
+### Cross interpolation between Corsica/HP and Monte Cimone datasets :  
+  
+
+```{r Cross interpolations of Corsica-Haute Provence and Monte CImone, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center'}
+
+atmospheric_co2_MONTE_CIMONE$CO2_MC[is.na(atmospheric_co2_MONTE_CIMONE$CO2_MC)] <- "NA"
+
+pCO2_CORSE_HP_MC <- left_join(atmospheric_co2_MONTE_CIMONE, pCO2_CORSE_HP, by="datetime")
+
+#pCO2 CORSE_HP_MC : 2011-2022
+pCO2_CORSE_HP_MC <- pCO2_CORSE_HP_MC %>% 
+  mutate(CORSE_HP = as.character(CORSE_HP)) %>% 
+  mutate(CORSE_HP_MC = case_when(CO2_MC == "NA" ~ CORSE_HP, TRUE ~ CO2_MC)) %>% 
+  mutate(CORSE_HP_MC = as.numeric(CORSE_HP_MC))
+
+summary(pCO2_CORSE_HP_MC$CORSE_HP_MC) #381 NA
+
+ggplot_na_distribution(pCO2_CORSE_HP_MC$CORSE_HP_MC, x_axis_labels = pCO2_CORSE_HP_MC$datetime, xlab = "",
+                       ylab="Atmospheric pCO2 (µatm)", 
+                       title="Cross Corsica/HP and Monte Cimone sites - atmospheric pCO2 (2011-2022)")
+
+```
+
+### Cross interpolation between Corsica/HP/Monte Cimone and Plateau Rosa datasets :  
+  
+
+```{r Cross interpolations of Corsica-Haute Provence-Monte CImone and Plateau Rosa, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center'}
+
+#mettre NA au format 
+atmospheric_co2_PLATEAU_ROSA$CO2_PR[is.na(atmospheric_co2_PLATEAU_ROSA$CO2_PR)] <- "NA"
+
+pCO2_CORSE_HP_MC_PR <- left_join(atmospheric_co2_PLATEAU_ROSA, pCO2_CORSE_HP_MC, by="datetime")
+
+#pCO2 CORSE_HP_MC_PR : 2007-2022
+pCO2_CORSE_HP_MC_PR <- pCO2_CORSE_HP_MC_PR %>% 
+  mutate(CORSE_HP_MC = as.character(CORSE_HP_MC)) %>% 
+  mutate(CORSE_HP_MC_PR = case_when(CO2_PR == "NA" ~ CORSE_HP_MC, TRUE ~ CO2_PR)) %>% 
+  mutate(CORSE_HP_MC_PR = as.numeric(CORSE_HP_MC_PR))
+
+summary(pCO2_CORSE_HP_MC_PR$CORSE_HP_MC_PR) #573 NA
+
+ggplot_na_distribution(pCO2_CORSE_HP_MC_PR$CORSE_HP_MC_PR, x_axis_labels = pCO2_CORSE_HP_MC_PR$datetime, xlab = "",
+                       ylab="Atmospheric pCO2 (µatm)", 
+                       title="Cross Corsica/HP/MC and Plateau Rosa sites - atmospheric pCO2 (2007-2022)")
+
+
+```
+
+### Cross interpolation between Corsica/HP/MC/PR and Lampedusa datasets :  
+  
+
+```{r Cross interpolations of Corsica-Haute Provence-Monte CImone-Plateau Rosa and Lampedusa, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center'}
+
+#mettre NA au format 
+atmospheric_co2_LAMPEDUSA$CO2_LAMP[is.na(atmospheric_co2_LAMPEDUSA$CO2_LAMP)] <- "NA"
+
+pCO2_CORSE_HP_MC_PR_LAMP <- left_join(atmospheric_co2_LAMPEDUSA, pCO2_CORSE_HP_MC_PR, by="datetime")
+
+#pCO2 CORSE_HP_MC_PR : 2007-2022
+pCO2_CORSE_HP_MC_PR_LAMP <- pCO2_CORSE_HP_MC_PR_LAMP %>% 
+  mutate(CORSE_HP_MC_PR = as.character(CORSE_HP_MC_PR)) %>% 
+  mutate(CORSE_HP_MC_PR_LAMP = case_when(CO2_LAMP == "NA" ~ CORSE_HP_MC_PR, TRUE ~ CO2_LAMP)) %>% 
+  mutate(CORSE_HP_MC_PR_LAMP = as.numeric(CORSE_HP_MC_PR_LAMP))
+
+summary(pCO2_CORSE_HP_MC_PR_LAMP$CORSE_HP_MC_PR_LAMP) #309 NA
+
+ggplot_na_distribution(pCO2_CORSE_HP_MC_PR_LAMP$CORSE_HP_MC_PR_LAMP, x_axis_labels = pCO2_CORSE_HP_MC_PR_LAMP$datetime, xlab = "",
+                       ylab="Atmospheric pCO2 (µatm)", 
+                       title="Cross Corsica/HP/MC/PR and Lampedusa sites - atmospheric pCO2 (2006-2022)")
+
+
+```
+
+## Visualisation of atmospheric pCO~2~ cross-interpolated (5 sites) + missing values  
+  
+
+```{r Visualisation of atmospheric pCO2 cross-interpolated (5 sites), echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4, fig.align='right', fig.show='hold'}
+
+#plot visualisation :
+pCO2_CORSE_HP_MC_PR_LAMP %>% 
+  ggplot() + 
+  ggtitle("Atmospheric pCO2 - 5 sites cross-interpolated") +
+  aes(x=datetime, y=CORSE_HP_MC_PR_LAMP) +
+  geom_point(size=0.6) +
+  scale_y_continuous(name="Atmospheric pCO2 (µatm)") +
+  scale_x_datetime(name="")
+
+#NA distribution by year :
+pCO2_CORSE_HP_MC_PR_LAMP_NA_plot <- pCO2_CORSE_HP_MC_PR_LAMP %>% 
+  dplyr::mutate(Year = format(datetime, format="%Y"),
+                Month = format(datetime, format="%m-%d")) %>% 
+  dplyr::group_by(Year, Month) 
+
+pCO2_CORSE_HP_MC_PR_LAMP_NA_plot$CORSE_HP_MC_PR_LAMP[is.na(pCO2_CORSE_HP_MC_PR_LAMP_NA_plot$CORSE_HP_MC_PR_LAMP)] <- "NA"
+
+pCO2_CORSE_HP_MC_PR_LAMP_NA_plot %>% 
+  dplyr::filter(CORSE_HP_MC_PR_LAMP == "NA") %>% 
+  dplyr::group_by(Year) %>% 
+  dplyr::summarise(number_of_NA = n()) %>% 
+  ggplot(aes(x = Year, y = number_of_NA))  +
+  geom_segment(aes(x = Year, xend = Year, y = 0, yend = number_of_NA), 
+               color = "grey", linewidth = 2) +
+  ggtitle("NA occurences by year - 5 sites mixed") +
+  geom_point(size = 5, fill = "#EE6677", shape = 21, color = "black") +
+  coord_flip() +
+  scale_x_discrete(name = "") +
+  scale_y_continuous(name = "NA number", limits = c(0,50), breaks = seq(0, 50, 5))
+
+##
+
+```
+
+## Visualisation of imputed values of atmospheric pCO~2~ data (linear interpolation)  
+  
+
+```{r Visualisation of imputed values (linear interpolation), echo=FALSE, warning=FALSE, message=FALSE}
+
+#conversion dry mol fraction pCO2 air :
+#unity : µatm
+pCO2_CORSE_HP_MC_PR_LAMP <- pCO2_CORSE_HP_MC_PR_LAMP %>% 
+  mutate(pCO2_converted = x2pCO2(S=35, T=25, Patm=1.0, xCO2=CORSE_HP_MC_PR_LAMP))
+
+
+#NA imputations by linear interpolation :
+pCO2_CORSE_HP_MC_PR_LAMP <- pCO2_CORSE_HP_MC_PR_LAMP %>% 
+  mutate(pCO2_imput = na_interpolation(pCO2_converted, option="linear"))
+
+#visualize imputed values :
+ggplot_na_imputations(pCO2_CORSE_HP_MC_PR_LAMP$pCO2_converted, pCO2_CORSE_HP_MC_PR_LAMP$pCO2_imput, xlab="",
+                      x_axis_labels = pCO2_CORSE_HP_MC_PR_LAMP$datetime, ylab="Atmospheric pCO2 (µatm)", 
+                      title="Atmospheric pCO2 (5 sites mixed)")
+
+```
+
+## Importation data wind speed 10m (m/s) - 2007-2022  
+
+Frequency : Hourly
+
+```{r importation data wind speed, echo=FALSE, warning=FALSE, message=FALSE}
+##Data wind speed (10m)
+#importation data wind speed (10m) Azur buoy (1999-2022)
+#measured at 3.80 m height, then roughly extrapolated to 10 m by adding 10%
+#unity : m/s (1999-2021)
+#unity : knot (2022)
+#2022 : que le mois de janvier
+#observations toutes les heures
+
+Azur_wind_1999 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_1999.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2000 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2000.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2001 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2001.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2002 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2002.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2003 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2003.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2004 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2004.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2005 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2005.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2006 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2006.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2007 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2007.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2008 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2008.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2009 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2009.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2010 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2010.dat", 
+                             delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Azur_wind_2011 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2011.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2011 <- Azur_wind_2011 %>% rename(date=X1, `wind speed`=X2)
+
+Azur_wind_2012 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2012.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2012 <- Azur_wind_2012 %>% rename(date=X1, `wind speed`=X2)
+
+Azur_wind_2013 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2013.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2013 <- Azur_wind_2013 %>% rename(date=X1, `wind speed`=X2)
+
+Azur_wind_2014 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2014.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2014 <- Azur_wind_2014 %>% rename(date=X1, `wind speed`=X2)
+
+Azur_wind_2015 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2015.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2015 <- Azur_wind_2015 %>% rename(date=X1, `wind speed`=X2)
+
+
+Azur_wind_2016 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2016.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2016 <- Azur_wind_2016 %>%
+  reframe(date=X1, `wind speed`= case_when(X2 == -9999 ~ NA_real_ , TRUE ~ X2))
+
+Azur_wind_2017 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2017.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2017 <- Azur_wind_2017 %>%
+  reframe(date=X1, `wind speed`= case_when(X2 == -9999 ~ NA_real_ , TRUE ~ X2))
+
+Azur_wind_2018 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2018.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2018 <- Azur_wind_2018 %>% 
+  reframe(date=X1, `wind speed`= case_when(X2 == -9999 ~ NA_real_ , TRUE ~ X2))
+
+Azur_wind_2019 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2019.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2019 <- Azur_wind_2019 %>% 
+  reframe(date=X1, `wind speed`= case_when(X2 == -9999 ~ NA_real_ , TRUE ~ X2))
+
+Azur_wind_2020 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FF_2020.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2020 <- Azur_wind_2020 %>% 
+  reframe(date=X1, `wind speed`= case_when(X2 == -9999 ~ NA_real_ , TRUE ~ X2))
+
+
+Azur_wind_2021 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FXI_2021.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2021 <- Azur_wind_2021 %>% 
+  reframe(date=X1, `wind speed`= case_when(X2 == -9999 ~ NA_real_ , TRUE ~ X2))
+
+#convert en m/s : 1 knot = 0.514444681 m/s
+
+Azur_wind_2022 <- read_delim("../Data/Wind_speed_10m_Azur_buoy/Azur_FXI_2022.dat", 
+                             delim = ";", escape_double = FALSE, col_names = FALSE, 
+                             trim_ws = TRUE)
+Azur_wind_2022 <- Azur_wind_2022 %>% reframe (date=X1, `wind speed` = case_when(X2 == -9999  ~ NA_real_ , 
+                                                                                TRUE ~ (X2*0.514444681)))
+
+
+#fusion (2007-2018) : Azur_wind_RAW = wind speed en m/s 2007-janvier 2022)
+
+Azur_wind_RAW <- rbind(Azur_wind_2007, Azur_wind_2008, Azur_wind_2009, Azur_wind_2010,
+                       Azur_wind_2011, Azur_wind_2012, Azur_wind_2013, Azur_wind_2014,
+                       Azur_wind_2015, Azur_wind_2016, Azur_wind_2016, Azur_wind_2017,
+                       Azur_wind_2018, Azur_wind_2019, Azur_wind_2020, Azur_wind_2021,
+                       Azur_wind_2022)
+
+Azur_wind_RAW <- Azur_wind_RAW %>% 
+  rename(datetime = date, wind_speed_ms = `wind speed`) %>% 
+  select(datetime, wind_speed_ms) %>% 
+  mutate(wind_speed_ms = case_when(wind_speed_ms == -9999  ~ NA_real_ ,  TRUE ~ wind_speed_ms))
+
+summary(Azur_wind_RAW) #9547 NA
+
+```
+
+→ Selection of Wind speed data only at 09:00 AM (m/s)  
+
+```{r moyenne wind speed par jour, echo=FALSE, warning=FALSE, message=FALSE}
+
+
+#selection of 09:00 AM data :
+Azur_wind_RAW <- Azur_wind_RAW %>% 
+  mutate(Hour = format(datetime, format="%H:%M:%S")) %>% 
+  filter(Hour == "09:00:00")
+
+Azur_wind_RAW <- Azur_wind_RAW %>% 
+  mutate(datetime = format(datetime, format="%Y-%m-%d")) %>% 
+  mutate(datetime = as.POSIXct(datetime)) %>% 
+  select(datetime, wind_speed_ms)
+
+summary(Azur_wind_RAW$wind_speed_ms) #396 NA
+
+##
+
+```
+
+## Visualisation data wind speed NA values  
+
+```{r distribution des NA wind speed, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center', fig.show='hold'}
+
+##visualisation NA 
+ggplot_na_distribution(Azur_wind_RAW$wind_speed_ms, x_axis_labels=Azur_wind_RAW$datetime, xlab="",
+                       ylab="Wind speed (m/s)", title="Wind speed 10m (m/s) of Azur buoy (2007-2022)")
+
+
+#plot nb NA per year
+data_wind_NA_plot <- Azur_wind_RAW %>% 
+  dplyr::mutate(Year = format(datetime, format="%Y"),
+                Month = format(datetime, format="%m-%d")) %>% 
+  dplyr::group_by(Year, Month) 
+
+data_wind_NA_plot$wind_speed_ms[is.na(data_wind_NA_plot$wind_speed_ms)] <- "NA"
+
+data_wind_NA_plot %>% 
+  dplyr::filter(wind_speed_ms == "NA") %>% 
+  dplyr::group_by(Year) %>% 
+  dplyr::summarise(number_of_NA = n()) %>% 
+  ggplot(aes(x = Year, y = number_of_NA))  +
+  geom_segment(aes(x = Year, xend = Year, y = 0, yend = number_of_NA), 
+               color = "grey", linewidth = 2) +
+  geom_point(size = 5, fill = "#EE6677", shape = 21, color = "black") +
+  ggtitle("NA occurences by year - wind speed data") + 
+  coord_flip() +
+  scale_x_discrete(name = "") +
+  scale_y_continuous(name = "NA number", limits = c(0,160), breaks = seq(0, 160, 40))
+
+##
+```
+
+## Visualisation of imputed values - wind speed data (linear interpolation)  
+  
+→ *pas la bonne methode car trop de consecutive NA (ex : years 2014 & 2021)*  
+
+```{r linear interpolation wind speed, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8, fig.height=4,fig.align='right'}
+
+#NA imputations by linear interpolation :
+Azur_wind_RAW <- Azur_wind_RAW %>% 
+  mutate(wind_imput = na_interpolation(wind_speed_ms, option="linear"))
+
+#visualize imputed values :
+ggplot_na_imputations(Azur_wind_RAW$wind_speed_ms, Azur_wind_RAW$wind_imput, xlab="",
+                      x_axis_labels = Azur_wind_RAW$datetime, ylab="Wind speed (m/s)", 
+                      title="Wind speed 10m (m/s) of Azur buoy (2007-2022)")
+
+```
+
+## **Merge of 3 tables :**  
+  
+-   SOMLIT_carbo_chemistry_surf (pCO~2~ water in µatm) → frequency = weekly  
+-   pCO2_CORSE_HP_MC_PR_LAMP (pCO~2~ air in µatm) → frequency = daily  
+-   Azur_wind_RAW (wind speed in m/S) → frequency = daily  
+  
+```{r merge 3 datasets : pCO2 water + pCO2 air + wind speed, echo=FALSE, warning=FALSE, message=FALSE}
+
+#mettre colonne datetime au format character + selection des colonnes a ajouter au dataset final (DATA):
+SOMLIT_carbo_chemistry_surf$datetime <- as.character(SOMLIT_carbo_chemistry_surf$datetime)
+
+Azur_wind_RAW <- Azur_wind_RAW %>% 
+  mutate(datetime = as.character(datetime)) %>% 
+  select(datetime, wind_imput)
+
+pCO2_CORSE_HP_MC_PR_LAMP <- pCO2_CORSE_HP_MC_PR_LAMP %>% 
+  mutate(datetime = as.character(datetime)) %>% 
+  select(datetime, pCO2_imput)
+
+#creation du dataset final DATA :
+DATA <- left_join(SOMLIT_carbo_chemistry_surf, Azur_wind_RAW, by = "datetime")
+DATA <- left_join(DATA, pCO2_CORSE_HP_MC_PR_LAMP, by = "datetime")
+
+summary(DATA)
+
+##
+
+```
+
+## Atmospheric and water pCO~2~ (µatm) according to time (2007-2022)  
+
+```{r Plot pCO2 water VS pCO2 atmosphere (µatm), echo=FALSE, warning=FALSE, message=FALSE}
+
+DATA <- DATA %>% 
+  mutate(datetime = format(datetime, format="%Y-%m-%d")) %>% 
+  mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d"))
+
+DATA %>% 
+  ggplot() + 
+  ggtitle("Water and atmosphere pCO2 (µatm) according to time (2007-2022)") +
+  geom_line(aes(x=datetime, y=pCO2_w), size=1, col='#357AB7') +
+  geom_line(aes(x=datetime, y=pCO2_imput), size=1, col='#EED153') + 
+  scale_x_datetime(name="") + 
+  scale_y_continuous(name="pCO2² (µatm)")
+
+##
+
+```
+
+### Calcul de T-normalized (=NpCO~2~ seawater)  
+  
+→ Corresponding to non-temperature effects on pCO~2~ water variations  
+  
+Formula : NpCO~2~ = pCO~2~w obs \* e(0.0423 \* Tmean-Tobs)  
+
+```{r NpCO2, echo=TRUE, warning=FALSE, message=FALSE}
+
+#formula : pCO2(N) = pCO2w obs * e(0.0423*Tmean-Tobs) = NpCO2 de Kapsenber
+
+#calcul de Tmean :
+Tmean <- mean(DATA$temperature, na.rm=T) #18.88
+
+#calcul de NpCO2
+DATA <- DATA %>% 
+  dplyr::mutate(NpCO2 = pCO2_w * exp(0.0423*(Tmean-temperature)))
+
+```
+
+### pCO~2~ at Point B : 2007-2021  
+  
+(Figure 5.a DE CARLO)  
+
+*(rajouter legende plot)*
+
+```{r Figure 5a DE CARLO, echo=TRUE, warning=FALSE, message=FALSE}
+##Figure 5.a DE CARLO :
+
+DATA %>% 
+  ggplot() +
+  ggtitle("pCO2 at Point B : 2007-2021") +
+  geom_line(aes(x=datetime, y=pCO2_imput), col='#EED153') +
+  geom_line(aes(x=datetime, y=pCO2_w), col='blue') +
+  geom_line(aes(x=datetime, y=NpCO2), col='#3A9D23') +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="pCO2 (µatm)")
+```
+
+### Annual cycle of pCO~2~ (2007-2021)  
+  
+(Figure 5.b DE CARLO)  
+
+*Remarque :* augmentation globale des valeurs de pCO~2~(water) au fil des années  
+
+*(rajouter legende plot)*
+
+```{r Figure 5.b DE CARLO, echo=FALSE, warning=FALSE, message=FALSE}
+#annual cycle of pCO2 (2007-2021)
+
+DATA %>% 
+  ggplot() +
+  geom_line(aes(x= as.Date(yday(datetime), "1970-01-01"), y=pCO2_w, 
+                group = factor(year(datetime)), 
+                color = factor(year(datetime))), linewidth = 0.75) +
+  scale_colour_viridis_d() +
+  ggtitle("Annual cycle of pCO2 (2007-2022)") +
+  scale_x_date(date_breaks="months", date_labels="%b", name = "") +
+  labs(x="Months",colour="") +
+  theme_bw() +
+  scale_y_continuous(name = "pCO2 water (µatm)") 
+```
+
+### Calcul de TpCO~2~ seawater  
+  
+→ Corresponding to temperature effects on pCO~2~ water variations  
+  
+Formula : TpCO~2~ = pCO~2~mean \* exp[0.0423(Tobs - Tmean)]  
+
+```{r TpCO2, echo=TRUE, warning=FALSE, message=FALSE}
+#the effects of only temperature
+#calcul de TpCO2 at Tobs
+#formula : TpCO2 = pCO2mean * exp[0.0423(Tobs - Tmean)]
+
+#calcul de pCO2mean :
+pCO2mean <- mean(DATA$pCO2_w, na.rm=T) #410.90
+
+#calcul de TpCO2 :
+DATA <- DATA %>% 
+  dplyr::mutate(TpCO2 = pCO2mean * exp(0.0423*(temperature-Tmean)))
+
+##
+```
+
+#### Visualisation of TpCO~2~ according to time (2007-2022)  
+  
+```{r Visualisation of TpCO2 according to time, echo=TRUE, warning=FALSE, message=FALSE}
+
+DATA %>% 
+  ggplot() +
+  ggtitle("TpCO2 according to time (2007-2022)") +
+  geom_line(aes(x=datetime, y=pCO2_imput), col='#EED153') +
+  geom_line(aes(x=datetime, y=pCO2_w), col='blue') +
+  geom_line(aes(x=datetime, y=TpCO2), col='#D90115') +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="pCO2 (µatm)")
+```
+
+### Deltas calcultations  
+  
+-   delta pCO~2~(T) = temperature effects = pCO~2~ water - NpCO~2~  
+
+-   delta pCO~2~(bio) : biological effects = pCO~2~ water - TpCO~2~  
+
+-   delta pCO~2~ = pCO~2~ water - pCO~2~ air  
+
+```{r Deltas calcultations, echo=TRUE, warning=FALSE, message=FALSE}
+
+
+DATA <- DATA %>% 
+  dplyr::mutate(delta_pCO2_T = pCO2_w - NpCO2,
+                delta_pCO2_bio = pCO2_w - TpCO2,
+                delta_pCO2 = pCO2_w - pCO2_imput)
+
+
+```
+
+### Visualisation of temperature and biological effects on pCO~2~ variations (delta T and Bio)  
+  
+**Plot delta pCO~2~(T) et delta pCO~2~(bio)**  
+  
+(Figure 6 DE CARLO)  
+
+*(rajouter légende plot)*
+
+```{r Figure 6 DE CARLO, echo=FALSE, warning=FALSE, message=FALSE}
+#plot
+##Figure 6 DE CARLO :
+
+DATA %>% 
+  ggplot() + 
+  ggtitle("Temperature and biological effects on pCO2 variations (2007-2022)") +
+  geom_line(aes(x=datetime, y=delta_pCO2_T), col='#960018', size=0.6) +
+  geom_line(aes(x=datetime, y=delta_pCO2_bio), col='#708D23', size=0.6) + 
+  scale_x_datetime(name="") + 
+  scale_y_continuous(name="deltas pCO2 (µatm)")
+
+##
+
+```
+
+## Calculation of air-surface CO~2~ flux  
+  
+### Method 1 : Wanninkhof (2014)  
+  
+Formula : 7.7 \* 10--4 \* U² \* ΔpCO2  
+  
+unity : mol of C / m² / year  
+
+```{r calcul flux wanninkhof 2014, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+#Calcul of F
+DATA <- DATA %>% mutate(Flux_wan_2014 = 0.00077 * wind_imput^2 * delta_pCO2)
+
+#plot Flux Wanninkhof 2014 :
+DATA %>% 
+  ggplot() + 
+  aes(x=datetime, y=Flux_wan_2014) + 
+  geom_line(col="#967C5C") +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Flux (mol of C/m²/y)") +
+  ggtitle("CO2 fluxes ocean-atmosphere (Wanninkhof 2014)")
+ 
+
+```
+
+```{r notes - A FAIRE}
+
+#periode + frequence de chaque data set dans un tableau
+
+
+#comparaison des 3 lieux de pco2 water sur un mm plot 
+
+#tendance sur delta pCO2 ? 
+
+#changer les echelles des graphiques 
+
+#plot de toutes les donnees atmospheriques de tous les lieux, voir a quoi ca ressemble, si les courbes sont identiques
+
+#faire par periode de 10ans pour 1992-2022, voir l'évolution de la tendance
+
+#partie autocorrelation, voir avec SAMIR ?
+
+#script FRED ?
+
+
+```
+
+### Method 2 : Wanninkhof (1992)  
+  
+Formulas :  
+  
+-   K600 = 0.266 \* U²  
+  
+-   SC = 2073.1 - (125.62 \* T) + (3.6276 \* T²) - (0.043219 \* T\^3)  
+  
+-   k = K600 \* (SC/600)\^0.5  
+  
+-   K0 = Henry's constant (seacarb)  
+  
+  
+Final formula : F = k \* K0 \* ΔpCO2  
+  
+unity : mol of C / m² / year  
+
+```{r calcul Flux Wanninkhof (1992), warning=FALSE, message=FALSE}
+
+DATA <- DATA %>% 
+  mutate(SC = 2073.1 - (125.62 * temperature) + (3.6276 * temperature^2) - (0.043219 * temperature^3),
+         K600 = 0.266 * wind_imput^2,
+         k = K600 * (SC/600)^0.5,
+         rho = rho(S=salinity, T=temperature, P=0)/1000,
+         K0 = (K0(S=salinity, T=temperature, P=0, Patm=1, warn="n")),
+         K0 = (K0 * rho)/1000000, 
+         Flux_wan_92 = (k * K0 * delta_pCO2)*10*24*365)
+
+##unity steps :
+
+#K0 en mol/kg/atm
+#rho (density of water) en kg/m3
+#donc rho/1000 = kg/L
+#donc K0*(rho/1000) = mol/l/atm
+
+#K0/10^6 pour passer de mol/L/atm a mol/L/µatm
+
+#Flux*10 pour passer de 10 mol/m²/h a mol/m²/h
+#Flux*24*365 pour passer de mol/m²/h a mol/m²/y
+
+
+#plot Fluw wanninkhof 1992 :
+DATA %>% 
+  ggplot() + 
+  aes(x=datetime, y=Flux_wan_92) + 
+  geom_line(col="#303030") +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Flux (mol/m²/y)") +
+  ggtitle("CO2 fluxes ocean-atmosphere (Wanninkhof 1992)")
+
+
+```

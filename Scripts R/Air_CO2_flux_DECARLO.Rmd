@@ -5,17 +5,18 @@ date: "2023-03-20"
 output: html_document
 ---
 
-# Air--Sea CO2 Flux (2007-2022) -- Article DE CARLO
+# **Air--Sea CO~2~ Flux (2007-2022) -- Article DE CARLO**
 
-Data : 
-- pCO2 water (µatm)
-Frequency : Weekly
+Data used :  
 
-- pCO2 air (µpm)
-Frequency : Hourly
+-   pCO~2~ water (µatm)\
+    Frequency : Weekly
 
-- wind speed 10m (m/s)
-Frequency :  Hourly
+-   pCO~2~ air (µpm)\
+    Frequency : Hourly
+
+-   wind speed 10m (m/s)\
+    Frequency : Hourly
 
 ```{r libraries, echo=FALSE, warning=FALSE, message=FALSE}
 library("readr")
@@ -42,8 +43,12 @@ library("ggExtra")
 library("corrplot")
 library("ggcorrplot")
 library("marelac")
+library("kableExtra")
+library("stringr")
+library("berryFunctions")
 ```
 
+## Importation data carbo chemistry - pCO~2~ water (Point B SOMLIT)
 
 ```{r importation data pCO2 water, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -54,28 +59,112 @@ library("marelac")
 SOMLIT_carbo_chemistry <- read_csv("../Data/data_pH_steeve.csv")
 
 #differenciation surface / 50m
+#interpolation salinity + temperature (surface) :
 
 SOMLIT_carbo_chemistry_surf <- SOMLIT_carbo_chemistry %>% 
   dplyr::filter(depth==0) %>% 
   select(sampling_date, salinity, temperature, ta, dic, NO2, NO3, Chla, pH_calc, pCO2) %>% 
   rename(pCO2_w = pCO2, datetime = sampling_date) %>%
-  mutate(salinity = case_when(salinity < 35 ~ NA_real_ , TRUE ~ salinity))
+  mutate(Year = format(datetime, format="%Y"),
+         Year.Month = format(datetime, format="%Y-%m"),
+         salinity = case_when(salinity < 35 ~ NA_real_ , TRUE ~ salinity))
 
-SOMLIT_carbo_chemistry_50m <- SOMLIT_carbo_chemistry %>% 
-  dplyr::filter(depth==50)
-##
+##SOMLIT_carbo_chemistry_50m <- SOMLIT_carbo_chemistry %>% 
+  #dplyr::filter(depth==50)
+
+
+summary(SOMLIT_carbo_chemistry_surf)
 
 ```
 
-## Importation data pCO2 atmosphere (ICOS)
-→ 5 sites
-→ Frequency : hourly
+### **Nombre de mesures SOMLIT par mois**  
+  
+
+```{r Nombre de mesures SOMLIT par mois, echo=FALSE, warning=FALSE, message=FALSE}
+
+#number of measure by year :
+Nb_by_year <- summarise(group_by(SOMLIT_carbo_chemistry_surf, Year), NB_OBS_Y=n()) 
+
+#number of measure by month :
+Nb_by_month <- summarise(group_by(SOMLIT_carbo_chemistry_surf, Year.Month), NB_OBS_M=n()) 
+
+Nb_by_month <- Nb_by_month %>% 
+  mutate(Year.Month = as.Date(paste(Year.Month, "-01", sep = ""), format = "%Y-%m-%d"))
+
+
+#plot number of measure by month (2077-2022)
+Nb_by_month %>% 
+  ggplot() +
+  aes(x=Year.Month, y=NB_OBS_M) +
+  geom_line(group=1) + 
+  scale_x_date(name="") + 
+  scale_y_continuous(name="") +
+  ggtitle("Evolution of number of observations by month at Point P (2007-2022)")
+  
+
+
+##kable(NAs_by_year, digits = c(0,0), padding = 0, caption="Number of days without atmospheric CO2 data.")
+```
+
+
+
+### Visualisation and linear interpolation of salinity and temperature data (Point B - 2007-2022)  
+  
+→ *possibilité de rajouter des données jusqu'en décembre 2022 pour salinité + température (voire script "SOMLIT_2022")*  
+
+  
+##### Salinity (78 NA) & Temperature (84 NA) :  
+  
+
+```{r interpolation of salinity and temperature, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center', fig.show='hold'}
+
+#Salinity : 78 NA
+ggplot_na_distribution(SOMLIT_carbo_chemistry_surf$salinity, x_axis_labels = SOMLIT_carbo_chemistry_surf$datetime, xlab = "", ylab="Salinity (psu)", title="Point B - Salinity time series (2007-2022)")
+
+
+#Temperature : 84 NA
+ggplot_na_distribution(SOMLIT_carbo_chemistry_surf$temperature, x_axis_labels = SOMLIT_carbo_chemistry_surf$datetime, xlab = "", ylab="Temp. (°C)", title="Point B - Temperature time series (2007-2022)")
+
+```
+
+##### pH_calc & pCO~2~ water (95 NA each) :  
+  
+
+```{r interpolation of pH_calc and pCO2w, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center', fig.show='hold'}
+
+#pH_calc : 95 NA
+ggplot_na_distribution(SOMLIT_carbo_chemistry_surf$pH_calc, x_axis_labels = SOMLIT_carbo_chemistry_surf$datetime, xlab = "", ylab="pH", title="Point B - pH_calc time series (2007-2022)")
+
+#pCO2w : 95 NA
+ggplot_na_distribution(SOMLIT_carbo_chemistry_surf$pCO2_w, x_axis_labels = SOMLIT_carbo_chemistry_surf$datetime, xlab = "", ylab="pCO2 (µatm)", title="Point B - pCO2 water time series (2007-2022)")
+```
+
+
+```{r interpolation salinity, temperature, pH_calc & pCO2w, echo=FALSE, warning=FALSE, message=FALSE}
+
+SOMLIT_carbo_chemistry_surf <- SOMLIT_carbo_chemistry_surf %>% 
+  mutate(salinity = na_interpolation(salinity, option="linear"),
+         temperature = na_interpolation(temperature, option="linear"),
+         pH_calc = na_interpolation(pH_calc, option="linear"),
+         pCO2_w = na_interpolation(pCO2_w, option="linear"))
+```
+
+
+
+
+
+
+
+## Importation data pCO~2~ atmosphere (ICOS)
+
+→ 5 sites\
+→ Frequency : hourly\
 → Selection of data taken at 09:00 AM
 
-1 : Monte Cimone (8m) - 2011-2022
-2 : Plateau Rosa (10m) - 2007-2022
-3 : Corse Ersa (40m) - 2013-2020
-4 : Observatoire Haute Provence (10m) - 2014-2020
+1 : Monte Cimone (8m) - 2011-2022\
+2 : Plateau Rosa (10m) - 2007-2022\
+3 : Corse Ersa (40m) - 2013-2020\
+4 : Observatoire Haute Provence (10m) - 2014-2020\
 5 : Lampedusa (10) - 2006-2022
 
 ```{r importation data air Monte Cimone (8m), echo=FALSE, warning=FALSE, message=FALSE}
@@ -195,9 +284,7 @@ summary(pCO2_atmos)
 
 ```
 
-
-
-##Visualisation 5 sites atmospheric pCO2
+## Visualisation 5 sites atmospheric pCO~2~
 
 ```{r Visualisation 5 sites atmospheric pCO2, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -220,14 +307,13 @@ pCO2_atmos_long %>%
 
 ```
 
+## Visualisation 5 sites atmospheric pCO~2~ NA values
 
-##Visualisation 5 sites atmospheric pCO2 NA values
+#### 1 : **Lampedusa site (2006-2022)**
 
-
-### 1 : Lampedusa site (2006-2022)
 Number of NA : 1805
 
-```{r visualisation LAMPEDUSA NA values, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='right'}
+```{r visualisation LAMPEDUSA NA values, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center', fig.show='hold'}
 
 #LAMPEDUSA : 1805 NA
 ggplot_na_distribution(atmospheric_co2_LAMPEDUSA$CO2_LAMP, x_axis_labels = atmospheric_co2_LAMPEDUSA$datetime, xlab = "", ylab="Atmospheric pCO2 (µatm)", title="Lampedusa site - atmospheric pCO2 (2006-2022)")
@@ -256,10 +342,11 @@ atmospheric_co2_LAMPEDUSA_NA_plot %>%
 
 ```
 
-### 2 : Plateau Rosa site (2007-2022)
+#### 2 : **Plateau Rosa site (2007-2022)**
+
 Number of NA : 1354
 
-```{r visualisation PLATEAU ROSA NA values, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6, fig.height=4, fig.align='right'}
+```{r visualisation PLATEAU ROSA NA values, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6, fig.height=4, fig.align='center', fig.show='hold'}
 
 #PLATEAU ROSA : 1262 NA
 ggplot_na_distribution(atmospheric_co2_PLATEAU_ROSA$CO2_PR, x_axis_labels = atmospheric_co2_PLATEAU_ROSA$datetime, 
@@ -289,10 +376,11 @@ atmospheric_co2_PLATEAU_ROSA_NA_plot %>%
 
 ```
 
-### 3 : Monte Cimone site (2011-2022)
+#### 3 : **Monte Cimone site (2011-2022)**
+
 Number of NA : 2356
 
-```{r visualisation MONTE CIMONE NA values, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4, fig.align='right'}
+```{r visualisation MONTE CIMONE NA values, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4, fig.align='center', fig.show='hold'}
 
 #MONTE CIMONE : 738 NA
 ggplot_na_distribution(atmospheric_co2_MONTE_CIMONE$CO2_MC, x_axis_labels = atmospheric_co2_MONTE_CIMONE$datetime, 
@@ -322,10 +410,11 @@ atmospheric_co2_MC_NA_plot %>%
 
 ```
 
-### 4 : Corsica site (2013-2022)
+#### 4 : **Corsica site (2013-2022)**
+
 Number of NA : 3398
 
-```{r visualisation CORSICA NA values, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='right'}
+```{r visualisation CORSICA NA values, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center', fig.show='hold'}
 
 #CORSICA : 511 NA
 ggplot_na_distribution(atmospheric_co2_CORSE$CO2_CORSE, x_axis_labels = atmospheric_co2_CORSE$datetime, xlab = "", 
@@ -355,11 +444,11 @@ atmospheric_co2_CORSICA_NA_plot %>%
 
 ```
 
+#### 5 : **Haute-Provence observatory site (2014-2022)**
 
-### 5 : Haute-Provence observatory site (2014-2022)
 Number of NA : 3086
 
-```{r visualisation HAUTE PROVENCE NA values, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='right'}
+```{r visualisation HAUTE PROVENCE NA values, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center', fig.show='hold'}
 
 #HAUTE PROVENCE : 204 NA
 ggplot_na_distribution(atmospheric_co2_HAUTE_PROV$CO2_HP, x_axis_labels = atmospheric_co2_HAUTE_PROV$datetime, xlab = "",
@@ -389,11 +478,13 @@ atmospheric_co2_HP_NA_plot %>%
 
 
 ```
-## Cross interpolations of 5 sites atmospheric data
 
-### Cross interpolation between Corsica and Haute Provence datasets :
+## Cross interpolations of 5 sites atmospheric pCO~2~ data  
+  
+### Cross interpolation between Corsica and Haute Provence datasets :  
+  
 
-```{r Cross interpolations of Corsica-Haute Provence, echo=FALSE, warning=FALSE, message=FALSE}
+```{r Cross interpolations of Corsica-Haute Provence, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center'}
 
 atmospheric_co2_CORSE$CO2_CORSE[is.na(atmospheric_co2_CORSE$CO2_CORSE)] <- "NA"
 atmospheric_co2_HAUTE_PROV$CO2_HP[is.na(atmospheric_co2_HAUTE_PROV$CO2_HP)] <- "NA"
@@ -411,9 +502,11 @@ ggplot_na_distribution(pCO2_CORSE_HP$CORSE_HP, x_axis_labels = pCO2_CORSE_HP$dat
                        ylab="Atmospheric pCO2 (µatm)", title="Cross Corsica/Haute Provence sites - atmospheric pCO2 (2013-2022)")
 
 ```
-### Cross interpolation between Corsica/HP and Monte Cimone datasets :
 
-```{r Cross interpolations of Corsica-Haute Provence and Monte CImone, echo=FALSE, warning=FALSE, message=FALSE}
+### Cross interpolation between Corsica/HP and Monte Cimone datasets :  
+  
+
+```{r Cross interpolations of Corsica-Haute Provence and Monte CImone, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center'}
 
 atmospheric_co2_MONTE_CIMONE$CO2_MC[is.na(atmospheric_co2_MONTE_CIMONE$CO2_MC)] <- "NA"
 
@@ -433,10 +526,10 @@ ggplot_na_distribution(pCO2_CORSE_HP_MC$CORSE_HP_MC, x_axis_labels = pCO2_CORSE_
 
 ```
 
-### Cross interpolation between Corsica/HP/Monte Cimone and Plateau Rosa datasets :
+### Cross interpolation between Corsica/HP/Monte Cimone and Plateau Rosa datasets :  
+  
 
-
-```{r Cross interpolations of Corsica-Haute Provence-Monte CImone and Plateau Rosa, echo=FALSE, warning=FALSE, message=FALSE}
+```{r Cross interpolations of Corsica-Haute Provence-Monte CImone and Plateau Rosa, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center'}
 
 #mettre NA au format 
 atmospheric_co2_PLATEAU_ROSA$CO2_PR[is.na(atmospheric_co2_PLATEAU_ROSA$CO2_PR)] <- "NA"
@@ -458,9 +551,10 @@ ggplot_na_distribution(pCO2_CORSE_HP_MC_PR$CORSE_HP_MC_PR, x_axis_labels = pCO2_
 
 ```
 
-### Cross interpolation between Corsica/HP/MC/PR and Lampedusa datasets :
+### Cross interpolation between Corsica/HP/MC/PR and Lampedusa datasets :  
+  
 
-```{r Cross interpolations of Corsica-Haute Provence-Monte CImone-Plateau Rosa and Lampedusa, echo=FALSE, warning=FALSE, message=FALSE}
+```{r Cross interpolations of Corsica-Haute Provence-Monte CImone-Plateau Rosa and Lampedusa, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center'}
 
 #mettre NA au format 
 atmospheric_co2_LAMPEDUSA$CO2_LAMP[is.na(atmospheric_co2_LAMPEDUSA$CO2_LAMP)] <- "NA"
@@ -482,9 +576,10 @@ ggplot_na_distribution(pCO2_CORSE_HP_MC_PR_LAMP$CORSE_HP_MC_PR_LAMP, x_axis_labe
 
 ```
 
-## Visualisation of atmospheric pCO2 cross-interpolated (5 sites) + missing values
+## Visualisation of atmospheric pCO~2~ cross-interpolated (5 sites) + missing values  
+  
 
-```{r Visualisation of atmospheric pCO2 cross-interpolated (5 sites), echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4, fig.align='right'}
+```{r Visualisation of atmospheric pCO2 cross-interpolated (5 sites), echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4, fig.align='right', fig.show='hold'}
 
 #plot visualisation :
 pCO2_CORSE_HP_MC_PR_LAMP %>% 
@@ -520,7 +615,8 @@ pCO2_CORSE_HP_MC_PR_LAMP_NA_plot %>%
 
 ```
 
-## Visualisation of imputed values of atmospheric pCO2 data (linear interpolation)
+## Visualisation of imputed values of atmospheric pCO~2~ data (linear interpolation)  
+  
 
 ```{r Visualisation of imputed values (linear interpolation), echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -541,9 +637,9 @@ ggplot_na_imputations(pCO2_CORSE_HP_MC_PR_LAMP$pCO2_converted, pCO2_CORSE_HP_MC_
 
 ```
 
-## Importation data wind speed 10m (m/s) - 2007-2022
-Frequency : Hourly
+## Importation data wind speed 10m (m/s) - 2007-2022  
 
+Frequency : Hourly
 
 ```{r importation data wind speed, echo=FALSE, warning=FALSE, message=FALSE}
 ##Data wind speed (10m)
@@ -679,7 +775,7 @@ summary(Azur_wind_RAW) #9547 NA
 
 ```
 
-→ Selection of Wind speed data only at 09:00 AM (m/s)
+→ Selection of Wind speed data only at 09:00 AM (m/s)  
 
 ```{r moyenne wind speed par jour, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -700,9 +796,9 @@ summary(Azur_wind_RAW$wind_speed_ms) #396 NA
 
 ```
 
-## Visualisation data wind speed NA values 
+## Visualisation data wind speed NA values  
 
-```{r distribution des NA wind speed, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+```{r distribution des NA wind speed, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center', fig.show='hold'}
 
 ##visualisation NA 
 ggplot_na_distribution(Azur_wind_RAW$wind_speed_ms, x_axis_labels=Azur_wind_RAW$datetime, xlab="",
@@ -733,9 +829,9 @@ data_wind_NA_plot %>%
 ##
 ```
 
-## Visualisation of imputed values - wind speed data (linear interpolation)
-
-→ pas la bonne methode car trop de consecutive NA (ex : years 2014 & 2021)
+## Visualisation of imputed values - wind speed data (linear interpolation)  
+  
+→ *pas la bonne methode car trop de consecutive NA (ex : years 2014 & 2021)*  
 
 ```{r linear interpolation wind speed, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8, fig.height=4,fig.align='right'}
 
@@ -750,12 +846,12 @@ ggplot_na_imputations(Azur_wind_RAW$wind_speed_ms, Azur_wind_RAW$wind_imput, xla
 
 ```
 
-## Merge of 3 tables : 
-
-- SOMLIT_carbo_chemistry_surf (pCO2 water in µatm) → frequency = weekly
-- pCO2_CORSE_HP_MC_PR_LAMP (pCO2 air in µatm) → frequency = daily
-- Azur_wind_RAW (wind speed in m/S) → frequency = daily
-
+## **Merge of 3 tables :**  
+  
+-   SOMLIT_carbo_chemistry_surf (pCO~2~ water in µatm) → frequency = weekly  
+-   pCO2_CORSE_HP_MC_PR_LAMP (pCO~2~ air in µatm) → frequency = daily  
+-   Azur_wind_RAW (wind speed in m/S) → frequency = daily  
+  
 ```{r merge 3 datasets : pCO2 water + pCO2 air + wind speed, echo=FALSE, warning=FALSE, message=FALSE}
 
 #mettre colonne datetime au format character + selection des colonnes a ajouter au dataset final (DATA):
@@ -779,9 +875,7 @@ summary(DATA)
 
 ```
 
-
-## Atmospheric and water pCO2 (µatm) according to time (2007-2022)
-
+## Atmospheric and water pCO~2~ (µatm) according to time (2007-2022)  
 
 ```{r Plot pCO2 water VS pCO2 atmosphere (µatm), echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -801,11 +895,11 @@ DATA %>%
 
 ```
 
-### Calcul de T-normalized (=NpCO2 seawater) 
-
-→ Corresponding to non-temperature effects on pCO2 water variations
-
-Formula : NpCO2 = pCO2w obs * e(0.0423 * Tmean-Tobs)  
+### Calcul de T-normalized (=NpCO~2~ seawater)  
+  
+→ Corresponding to non-temperature effects on pCO~2~ water variations  
+  
+Formula : NpCO~2~ = pCO~2~w obs \* e(0.0423 \* Tmean-Tobs)  
 
 ```{r NpCO2, echo=TRUE, warning=FALSE, message=FALSE}
 
@@ -820,9 +914,9 @@ DATA <- DATA %>%
 
 ```
 
-### pCO2 at Point B : 2007-2021
-
-(Figure 5.a DE CARLO)
+### pCO~2~ at Point B : 2007-2021  
+  
+(Figure 5.a DE CARLO)  
 
 *(rajouter legende plot)*
 
@@ -839,11 +933,11 @@ DATA %>%
   scale_y_continuous(name="pCO2 (µatm)")
 ```
 
-### Annual cycle of pCO2 (2007-2021)
+### Annual cycle of pCO~2~ (2007-2021)  
+  
+(Figure 5.b DE CARLO)  
 
-(Figure 5.b DE CARLO)
-
-*Remarque :* augmentation globale des valeurs de pCO2(water) au fil des années
+*Remarque :* augmentation globale des valeurs de pCO~2~(water) au fil des années  
 
 *(rajouter legende plot)*
 
@@ -856,17 +950,18 @@ DATA %>%
                 group = factor(year(datetime)), 
                 color = factor(year(datetime))), linewidth = 0.75) +
   scale_colour_viridis_d() +
+  ggtitle("Annual cycle of pCO2 (2007-2022)") +
   scale_x_date(date_breaks="months", date_labels="%b", name = "") +
   labs(x="Months",colour="") +
   theme_bw() +
   scale_y_continuous(name = "pCO2 water (µatm)") 
 ```
 
-### Calcul de TpCO2 seawater 
-
-→  Corresponding to temperature effects on pCO2 water variations
-
-Formula : TpCO2 = pCO2mean * exp[0.0423(Tobs - Tmean)]
+### Calcul de TpCO~2~ seawater  
+  
+→ Corresponding to temperature effects on pCO~2~ water variations  
+  
+Formula : TpCO~2~ = pCO~2~mean \* exp[0.0423(Tobs - Tmean)]  
 
 ```{r TpCO2, echo=TRUE, warning=FALSE, message=FALSE}
 #the effects of only temperature
@@ -883,8 +978,8 @@ DATA <- DATA %>%
 ##
 ```
 
-#### Visualisation of TpCO2 according to time (2007-2022)
-
+#### Visualisation of TpCO~2~ according to time (2007-2022)  
+  
 ```{r Visualisation of TpCO2 according to time, echo=TRUE, warning=FALSE, message=FALSE}
 
 DATA %>% 
@@ -897,13 +992,13 @@ DATA %>%
   scale_y_continuous(name="pCO2 (µatm)")
 ```
 
-### Deltas calcultations
+### Deltas calcultations  
+  
+-   delta pCO~2~(T) = temperature effects = pCO~2~ water - NpCO~2~  
 
--   delta pCO2(T) = temperature effects = pCO2 water - NpCO2
+-   delta pCO~2~(bio) : biological effects = pCO~2~ water - TpCO~2~  
 
--   delta pCO2(bio) : biological effects = pCO2 water - TpCO2
-
--   delta pCO2 = pCO2 water - pCO2 air 
+-   delta pCO~2~ = pCO~2~ water - pCO~2~ air  
 
 ```{r Deltas calcultations, echo=TRUE, warning=FALSE, message=FALSE}
 
@@ -916,12 +1011,11 @@ DATA <- DATA %>%
 
 ```
 
-
-### Visualisation of temperature and biological effects on pCO2 variations (delta T and Bio)
-
-**Plot delta pCO2(T) et delta pCO2(bio)**
-
-(Figure 6 DE CARLO)
+### Visualisation of temperature and biological effects on pCO~2~ variations (delta T and Bio)  
+  
+**Plot delta pCO~2~(T) et delta pCO~2~(bio)**  
+  
+(Figure 6 DE CARLO)  
 
 *(rajouter légende plot)*
 
@@ -941,61 +1035,32 @@ DATA %>%
 
 ```
 
-## Calculation of air-surface CO2 flux
+## Calculation of air-surface CO~2~ flux  
+  
+### Method 1 : Wanninkhof (2014)  
+  
+Formula : 7.7 \* 10--4 \* U² \* ΔpCO2  
+  
+unity : mol of C / m² / year  
 
-```{r calcul flux wanninkhof 2014, echo=FALSE, warning=FALSE, message=FALSE}
+```{r calcul flux wanninkhof 2014, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
-#Formula : F = 7.7 * U^2 * delta_pCO2
-#unit : mol/m2/y, ici mol/m2/y 
+#Calcul of F
+DATA <- DATA %>% mutate(Flux_wan_2014 = 0.00077 * wind_imput^2 * delta_pCO2)
 
-#delta_pCO2 :
-delta_pCO2 <- DATA$pCO2_water_uatm - DATA$pCO2_air_uatm
-DATA <- DATA %>% mutate(delta_pCO2 = pCO2_water_uatm - pCO2_air_uatm)
-
-#F en mol/m2/day
-Flux_wan_2014 <- 0.00077 * DATA$wind_speed_ms^2 * DATA$delta_pCO2
-
-#integration au dataset
-DATA <- DATA %>% mutate(Flux_wan_2014 = 0.00077 * wind_speed_ms^2 * delta_pCO2)
- summary(Flux_wan_2014)
+#plot Flux Wanninkhof 2014 :
+DATA %>% 
+  ggplot() + 
+  aes(x=datetime, y=Flux_wan_2014) + 
+  geom_line(col="#967C5C") +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Flux (mol of C/m²/y)") +
+  ggtitle("CO2 fluxes ocean-atmosphere (Wanninkhof 2014)")
  
 
 ```
 
-
-```{r outliers flux wanninkhof 2014, echo=FALSE, warning=FALSE, message=FALSE}
-#plot visualiser les outliers
-DATA %>% 
-  ggplot() +
-  aes(x=datetime, y=Flux_wan_2014) +
-  geom_boxplot() + 
-  xlab(label = "") +
-  ylab(label = "") +
-  theme(legend.position="none")+
-  ggtitle("Flux_CO2 boxplot (outliers)") 
-
-#recuperation des outliers (47 outliers)
-
-outliers_2014 <- boxplot.stats(DATA$Flux_wan_2014)
-
-
-#remplacer les outliers Flux_wan_2014 par des NA 
-
-#DATA[DATA$Flux_wan_2014 %in% outliers_2014$out, "Flux_wan_2014"] = NA
-
-
-```
-
-```{r plot flux}
-#plot flux wanninkhof 2014 en mmol/m2/d
-DATA %>% 
-  ggplot() +
-  aes(x=datetime, y=Flux_wan_2014) +
-  geom_line(linewidth=0.7) + 
-  scale_x_datetime(name="") +
-  scale_y_continuous(name="Flux (mmol/m²/year)") +
-  ggtitle("CO2 fluxes ocean-atmosphere (Wanninkhof 2014)")
-```
+```{r notes - A FAIRE}
 
 #periode + frequence de chaque data set dans un tableau
 
@@ -1011,42 +1076,61 @@ DATA %>%
 #faire par periode de 10ans pour 1992-2022, voir l'évolution de la tendance
 
 #partie autocorrelation, voir avec SAMIR ?
-script FRED ?
 
+#script FRED ?
 
-```{r essai}
-
-SC <- gas_schmidt(t=SOMLIT_carbo_chemistry_surf$temperature, species="CO2")
-
-k <- 0.251*DATA$wind_speed_ms^2*(SC/660)^-0.5 #en cm/heure
-
-#K0 <- K0(S=SOMLIT_carbo_chemistry_surf$salinity, T=SOMLIT_carbo_chemistry_surf$temperature, P=0, Patm=1, warn="y")
-
-K0 <- exp(-58.0931+90.5069*(100/(SOMLIT_carbo_chemistry_surf$temperature+273.16))
-          +22.294*log((SOMLIT_carbo_chemistry_surf$temperature+273.16)/100) +
-          SOMLIT_carbo_chemistry_surf$salinity*(0.027766-0.025888*
-          ((SOMLIT_carbo_chemistry_surf$temperature+273.16)/100)+0.0051313*
-            ((SOMLIT_carbo_chemistry_surf$temperature+273.16)/100)^2))
-
-K0 <- K0/1000000
-
-F <- k*K0*delta_pCO2
-
-
-
-DATA <- DATA %>% mutate(F = k*K0*delta_pCO2)
 
 ```
 
-```{r new}
+### Method 2 : Wanninkhof (1992)  
+  
+Formulas :  
+  
+-   K600 = 0.266 \* U²  
+  
+-   SC = 2073.1 - (125.62 \* T) + (3.6276 \* T²) - (0.043219 \* T\^3)  
+  
+-   k = K600 \* (SC/600)\^0.5  
+  
+-   K0 = Henry's constant (seacarb)  
+  
+  
+Final formula : F = k \* K0 \* ΔpCO2  
+  
+unity : mol of C / m² / year  
 
+```{r calcul Flux Wanninkhof (1992), warning=FALSE, message=FALSE}
+
+DATA <- DATA %>% 
+  mutate(SC = 2073.1 - (125.62 * temperature) + (3.6276 * temperature^2) - (0.043219 * temperature^3),
+         K600 = 0.266 * wind_imput^2,
+         k = K600 * (SC/600)^0.5,
+         rho = rho(S=salinity, T=temperature, P=0)/1000,
+         K0 = (K0(S=salinity, T=temperature, P=0, Patm=1, warn="n")),
+         K0 = (K0 * rho)/1000000, 
+         Flux_wan_92 = (k * K0 * delta_pCO2)*10*24*365)
+
+##unity steps :
+
+#K0 en mol/kg/atm
+#rho (density of water) en kg/m3
+#donc rho/1000 = kg/L
+#donc K0*(rho/1000) = mol/l/atm
+
+#K0/10^6 pour passer de mol/L/atm a mol/L/µatm
+
+#Flux*10 pour passer de 10 mol/m²/h a mol/m²/h
+#Flux*24*365 pour passer de mol/m²/h a mol/m²/y
+
+
+#plot Fluw wanninkhof 1992 :
 DATA %>% 
-  ggplot() +
-  aes(x=datetime, y=F) +
-  geom_line(linewidth=0.6) + 
+  ggplot() + 
+  aes(x=datetime, y=Flux_wan_92) + 
+  geom_line(col="#303030") +
   scale_x_datetime(name="") +
-  scale_y_continuous(name="Flux (mol C/m²/h)") +
-  ggtitle("CO2 fluxes ocean-atmosphere (Wanninkhof 2014)")
+  scale_y_continuous(name="Flux (mol/m²/y)") +
+  ggtitle("CO2 fluxes ocean-atmosphere (Wanninkhof 1992)")
+
 
 ```
-
