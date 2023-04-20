@@ -2100,7 +2100,7 @@ reg_anomalies
 
 ```{r regression analysis - temperature & salinity - SOMLIT - 2013-2022, echo=FALSE, warning=FALSE, message=FALSE}
 
-anomalies_SOM_1322 <- left_join(ungroup(SOMLIT_1322), SOMLIT_1322_monthly_means, by = "Month") %>%
+anomalies_SOM_1322 <- left_join(ungroup(SOMLIT_1322), monthly_means_somlit_1322, by = "Month") %>% 
   mutate(Salinity_ano = salinity - Salinity_month,
          Temperature_ano = temperature - Temperature_month)
 
