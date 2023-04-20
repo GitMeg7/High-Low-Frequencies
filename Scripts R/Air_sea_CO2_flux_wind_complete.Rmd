@@ -1,0 +1,141 @@
+---
+title: "wind speed"
+author: "Mégane"
+date: "2023-04-20"
+output: html_document
+---
+
+```{r libraries, echo=FALSE, warning=FALSE, message=FALSE}
+library("readr")
+library("viridis")
+library("scales")
+library("lubridate")
+library("gsignal")
+library("FactoMineR")
+library("factoextra")
+library("gplots")
+library("heatwaveR")
+library("dplyr")
+library("imputeTS")
+library("Metrics")
+library("tidyr")
+library("tseries")
+library("forecast")
+library("tsDyn")
+library("tsoutliers")
+library("seacarb")
+library("lmodel2")
+library("lmtest")
+library("ggExtra")
+library("corrplot")
+library("ggcorrplot")
+library("marelac")
+library("kableExtra")
+library("stringr")
+library("berryFunctions")
+```
+
+
+### Importation data wind speed 10m (m/s) - 2009-2022  
+  
+Frequency : Hourly  
+Unity : m/s
+
+```{r Importation data wind speed 2009-2022, echo=FALSE, warning=FALSE, message=FALSE}
+
+Wind <- read_csv("../Data/Wind_speed_10m_Azur_buoy/arome_azur.csv")
+
+##visualisation NA 
+#ggplot_na_distribution(Wind$speed_ms, x_axis_labels=Wind$Date, xlab="",
+                       #ylab="Wind speed (m/s)", title="Wind speed 10m (m/s) of Azur buoy (2009-2022)")
+
+## pas de NA, serie complete
+
+```
+
+
+
+## Histogram of wind speed distribution  
+
+```{r Histogram of wind speed distribution, echo=FALSE, warning=FALSE, message=FALSE}
+
+#plot
+Wind %>% 
+  ggplot(aes(x=speed_ms)) +
+  geom_histogram(fill="#69b3a2", color="#e9ecef", alpha=0.8) +
+  ggtitle("Wind speed distribution") + 
+  scale_y_continuous(name="Distribution") +
+  scale_x_continuous(name="", breaks = c(0, 5, 10, 15, 20))
+
+
+
+
+```
+
+
+
+
+
+## Air-surface CO~2~ flux (with data wind speed complete)  
+  
+### Flux calculation  
+Method used : Wanninkhof (2014)  
+  
+→ **negative values = flux into the ocean**  
+
+```{r calcul flux, echo=FALSE, warning=FALSE, message=FALSE}
+
+#Calcul of F
+test2 <- test2 %>% 
+  mutate(Flux_CO2 = 0.00077 * speed_ms^2 * delta_pCO2,
+         datetime = as.POSIXct(datetime))
+
+#plot Flux Wanninkhof 2014 :
+test2 %>% 
+  ggplot() + 
+  aes(x=datetime, y=Flux_CO2) + 
+  geom_line(col="#967C5C") +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Flux (mol of C/m²/y)") +
+  ggtitle("CO2 fluxes ocean-atmosphere (Wanninkhof 2014)")
+
+```
+
+### Comparison with data wind speed series not complete  
+  
+```{r Comparison, echo=TRUE, warning=FALSE, message=FALSE}
+
+#fusion de Flux_wan_2014 (not complete) a test3
+Flux_wan_2014 <- data.frame(datetime = DATA$datetime, Flux_NC = DATA$Flux_wan_2014)
+test3 <- left_join(test2, Flux_wan_2014, by = "datetime")
+
+#plot des 2 courbes :
+test3 %>% 
+  ggplot() +
+  ggtitle("Comparison of CO2 fluxes computed with and without data wind complete series (2007-2022)") +
+  geom_line(aes(x=datetime, y=Flux_CO2), col='darkgreen', size=0.6) +
+  geom_line(aes(x=datetime, y=Flux_NC), col='darkgrey', size=0.6) + 
+  scale_x_datetime(name="") + 
+  scale_y_continuous(name="Flux (mol of C/m²/y)")
+
+
+```
+
+
+
+```{r comparison table, echo=FALSE, warning=FALSE, message=FALSE}
+
+comparison_table_wind <- data.frame(test3$datetime, test3$Flux_CO2, test3$Flux_NC)
+
+comparison_table_wind <- comparison_table_wind %>% 
+  mutate(delta = test3$Flux_CO2 - test3$Flux_NC)
+
+colnames(comparison_table_wind) <- c("Datetime", "Flux_C", "Flux_NC", "Delta")
+
+comparison_table_wind
+
+
+```
+
+
+

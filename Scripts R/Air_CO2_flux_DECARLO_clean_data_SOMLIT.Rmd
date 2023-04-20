@@ -1,5 +1,5 @@
 ---
-title: "Air_sea_CO2_flux_final"
+title: "Air_sea_CO2_flux_DE CARLO"
 author: "Mégane"
 date: "2023-04-17"
 output: html_document
@@ -104,7 +104,7 @@ Nb_by_month %>%
   geom_line(group=1) + 
   scale_x_date(name="") + 
   scale_y_continuous(name="") +
-  ggtitle("Evolution of number of observations by month at Point P (2007-2022)")
+  ggtitle("Evolution of number of observations by month at Point B (2007-2022)")
   
 
 
@@ -153,10 +153,6 @@ SOMLIT_carbo_chemistry_surf <- SOMLIT_carbo_chemistry_surf %>%
          pH_calc = na_interpolation(pH_calc, option="linear"),
          pCO2_w = na_interpolation(pCO2_w, option="linear"))
 ```
-
-
-
-
 
 
 
@@ -1065,28 +1061,6 @@ DATA %>%
 
 ```
 
-```{r notes - A FAIRE}
-
-#periode + frequence de chaque data set dans un tableau
-
-
-#comparaison des 3 lieux de pco2 water sur un mm plot 
-
-#tendance sur delta pCO2 ? 
-
-#changer les echelles des graphiques 
-
-#plot de toutes les donnees atmospheriques de tous les lieux, voir a quoi ca ressemble, si les courbes sont identiques
-
-#faire par periode de 10ans pour 1992-2022, voir l'évolution de la tendance
-
-#partie autocorrelation, voir avec SAMIR ?
-
-#script FRED ?
-
-
-```
-
 ### Method 2 : Wanninkhof (1992)  
   
 Formulas :  
@@ -1104,7 +1078,7 @@ Final formula : F = k \* K0 \* ΔpCO2
   
 unity : mol of C / m² / year  
 
-```{r calcul Flux Wanninkhof (1992), warning=FALSE, message=FALSE}
+```{r calcul Flux Wanninkhof (1992), echo=FALSE, warning=FALSE, message=FALSE}
 
 DATA <- DATA %>% 
   mutate(SC = 2073.1 - (125.62 * temperature) + (3.6276 * temperature^2) - (0.043219 * temperature^3),
@@ -1139,3 +1113,22 @@ DATA %>%
 
 
 ```
+
+#### Table comparing the results of the 2 CO~2~ flux calculation methods
+
+```{r 2 methods comparison, echo=FALSE, warning=FALSE, message=FALSE}
+
+comparison_flux_table <- data.frame(DATA$datetime, DATA$Flux_wan_92, DATA$Flux_wan_2014)
+
+comparison_flux_table <- comparison_flux_table %>% 
+  mutate(delta = DATA$Flux_wan_92 - DATA$Flux_wan_2014)
+
+colnames(comparison_flux_table) <- c("Datetime", "Flux_CO2_92", "Flux_CO2_2014", "Delta")
+
+comparison_flux_table
+
+
+```
+
+
+

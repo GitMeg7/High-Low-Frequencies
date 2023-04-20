@@ -404,47 +404,40 @@ write.table(SOMLIT_carbo_chemistry_missing_value, "DATA_SOMLIT_07-23_CLEAN.csv",
 
 #MAJ year + month (numeric)
  
-SOMLIT_carbo_chemistry_missing_value$year <- as.numeric(SOMLIT_carbo_chemistry_missing_value$year)
-SOMLIT_carbo_chemistry_missing_value$month <- as.numeric(SOMLIT_carbo_chemistry_missing_value$month)
+SOMLIT_carbo_chemistry_missing_value$year <- as.character(SOMLIT_carbo_chemistry_missing_value$year)
+SOMLIT_carbo_chemistry_missing_value$month <- as.character(SOMLIT_carbo_chemistry_missing_value$month)
 
 
 #number of measure by year :
 Nb_by_year_final <- summarise(group_by(SOMLIT_carbo_chemistry_missing_value, year), NB_OBS_Y=n())
 # must be 104 or 106
 
-SOMLIT_carbo_chemistry_missing_value <- SOMLIT_carbo_chemistry_missing_value %>% 
-  mutate(month = case_when(month == 1 ~ paste("0", month, sep=""), TRUE ~ month)) #a continuer
-
-mutate(month = paste(month["1":"9"], paste("0")))
 
 
-##
 
-test2 <- SOMLIT_carbo_chemistry_missing_value %>% 
-  unite(col=datetime, c("year", "month"), sep="-") %>% 
-  mutate(Year.Month = as.POSIXct(paste(datetime, "-01", sep = ""), format = "%Y-%m-%d")) 
+############ il faut remplir les dates manquantes 
 
 
 #number of measure by month by year :
-Nb_by_month_final <- summarise(group_by(test2, Year.Month), NB_OBS_M=n()) 
+#Nb_by_month_final <- summarise(group_by(test, datetime), NB_OBS_M=n()) 
 #must be 8 or 10
 
-Nb_by_month_final <- Nb_by_month_final %>% 
-  mutate(Year.Month = as.Date(paste(Year.Month, "-01", sep = ""), format = "%Y-%m-%d"))
-##
-
-view_2021 <- SOMLIT_carbo_chemistry_missing_value %>% dplyr::filter(year == "2020")
-table(SOMLIT_carbo_chemistry$depth, SOMLIT_carbo_chemistry$year)
-for (i in 1:12) {print(countTuesday(2020,i))}
-
-#plot number of measure by month (2077-2022)
-Nb_by_month_final %>% 
-  ggplot() +
-  aes(x=Year.Month, y=NB_OBS_M) +
-  geom_line(group=1) + 
-  scale_x_date(name="", date_breaks = "2 years", labels = year) + 
-  scale_y_continuous(name="", limits=c(0,11)) +
-  ggtitle("Evolution of number of observations by month at Point B (2007-2022)")
+#Nb_by_month_final <- Nb_by_month_final %>% 
+#   mutate(Year.Month = as.Date(paste(Year.Month, "-01", sep = ""), format = "%Y-%m-%d"))
+# ##
+# 
+# view_2021 <- SOMLIT_carbo_chemistry_missing_value %>% dplyr::filter(year == "2020")
+# table(SOMLIT_carbo_chemistry$depth, SOMLIT_carbo_chemistry$year)
+# for (i in 1:12) {print(countTuesday(2020,i))}
+# 
+# #plot number of measure by month (2077-2022)
+# Nb_by_month_final %>% 
+#   ggplot() +
+#   aes(x=Year.Month, y=NB_OBS_M) +
+#   geom_line(group=1) + 
+#   scale_x_date(name="", date_breaks = "2 years", labels = year) + 
+#   scale_y_continuous(name="", limits=c(0,11)) +
+#   ggtitle("Evolution of number of observations by month at Point B (2007-2022)")
   
 
 ```
