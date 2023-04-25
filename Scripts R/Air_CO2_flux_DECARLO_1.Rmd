@@ -1,12 +1,13 @@
 ---
-title: "CO2_Flux"
+title: "Air_sea_CO2_flux_DE CARLO"
 author: "Mégane"
-date: "2023-03-20"
+date: "2023-04-17"
 output: html_document
 ---
 
-# **Air--Sea CO~2~ Flux (2007-2022) -- Article DE CARLO**
-
+# **Air--Sea CO~2~ Flux -- Article DE CARLO**  
+*period : 2007-2022 complete*  
+  
 Data used :  
 
 -   pCO~2~ water (µatm)\
@@ -54,9 +55,13 @@ library("berryFunctions")
 
 ###Importation des donnees
 ##Data pCO2 water
-#a partir de janvier 2007 jusqu'a janvier 2022
+#a partir de janvier 2007 jusqu'a janvier 2023
 
-SOMLIT_carbo_chemistry <- read_csv("../Data/data_pH_steeve.csv")
+SOMLIT_carbo_chemistry <- read_delim("../Data/DATA_SOMLIT_07-23.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+#on retire les data 2023 pour avoir les annees completes sur 2007-2022 :
+SOMLIT_carbo_chemistry <- SOMLIT_carbo_chemistry[-c(1622:1631),]
 
 #differenciation surface / 50m
 #interpolation salinity + temperature (surface) :
@@ -99,7 +104,7 @@ Nb_by_month %>%
   geom_line(group=1) + 
   scale_x_date(name="") + 
   scale_y_continuous(name="") +
-  ggtitle("Evolution of number of observations by month at Point P (2007-2022)")
+  ggtitle("Evolution of number of observations by month at Point B (2007-2022)")
   
 
 
@@ -109,20 +114,17 @@ Nb_by_month %>%
 
 
 ### Visualisation and linear interpolation of salinity and temperature data (Point B - 2007-2022)  
-  
-→ *possibilité de rajouter des données jusqu'en décembre 2022 pour salinité + température (voire script "SOMLIT_2022")*  
 
-  
-##### Salinity (78 NA) & Temperature (84 NA) :  
+##### Salinity (74 NA) & Temperature (79 NA) :  
   
 
 ```{r interpolation of salinity and temperature, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center', fig.show='hold'}
 
-#Salinity : 78 NA
+#Salinity : 74 NA
 ggplot_na_distribution(SOMLIT_carbo_chemistry_surf$salinity, x_axis_labels = SOMLIT_carbo_chemistry_surf$datetime, xlab = "", ylab="Salinity (psu)", title="Point B - Salinity time series (2007-2022)")
 
 
-#Temperature : 84 NA
+#Temperature : 79 NA
 ggplot_na_distribution(SOMLIT_carbo_chemistry_surf$temperature, x_axis_labels = SOMLIT_carbo_chemistry_surf$datetime, xlab = "", ylab="Temp. (°C)", title="Point B - Temperature time series (2007-2022)")
 
 ```
@@ -131,6 +133,7 @@ ggplot_na_distribution(SOMLIT_carbo_chemistry_surf$temperature, x_axis_labels = 
   
 
 ```{r interpolation of pH_calc and pCO2w, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center', fig.show='hold'}
+#plutot faire AT et CT
 
 #pH_calc : 95 NA
 ggplot_na_distribution(SOMLIT_carbo_chemistry_surf$pH_calc, x_axis_labels = SOMLIT_carbo_chemistry_surf$datetime, xlab = "", ylab="pH", title="Point B - pH_calc time series (2007-2022)")
@@ -148,10 +151,6 @@ SOMLIT_carbo_chemistry_surf <- SOMLIT_carbo_chemistry_surf %>%
          pH_calc = na_interpolation(pH_calc, option="linear"),
          pCO2_w = na_interpolation(pCO2_w, option="linear"))
 ```
-
-
-
-
 
 
 
@@ -249,6 +248,8 @@ atmospheric_co2_HAUTE_PROV <- atmospheric_co2_HAUTE_PROV %>%
   mutate(CO2_HP = case_when(CO2_HP == -999.990 ~ NA_real_ , TRUE ~ CO2_HP)) %>% 
   select(datetime, CO2_HP)
 
+####################
+
 #LAMPEDUSA
 atmospheric_co2_LAMPEDUSA <- read_delim("../Data/atmospheric_co2_LAMPEDUSA_2006_2022.CO2", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
@@ -304,9 +305,148 @@ pCO2_atmos_long %>%
 
 
 
+```
+### Corsica vs Haute Provence  
+  
+slope = 0.7327435  
+intercept = 107.8772  
+  
+*Haute Provence = land site (variations explained by other variables like vegetation)*  
+
+```{r property & scatter plots (corse vs haute provence), echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center', fig.show='hold'}
+
+#creation column for legend
+corse_HP <- pCO2_atmos %>% 
+  select(datetime, CO2_CORSE, CO2_HP)
+
+corse_HP_long <- corse_HP %>% 
+  rename(Corsica = CO2_CORSE, `Haute Provence` = CO2_HP) %>% 
+  pivot_longer(cols=Corsica :`Haute Provence`, names_to = "Legend", values_to = "value")
+
+#plot
+corse_HP_long[4798: 11260,] %>% 
+  ggplot() +
+  ggtitle("Atmospheric pCO2 of Corsica and HP Observatory sites (ICOS) according to time") +
+  geom_point(aes(x=datetime, y=value, color= Legend), size=0.5) +
+  scale_y_continuous(name="Atmospheric pCO2 (µatm)") + 
+  scale_x_datetime(name="")
+##
+
+#scatter plot :
+corse_HP[4798: 11260,] %>% 
+  ggplot() +
+  aes(x=CO2_HP, y=CO2_CORSE) +
+  geom_point(size=0.85) +
+  stat_smooth(method="lm", formula = y ~ x) +
+  scale_x_continuous(name="Haute Provence Observatory") +
+  scale_y_continuous(name="Corsica") +
+  ggtitle("Relationship between Corsica and HP observatory sites for pCO2 atmospheric measurements (µatm)")
+
+#slope + intercept
+
+reg_corse_HP <- lm(data = corse_HP, CO2_CORSE ~ CO2_HP)
+slope_corse_HP <- reg_corse_HP$coefficients[[2]]
+intercept_corse_HP <- reg_corse_HP$coefficients[[1]]
+
+
+```
+### Corsica vs Plateau Rosa  
+  
+slope = 0.9885425   
+intercept = 5.822153  
+  
+*Better fit*  
+*Necessity to take Plateau Rosa data to fill in the series before 2013 and after 2020*  
+
+```{r property & scatter plots (corse vs plateau rosa), echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center', fig.show='hold'}
+
+#creation column for legend
+corse_PR <- pCO2_atmos %>% 
+  select(datetime, CO2_CORSE, CO2_PR)
+
+corse_PR_long <- corse_PR %>% 
+  rename(Corsica = CO2_CORSE, `Plateau Rosa` = CO2_PR) %>% 
+  pivot_longer(cols=Corsica :`Plateau Rosa`, names_to = "Legend", values_to = "value")
+
+#plot
+corse_PR_long %>% 
+  ggplot() +
+  ggtitle("Atmospheric pCO2 of Corsica and Plateau Rosa sites (ICOS) according to time") +
+  geom_point(aes(x=datetime, y=value, color= Legend), size=0.5) +
+  scale_y_continuous(name="Atmospheric pCO2 (µatm)") + 
+  scale_x_datetime(name="")
+##
+
+#scatter plot :
+corse_PR %>% 
+  ggplot() +
+  aes(x=CO2_PR, y=CO2_CORSE) +
+  geom_point(size=0.85) +
+  stat_smooth(method="lm", formula = y ~ x) +
+  scale_x_continuous(name="Plateau Rosa") +
+  scale_y_continuous(name="Corsica") +
+  ggtitle("Relationship between Corsica and Plateau Rosa sites for pCO2 atmospheric measurements (µatm)")
+
+#slope + intercept
+
+reg_corse_PR <- lm(data = corse_PR, CO2_CORSE ~ CO2_PR)
+slope_corse_PR <- reg_corse_PR$coefficients[[2]]
+intercept_corse_PR <- reg_corse_PR$coefficients[[1]]
+
+
 
 ```
 
+### Corsica vs Lampedusa  
+  
+slope = 0.993454  
+intercept = 3.383484  
+  
+*Best fit*  
+*Necessity to take Lampedusa data to fill in the series before 2013 and after 2020*  
+
+```{r property & scatter plots (corse vs lampedusa), echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center', fig.show='hold'}
+
+#creation column for legend
+corse_LAMP <- pCO2_atmos %>% 
+  select(datetime, CO2_CORSE, CO2_LAMP)
+
+corse_LAMP_long <- corse_LAMP %>% 
+  rename(Corsica = CO2_CORSE, Lampedusa = CO2_LAMP) %>% 
+  pivot_longer(cols=Corsica :Lampedusa, names_to = "Legend", values_to = "value")
+
+#plot
+corse_LAMP_long %>% 
+  ggplot() +
+  ggtitle("Atmospheric pCO2 of Corsica and Lampedusa sites (ICOS) according to time") +
+  geom_point(aes(x=datetime, y=value, color= Legend), size=0.5) +
+  scale_y_continuous(name="Atmospheric pCO2 (µatm)") + 
+  scale_x_datetime(name="")
+##
+
+#scatter plot :
+corse_LAMP %>% 
+  ggplot() +
+  aes(x=CO2_LAMP, y=CO2_CORSE) +
+  geom_point(size=0.85) +
+  stat_smooth(method="lm", formula = y ~ x) +
+  scale_x_continuous(name="Lampedusa") +
+  scale_y_continuous(name="Corsica") +
+  ggtitle("Relationship between Corsica and Lampedusa sites for pCO2 atmospheric measurements (µatm)")
+
+#slope + intercept
+
+reg_corse_LAMP <- lm(data = corse_LAMP, CO2_CORSE ~ CO2_LAMP)
+slope_corse_LAMP <- reg_corse_LAMP$coefficients[[2]]
+intercept_corse_LAMP <- reg_corse_LAMP$coefficients[[1]]
+
+
+
+```
+
+
+
+###################################################################################################
 ## Visualisation 5 sites atmospheric pCO~2~ NA values
 
 #### 1 : **Lampedusa site (2006-2022)**
@@ -476,142 +616,6 @@ atmospheric_co2_HP_NA_plot %>%
   scale_x_discrete(name = "") +
   scale_y_continuous(name = "NA number", limits = c(0,50), breaks = seq(0, 50, 50))
 
-
-```
-
-## Cross interpolations of 5 sites atmospheric pCO~2~ data  
-  
-### Cross interpolation between Corsica and Haute Provence datasets :  
-  
-
-```{r Cross interpolations of Corsica-Haute Provence, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center'}
-
-atmospheric_co2_CORSE$CO2_CORSE[is.na(atmospheric_co2_CORSE$CO2_CORSE)] <- "NA"
-atmospheric_co2_HAUTE_PROV$CO2_HP[is.na(atmospheric_co2_HAUTE_PROV$CO2_HP)] <- "NA"
-
-pCO2_CORSE_HP <- left_join(atmospheric_co2_CORSE, atmospheric_co2_HAUTE_PROV, by="datetime")
-
-#pCO2 CORSE_HP : 2013-2022
-pCO2_CORSE_HP <- pCO2_CORSE_HP %>% 
-  mutate(CORSE_HP = case_when(CO2_CORSE == "NA" ~ CO2_HP, TRUE ~ CO2_CORSE)) %>% 
-  mutate(CORSE_HP = as.numeric(CORSE_HP))
-
-summary(pCO2_CORSE_HP$CORSE_HP) #189 NA
-
-ggplot_na_distribution(pCO2_CORSE_HP$CORSE_HP, x_axis_labels = pCO2_CORSE_HP$datetime, xlab = "",
-                       ylab="Atmospheric pCO2 (µatm)", title="Cross Corsica/Haute Provence sites - atmospheric pCO2 (2013-2022)")
-
-```
-
-### Cross interpolation between Corsica/HP and Monte Cimone datasets :  
-  
-
-```{r Cross interpolations of Corsica-Haute Provence and Monte CImone, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center'}
-
-atmospheric_co2_MONTE_CIMONE$CO2_MC[is.na(atmospheric_co2_MONTE_CIMONE$CO2_MC)] <- "NA"
-
-pCO2_CORSE_HP_MC <- left_join(atmospheric_co2_MONTE_CIMONE, pCO2_CORSE_HP, by="datetime")
-
-#pCO2 CORSE_HP_MC : 2011-2022
-pCO2_CORSE_HP_MC <- pCO2_CORSE_HP_MC %>% 
-  mutate(CORSE_HP = as.character(CORSE_HP)) %>% 
-  mutate(CORSE_HP_MC = case_when(CO2_MC == "NA" ~ CORSE_HP, TRUE ~ CO2_MC)) %>% 
-  mutate(CORSE_HP_MC = as.numeric(CORSE_HP_MC))
-
-summary(pCO2_CORSE_HP_MC$CORSE_HP_MC) #381 NA
-
-ggplot_na_distribution(pCO2_CORSE_HP_MC$CORSE_HP_MC, x_axis_labels = pCO2_CORSE_HP_MC$datetime, xlab = "",
-                       ylab="Atmospheric pCO2 (µatm)", 
-                       title="Cross Corsica/HP and Monte Cimone sites - atmospheric pCO2 (2011-2022)")
-
-```
-
-### Cross interpolation between Corsica/HP/Monte Cimone and Plateau Rosa datasets :  
-  
-
-```{r Cross interpolations of Corsica-Haute Provence-Monte CImone and Plateau Rosa, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center'}
-
-#mettre NA au format 
-atmospheric_co2_PLATEAU_ROSA$CO2_PR[is.na(atmospheric_co2_PLATEAU_ROSA$CO2_PR)] <- "NA"
-
-pCO2_CORSE_HP_MC_PR <- left_join(atmospheric_co2_PLATEAU_ROSA, pCO2_CORSE_HP_MC, by="datetime")
-
-#pCO2 CORSE_HP_MC_PR : 2007-2022
-pCO2_CORSE_HP_MC_PR <- pCO2_CORSE_HP_MC_PR %>% 
-  mutate(CORSE_HP_MC = as.character(CORSE_HP_MC)) %>% 
-  mutate(CORSE_HP_MC_PR = case_when(CO2_PR == "NA" ~ CORSE_HP_MC, TRUE ~ CO2_PR)) %>% 
-  mutate(CORSE_HP_MC_PR = as.numeric(CORSE_HP_MC_PR))
-
-summary(pCO2_CORSE_HP_MC_PR$CORSE_HP_MC_PR) #573 NA
-
-ggplot_na_distribution(pCO2_CORSE_HP_MC_PR$CORSE_HP_MC_PR, x_axis_labels = pCO2_CORSE_HP_MC_PR$datetime, xlab = "",
-                       ylab="Atmospheric pCO2 (µatm)", 
-                       title="Cross Corsica/HP/MC and Plateau Rosa sites - atmospheric pCO2 (2007-2022)")
-
-
-```
-
-### Cross interpolation between Corsica/HP/MC/PR and Lampedusa datasets :  
-  
-
-```{r Cross interpolations of Corsica-Haute Provence-Monte CImone-Plateau Rosa and Lampedusa, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center'}
-
-#mettre NA au format 
-atmospheric_co2_LAMPEDUSA$CO2_LAMP[is.na(atmospheric_co2_LAMPEDUSA$CO2_LAMP)] <- "NA"
-
-pCO2_CORSE_HP_MC_PR_LAMP <- left_join(atmospheric_co2_LAMPEDUSA, pCO2_CORSE_HP_MC_PR, by="datetime")
-
-#pCO2 CORSE_HP_MC_PR : 2007-2022
-pCO2_CORSE_HP_MC_PR_LAMP <- pCO2_CORSE_HP_MC_PR_LAMP %>% 
-  mutate(CORSE_HP_MC_PR = as.character(CORSE_HP_MC_PR)) %>% 
-  mutate(CORSE_HP_MC_PR_LAMP = case_when(CO2_LAMP == "NA" ~ CORSE_HP_MC_PR, TRUE ~ CO2_LAMP)) %>% 
-  mutate(CORSE_HP_MC_PR_LAMP = as.numeric(CORSE_HP_MC_PR_LAMP))
-
-summary(pCO2_CORSE_HP_MC_PR_LAMP$CORSE_HP_MC_PR_LAMP) #309 NA
-
-ggplot_na_distribution(pCO2_CORSE_HP_MC_PR_LAMP$CORSE_HP_MC_PR_LAMP, x_axis_labels = pCO2_CORSE_HP_MC_PR_LAMP$datetime, xlab = "",
-                       ylab="Atmospheric pCO2 (µatm)", 
-                       title="Cross Corsica/HP/MC/PR and Lampedusa sites - atmospheric pCO2 (2006-2022)")
-
-
-```
-
-## Visualisation of atmospheric pCO~2~ cross-interpolated (5 sites) + missing values  
-  
-
-```{r Visualisation of atmospheric pCO2 cross-interpolated (5 sites), echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4, fig.align='right', fig.show='hold'}
-
-#plot visualisation :
-pCO2_CORSE_HP_MC_PR_LAMP %>% 
-  ggplot() + 
-  ggtitle("Atmospheric pCO2 - 5 sites cross-interpolated") +
-  aes(x=datetime, y=CORSE_HP_MC_PR_LAMP) +
-  geom_point(size=0.6) +
-  scale_y_continuous(name="Atmospheric pCO2 (µatm)") +
-  scale_x_datetime(name="")
-
-#NA distribution by year :
-pCO2_CORSE_HP_MC_PR_LAMP_NA_plot <- pCO2_CORSE_HP_MC_PR_LAMP %>% 
-  dplyr::mutate(Year = format(datetime, format="%Y"),
-                Month = format(datetime, format="%m-%d")) %>% 
-  dplyr::group_by(Year, Month) 
-
-pCO2_CORSE_HP_MC_PR_LAMP_NA_plot$CORSE_HP_MC_PR_LAMP[is.na(pCO2_CORSE_HP_MC_PR_LAMP_NA_plot$CORSE_HP_MC_PR_LAMP)] <- "NA"
-
-pCO2_CORSE_HP_MC_PR_LAMP_NA_plot %>% 
-  dplyr::filter(CORSE_HP_MC_PR_LAMP == "NA") %>% 
-  dplyr::group_by(Year) %>% 
-  dplyr::summarise(number_of_NA = n()) %>% 
-  ggplot(aes(x = Year, y = number_of_NA))  +
-  geom_segment(aes(x = Year, xend = Year, y = 0, yend = number_of_NA), 
-               color = "grey", linewidth = 2) +
-  ggtitle("NA occurences by year - 5 sites mixed") +
-  geom_point(size = 5, fill = "#EE6677", shape = 21, color = "black") +
-  coord_flip() +
-  scale_x_discrete(name = "") +
-  scale_y_continuous(name = "NA number", limits = c(0,50), breaks = seq(0, 50, 5))
-
-##
 
 ```
 
@@ -1039,7 +1043,7 @@ DATA %>%
   
 ### Method 1 : Wanninkhof (2014)  
   
-Formula : 7.7 \* 10--4 \* U² \* ΔpCO2  
+Formula : 7.7 \* 10^-4 \* U² \* ΔpCO2  
   
 unity : mol of C / m² / year  
 
@@ -1060,28 +1064,6 @@ DATA %>%
 
 ```
 
-```{r notes - A FAIRE}
-
-#periode + frequence de chaque data set dans un tableau
-
-
-#comparaison des 3 lieux de pco2 water sur un mm plot 
-
-#tendance sur delta pCO2 ? 
-
-#changer les echelles des graphiques 
-
-#plot de toutes les donnees atmospheriques de tous les lieux, voir a quoi ca ressemble, si les courbes sont identiques
-
-#faire par periode de 10ans pour 1992-2022, voir l'évolution de la tendance
-
-#partie autocorrelation, voir avec SAMIR ?
-
-#script FRED ?
-
-
-```
-
 ### Method 2 : Wanninkhof (1992)  
   
 Formulas :  
@@ -1099,7 +1081,7 @@ Final formula : F = k \* K0 \* ΔpCO2
   
 unity : mol of C / m² / year  
 
-```{r calcul Flux Wanninkhof (1992), warning=FALSE, message=FALSE}
+```{r calcul Flux Wanninkhof (1992), echo=FALSE, warning=FALSE, message=FALSE}
 
 DATA <- DATA %>% 
   mutate(SC = 2073.1 - (125.62 * temperature) + (3.6276 * temperature^2) - (0.043219 * temperature^3),
@@ -1123,7 +1105,7 @@ DATA <- DATA %>%
 #Flux*24*365 pour passer de mol/m²/h a mol/m²/y
 
 
-#plot Fluw wanninkhof 1992 :
+#plot Flux wanninkhof 1992 :
 DATA %>% 
   ggplot() + 
   aes(x=datetime, y=Flux_wan_92) + 
@@ -1134,3 +1116,74 @@ DATA %>%
 
 
 ```
+### Method 3 : David T. Ho (2023)  
+  
+Formulas :  
+  
+-   K600 = 0.143 \* U²  
+  
+-   SC = 2073.1 - (125.62 \* T) + (3.6276 \* T²) - (0.043219 \* T\^3)  
+    or gas_schmidt() function of marelac package (same result)
+  
+-   k = K600 \* (SC/600)\^0.5  
+  
+-   K0 = Henry's constant (seacarb)
+Final formula : F = k \* K0 \* ΔpCO2  
+  
+unity : mol of C / m² / year
+
+
+```{r calcul Flux David T. Ho (2023), echo=FALSE, warning=FALSE, message=FALSE}
+
+DATA <- DATA %>% 
+  mutate(K600_M3 = 0.143 * wind_imput^2,
+         Flux_HO = ((K600_M3*(SC/600)^0.5) * K0 * delta_pCO2)*10*24*365)
+
+#plot Flux David T. Ho (2023) :
+DATA %>% 
+  ggplot() + 
+  aes(x=datetime, y=Flux_HO) + 
+  geom_line(col="#24445C") +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Flux (mol/m²/y)") +
+  ggtitle("CO2 fluxes ocean-atmosphere (David T. Ho 2023)")
+
+```
+
+
+#### Table comparing the results of the 3 CO~2~ flux calculation methods
+
+```{r 3 methods comparison - table, echo=FALSE, warning=FALSE, message=FALSE}
+
+comparison_flux_table <- data.frame(DATA$datetime, DATA$Flux_wan_92, DATA$Flux_wan_2014, DATA$Flux_HO)
+
+
+colnames(comparison_flux_table) <- c("Datetime", "Flux_W_92", "Flux_W_2014", "Flux_HO")
+
+comparison_flux_table
+
+
+
+
+```
+
+#### Plot comparing the results of the 3 CO~2~ flux calculation methods
+
+```{r 3 methods comparison - plot, echo=FALSE, warning=FALSE, message=FALSE}
+
+#creation column for legend
+DATA_long <- DATA %>% 
+  rename(`Flux W (2014)` = Flux_wan_2014, `Flux W (1992)` = Flux_wan_92, `Flux Ho (2023)` = Flux_HO) %>% 
+  pivot_longer(cols=c(`Flux W (2014)`, `Flux W (1992)`, `Flux Ho (2023)`), names_to = "Legend", values_to = "value")
+
+#plot
+DATA_long %>% 
+  ggplot() +
+  ggtitle("CO2 fluxes ocean-atmosphere (3 methods)") +
+  geom_line(aes(x=datetime, y=value, color= Legend), size=0.5) +
+  scale_y_continuous(name="Flux (mol/m²/y)") + 
+  scale_x_datetime(name="")
+
+
+```
+

@@ -1,0 +1,337 @@
+---
+title: "DE CARLO"
+author: "Mégane"
+date: "2023-04-20"
+output: html_document
+---
+
+```{r libraries, echo=FALSE, warning=FALSE, message=FALSE}
+library("readr")
+library("viridis")
+library("scales")
+library("lubridate")
+library("gsignal")
+library("FactoMineR")
+library("factoextra")
+library("gplots")
+library("heatwaveR")
+library("dplyr")
+library("imputeTS")
+library("Metrics")
+library("tidyr")
+library("tseries")
+library("forecast")
+library("tsDyn")
+library("tsoutliers")
+library("seacarb")
+library("lmodel2")
+library("lmtest")
+library("ggExtra")
+library("corrplot")
+library("ggcorrplot")
+library("marelac")
+library("kableExtra")
+library("stringr")
+library("berryFunctions")
+```
+
+
+#### *Data wind speed 10m (m/s)*:  
+  
+→ Azur buoy (model) - 2009-2022  
+→ EOL buoy (model) - 2011-2022  
+  
+Frequency : Hourly  
+Unity : m/s
+
+```{r Importation data wind speed 2009-2022, echo=FALSE, warning=FALSE, message=FALSE}
+
+#importation data wind speed (model) of Azur buoy (2009-2022) :
+Wind_Azur <- read_csv("../Data/Wind_speed_10m_Azur_buoy/model_wind_speed_AZUR.csv")
+
+#visualization NA 
+#ggplot_na_distribution(Wind_Azur$speed_ms, x_axis_labels=Wind_Azur$Date, xlab="",
+#                       ylab="Wind speed (m/s)", title="Wind speed 10m (m/s) of Azur buoy (2009-2022)")
+
+# pas de NA, complete series
+
+##
+
+#importation data wind speed (model) of Azur buoy (fin 2011-2022) :
+Wind_EOL <- read_csv("../Data/model_wind_speed_EOL.csv")
+
+#visualization NA 
+# ggplot_na_distribution(Wind_EOL$speed_ms, x_axis_labels=Wind_EOL$Date, xlab="",
+#                        ylab="Wind speed (m/s)", title="Wind speed 10m (m/s) of EOL buoy (2011-2022)")
+
+# pas de NA, complete series
+
+##
+```
+
+
+
+### **Histogram of wind speed distribution**  
+
+```{r Histogram of wind speed distribution, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6, fig.height=4, fig.align='center', fig.show='hold'}
+
+#plot 1
+Wind_Azur %>% 
+  ggplot(aes(x=speed_ms)) +
+  geom_histogram(fill="#69b3a2", color="#e9ecef", alpha=0.8) +
+  ggtitle("Wind speed distribution (Azur buoy)") + 
+  scale_y_continuous(name="Distribution") +
+  scale_x_continuous(name="", breaks = c(0, 5, 10, 15, 20))
+##
+
+#plot 2
+Wind_EOL %>% 
+  ggplot(aes(x=speed_ms)) +
+  geom_histogram(fill="#ED7F10", color="#e9ecef", alpha=0.8) +
+  ggtitle("Wind speed distribution (EOL buoy)") + 
+  scale_y_continuous(name="Distribution") +
+  scale_x_continuous(name="", breaks = c(0, 5, 10, 15, 20))
+
+
+
+```
+
+```{r filter 9 AM, echo=FALSE, warning=FALSE, message=FALSE}
+
+Wind_EOL <- Wind_EOL %>% 
+  mutate(Hour = format(date, format="%H:%M:%S")) %>% 
+  filter(Hour == "09:00:00") %>% 
+  mutate(datetime = format(date, format="%Y-%m-%d"),
+         datetime = as.POSIXct(datetime)) %>% 
+  select(datetime, speed_ms)
+
+```
+
+
+
+
+#### *Data pCO2 water (µatm)*:  
+  
+period : jan.2007 - jan.2023 
+  
+Frequency : Weekly (every tuesday at 09 AM)  
+Unity : µatm  
+
+```{r importation data pCO2 water, echo=FALSE, warning=FALSE, message=FALSE}
+
+#period : jan. 2007 - jan. 2023
+#measurements every tuesday at 09h AM
+
+SOMLIT_pcO2 <- read_delim("../Data/DATA_SOMLIT_07-23_CLEAN.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+
+#surface data :
+SOMLIT_pcO2 <- SOMLIT_pcO2 %>% 
+  dplyr::filter(depth==0) %>% 
+  rename(pCO2_w = pCO2, datetime = sampling_date) %>%
+  mutate(salinity = case_when(salinity < 35 ~ NA_real_ , TRUE ~ salinity))
+
+
+summary(SOMLIT_pcO2)
+
+#merge wind speed & SOMLIT :
+merge1 <- left_join(SOMLIT_pcO2, Wind_EOL, by="datetime")
+
+```
+
+```{r interpolation temp & salinity, echo=FALSE, warning=FALSE, message=FALSE}
+
+impute_temp <- na_interpolation(SOMLIT_pcO2$temperature, option="linear")
+impute_sal <- na_interpolation(SOMLIT_pcO2$salinity, option="linear")
+
+ggplot_na_imputations(SOMLIT_pcO2$temperature, impute_temp, x_axis_labels = SOMLIT_pcO2$datetime, xlab = "", ylab="Temp. (°C)", title="Point B - Temperature time series (°C) - period 2007-2022")
+ggplot_na_imputations(SOMLIT_pcO2$salinity, impute_sal, x_axis_labels = SOMLIT_pcO2$datetime, xlab = "", ylab="Salinity", title="Point B - Salinity time series - period 2007-2022")
+
+```
+
+```{r interpolation AT & CT, echo=FALSE, warning=FALSE, message=FALSE}
+
+impute_ta <- na_interpolation(SOMLIT_pcO2$ta, option="linear")
+#faire pour CT
+impute_sal <- na_interpolation(SOMLIT_pcO2$salinity, option="linear")
+
+ggplot_na_imputations(SOMLIT_pcO2$ta, impute_ta, x_axis_labels = SOMLIT_pcO2$datetime, xlab = "", ylab="AT (µmol/kg)", title="Point B - Total alkalinity time series (µmol/kg) - period 2007-2022")
+#faire pour CT
+ggplot_na_imputations(SOMLIT_pcO2$salinity, impute_sal, x_axis_labels = SOMLIT_pcO2$datetime, xlab = "", ylab="Salinity", title="Point B - Salinity time series - period 2007-2022")
+
+```
+
+
+
+
+
+
+
+#### *Data pCO2 air (µatm)*:  
+  
+period : jan.2007 - jan.2023 
+  
+Frequency : Hourly
+Unity : µatm  
+
+Corse Ersa (40m) - 2013-2020  
+  
+```{r importation data pCO2 air, echo=FALSE, warning=FALSE, message=FALSE}
+
+#CORSE ERSA
+pCO2_CORSE <- read_delim("../Data/atmospheric_co2_CORSE_RAW_2013_2020.CO2", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+# delate last row :
+pCO2_CORSE <- pCO2_CORSE[-65900,]
+#46 days of measurements are missing : 2789 - 2743 (theo - obs)
+
+#selection of more or less 09:00 AM data :
+pCO2_CORSE <- pCO2_CORSE %>% 
+  unite(col='datetime', c('Year', 'Month', 'Day'), sep='-') %>% 
+  unite(col='time', c('Hour', 'Minute'), sep=':') %>% 
+  filter(time == "09:00")
+
+#data sorting :
+pCO2_CORSE <- pCO2_CORSE %>% 
+  mutate(datetime = format(datetime, format="%Y-%m-%d")) %>% 
+  mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>%
+  rename(CO2_CORSE = co2) %>% 
+  mutate(CO2_CORSE = case_when(CO2_CORSE == -999.990 ~ NA_real_ , TRUE ~ CO2_CORSE)) %>% 
+  select(datetime, CO2_CORSE)
+
+# 1534 NA
+###########################
+
+### PLATEAU ROSA
+pCO2_PLATEAU_ROSA <- read_delim("../Data/atmospheric_co2_PLATEAU_ROSA_2007_2022.CO2", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+#selection of 09:00 AM data :
+pCO2_PLATEAU_ROSA <- pCO2_PLATEAU_ROSA %>% 
+  unite(col='datetime', c('Year', 'Month', 'Day'), sep='-') %>% 
+  unite(col='time', c('Hour', 'Minute'), sep=':') %>% 
+  filter(time == "09:00")
+
+
+#data sorting :
+pCO2_PLATEAU_ROSA <- pCO2_PLATEAU_ROSA %>% 
+  mutate(datetime = format(datetime, format="%Y-%m-%d")) %>% 
+  mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>%
+  rename(CO2_PR = co2) %>% 
+  mutate(CO2_PR = case_when(CO2_PR == -999.990 ~ NA_real_ , TRUE ~ CO2_PR)) %>% 
+  select(datetime, CO2_PR)
+
+# 1262 NA
+###########################
+
+#LAMPEDUSA
+pCO2_LAMPEDUSA <- read_delim("../Data/atmospheric_co2_LAMPEDUSA_2006_2022.CO2", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+#selection of 09:00 AM data :
+pCO2_LAMPEDUSA <- pCO2_LAMPEDUSA %>% 
+  unite(col='datetime', c('Year', 'Month', 'Day'), sep='-') %>% 
+  unite(col='time', c('Hour', 'Minute'), sep=':') %>% 
+  filter(time == "09:00")
+
+#data sorting :
+pCO2_LAMPEDUSA <- pCO2_LAMPEDUSA %>% 
+  mutate(datetime = format(datetime, format="%Y-%m-%d")) %>% 
+  mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>%
+  rename(CO2_LAMP = co2) %>% 
+  mutate(CO2_LAMP = case_when(CO2_LAMP == -999.990 ~ NA_real_ , TRUE ~ CO2_LAMP)) %>% 
+  select(datetime, CO2_LAMP)
+
+#merge pCO2 air CORSE & Plateau Rosa avec pCO2 water SOMLIT :
+merge2 <- left_join(merge1, pCO2_CORSE, by="datetime") #514 NA
+
+merge3 <- left_join(merge2, pCO2_PLATEAU_ROSA, by="datetime") #231 NA
+
+merge3 <- left_join(merge3, pCO2_LAMPEDUSA, by="datetime") #281 NA
+
+
+```
+
+
+```{r interpolation data pCO2 air, echo=FALSE, warning=FALSE, message=FALSE}
+#jen suis la
+impute_pCO2_atmos <- na_interpolation(merge3$salinity, option="linear")
+
+ggplot_na_imputations(SOMLIT_pcO2$ta, impute_ta, x_axis_labels = SOMLIT_pcO2$datetime, xlab = "", ylab="AT (µmol/kg)", title="Point B - Total alkalinity time series (µmol/kg) - period 2007-2022")
+
+```
+
+
+
+
+```{r calcul delta pCO2, echo=FALSE, warning=FALSE, message=FALSE}
+
+#fusion pCO2 air Corsica & Plateau Rosa
+merge3$CO2_CORSE[is.na(merge3$CO2_CORSE)] <- "NA"
+merge3$CO2_PR[is.na(merge3$CO2_PR)] <- "NA"
+merge3$CO2_LAMP[is.na(merge3$CO2_LAMP)] <- "NA"
+
+merge3 <- merge3 %>% 
+  mutate(pCO2_air = case_when(CO2_CORSE == "NA" ~ CO2_PR, TRUE ~ CO2_CORSE),
+         pCO2_air = case_when(pCO2_air == "NA" ~ CO2_LAMP, TRUE ~ pCO2_air),
+         pCO2_air = as.numeric(pCO2_air))
+##
+
+#calcul of delta pCO2 = pCO2 water - pCO2 air :
+merge3 <- merge3 %>%
+  mutate(delta_CO2 = pCO2_w - pCO2_air)
+
+
+summary(merge3)
+
+```
+
+
+
+## Air-surface CO~2~ flux (with data wind speed complete)  
+  
+### Flux calculation  
+Method used : Wanninkhof (2014)  
+  
+→ **negative values = flux into the ocean**  
+
+```{r calcul flux, echo=FALSE, warning=FALSE, message=FALSE}
+
+#Calcul of F
+merge3 <- merge3 %>% 
+    mutate(Flux_CO2_2014 = 0.00077 * speed_ms^2 * delta_CO2)
+
+summary(merge3)
+
+
+#plot Flux Wanninkhof 2014 :
+merge3 %>% 
+  ggplot() + 
+  aes(x=datetime, y=Flux_CO2_2014) + 
+  geom_line(col="#967C5C") +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Flux (mol of C/m²/y)") +
+  ggtitle("CO2 fluxes ocean-atmosphere (Wanninkhof 2014)")
+
+```
+###################
+
+
+```{r comparison table, echo=FALSE, warning=FALSE, message=FALSE}
+
+comparison_table_wind <- data.frame(test3$datetime, test3$Flux_CO2, test3$Flux_NC)
+
+comparison_table_wind <- comparison_table_wind %>% 
+  mutate(delta = test3$Flux_CO2 - test3$Flux_NC)
+
+colnames(comparison_table_wind) <- c("Datetime", "Flux_C", "Flux_NC", "Delta")
+
+comparison_table_wind
+
+
+```
+
+
+

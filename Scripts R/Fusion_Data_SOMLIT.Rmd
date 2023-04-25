@@ -41,7 +41,7 @@ library("stringr")
   
 - data_pH_steeve (data papier Kapsenberg, 09/01/2007 - 11/01/2022, T, S, pH, pCO2, carbonate system...)  
 - SOMLIT_HYDRO (pH mesuré du 09/01/2007 - 21/06/2022)  
-- SOMLIT_extraction_CTD_dernier (donnees telechargees de SOMLIT, 09/01/2007 - 31/01/2023, T, S)  
+- SOMLIT_extraction_CTD_dernier (donnees telechargees de SOMLIT, 09/01/2007 - 31/01/2023, donnees manquantes du 13/09/2022 au 03/01/2023, T, S)  
 - PtB_data_TS (donne Laura, 11/01/2022 - 30/12/2022, T, S)  
   
 

@@ -244,8 +244,6 @@ inf_8_dates
   
 → Fill in the gaps: adding lines  
   
-**60 values missing (30 values per depth)  
-  
 
 ```{r ajout de lignes - part 1, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -363,15 +361,15 @@ missing_data$year[missing_data$year == 15] = "2021"
 missing_data$year[missing_data$year == 16] = "2022"
 
 #mois
-missing_data$month[missing_data$month == 1] = "01"
-missing_data$month[missing_data$month == 2] = "02"
-missing_data$month[missing_data$month == 3] = "03"
-missing_data$month[missing_data$month == 4] = "04"
-missing_data$month[missing_data$month == 5] = "05"
-missing_data$month[missing_data$month == 6] = "06"
-missing_data$month[missing_data$month == 7] = "07"
-missing_data$month[missing_data$month == 8] = "08"
-missing_data$month[missing_data$month == 9] = "09"
+missing_data$month[missing_data$month == 1] = "1"
+missing_data$month[missing_data$month == 2] = "2"
+missing_data$month[missing_data$month == 3] = "3"
+missing_data$month[missing_data$month == 4] = "4"
+missing_data$month[missing_data$month == 5] = "5"
+missing_data$month[missing_data$month == 6] = "6"
+missing_data$month[missing_data$month == 7] = "7"
+missing_data$month[missing_data$month == 8] = "8"
+missing_data$month[missing_data$month == 9] = "9"
 missing_data$month[missing_data$month == 10] = "10"
 missing_data$month[missing_data$month == 11] = "11"
 missing_data$month[missing_data$month == 12] = "12"
@@ -391,53 +389,254 @@ SOMLIT_carbo_chemistry_missing_value = SOMLIT_carbo_chemistry_missing_value %>% 
 #verification for both depths
 table(SOMLIT_carbo_chemistry_missing_value$year, SOMLIT_carbo_chemistry_missing_value$depth)
 
+###########################
+
+#rajout des dates manquantes manuellement :
+SOMLIT_carbo_chemistry_missing_value[c(9,10),"sampling_date"] <- "2007-01-02"
+SOMLIT_carbo_chemistry_missing_value[c(103,104),"sampling_date"] <- "2007-09-11"
+SOMLIT_carbo_chemistry_missing_value[c(765,766),"sampling_date"] <- "2014-12-30"
+SOMLIT_carbo_chemistry_missing_value[c(825,826),"sampling_date"] <- "2014-08-12"
+SOMLIT_carbo_chemistry_missing_value[c(869,870),"sampling_date"] <- "2015-12-29"
+SOMLIT_carbo_chemistry_missing_value[c(929,930),"sampling_date"] <- "2015-08-18"
+SOMLIT_carbo_chemistry_missing_value[c(973,974),"sampling_date"] <- "2016-12-27"
+
+SOMLIT_carbo_chemistry_missing_value[c(1009,1010),"sampling_date"] <- "2016-05-31"
+SOMLIT_carbo_chemistry_missing_value[c(1037,1038),"sampling_date"] <- "2016-08-09"
+SOMLIT_carbo_chemistry_missing_value[c(1081,1082),"sampling_date"] <- "2017-12-26"
+SOMLIT_carbo_chemistry_missing_value[c(1089,1090),"sampling_date"] <- "2017-02-28"
+SOMLIT_carbo_chemistry_missing_value[c(1143,1144),"sampling_date"] <- "2017-08-15"
+SOMLIT_carbo_chemistry_missing_value[c(1171,1172),"sampling_date"] <- "2018-10-30"
+SOMLIT_carbo_chemistry_missing_value[c(1187,1188),"sampling_date"] <- "2018-12-25"
+SOMLIT_carbo_chemistry_missing_value[c(1211,1212),"sampling_date"] <- "2018-04-10"
+SOMLIT_carbo_chemistry_missing_value[c(1247,1248),"sampling_date"] <- "2018-08-14"
+SOMLIT_carbo_chemistry_missing_value[c(1293,1294),"sampling_date"] <- "2019-12-31"
+SOMLIT_carbo_chemistry_missing_value[c(1353,1354),"sampling_date"] <- "2019-08-13"
+
+SOMLIT_carbo_chemistry_missing_value[c(1395,1396),"sampling_date"] <- "2020-12-29"
+SOMLIT_carbo_chemistry_missing_value[c(1409,1410),"sampling_date"] <- "2020-03-17"
+SOMLIT_carbo_chemistry_missing_value[c(1411,1412),"sampling_date"] <- "2020-03-24"
+SOMLIT_carbo_chemistry_missing_value[c(1413,1414),"sampling_date"] <- "2020-03-31"
+SOMLIT_carbo_chemistry_missing_value[c(1417,1418),"sampling_date"] <- "2020-04-07"
+SOMLIT_carbo_chemistry_missing_value[c(1419,1420),"sampling_date"] <- "2020-04-14"
+SOMLIT_carbo_chemistry_missing_value[c(1421,1422),"sampling_date"] <- "2020-04-28"
+SOMLIT_carbo_chemistry_missing_value[c(1489,1490),"sampling_date"] <- "2021-11-16"
+SOMLIT_carbo_chemistry_missing_value[c(1491,1492),"sampling_date"] <- "2021-11-30"
+SOMLIT_carbo_chemistry_missing_value[c(1585,1586),"sampling_date"] <- "2022-10-18"
+SOMLIT_carbo_chemistry_missing_value[c(1603,1604),"sampling_date"] <- "2022-12-27"
+SOMLIT_carbo_chemistry_missing_value[c(1499,1500),"sampling_date"] <- "2021-12-28"
+SOMLIT_carbo_chemistry_missing_value[c(1577,1578),"sampling_date"] <- "2022-01-04"
+##
+
+#MAJ variable Year.Month
+
+SOMLIT_carbo_chemistry_missing_value <- SOMLIT_carbo_chemistry_missing_value %>% 
+  select(-c(year, month)) %>% 
+  mutate(Year = format(sampling_date, format="%Y"),
+         Month = format(sampling_date, format="%m"),
+         Year.Month = format(sampling_date, format="%Y-%m"))
+##
+SOMLIT_carbo_chemistry_missing_value <- SOMLIT_carbo_chemistry_missing_value[,c(3, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+                                                                                21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39)]
+SOMLIT_carbo_chemistry_missing_value <- SOMLIT_carbo_chemistry_missing_value %>% arrange(sampling_date)
+
 #save :
 write.table(SOMLIT_carbo_chemistry_missing_value, "DATA_SOMLIT_07-23_CLEAN.csv", sep=";", col.names = TRUE, row.names = FALSE)
 
 ```
 
   
-### **Nombre de mesures SOMLIT par mois - TAB CLEAN**  
+## Importation data EOL : 2013-2022   
   
+Frequency : hourly
 
-```{r Nombre de mesures SOMLIT par mois tab clean, echo=FALSE, warning=FALSE, message=FALSE}
+```{r importation data EOL, echo=FALSE, warning=FALSE, message=FALSE}
 
-#MAJ year + month (numeric)
- 
-SOMLIT_carbo_chemistry_missing_value$year <- as.character(SOMLIT_carbo_chemistry_missing_value$year)
-SOMLIT_carbo_chemistry_missing_value$month <- as.character(SOMLIT_carbo_chemistry_missing_value$month)
+#from sept. 2013 to oct. 2023
 
-
-#number of measure by year :
-Nb_by_year_final <- summarise(group_by(SOMLIT_carbo_chemistry_missing_value, year), NB_OBS_Y=n())
-# must be 104 or 106
+data_EOL <- read_csv("../Data/SEANOE_EOL.csv", 
+    col_types = cols(...1 = col_skip()))
 
 
+#creation variables + number of days in the month (dMonth) :
+data_EOL <- data_EOL %>%
+  mutate(Year = format(datetime, format="%Y"),
+         Month = format(datetime, format="%m"),
+         Year.Month = format(datetime, format="%Y-%m"),
+         Year.Month.Day = format(datetime, format="%Y-%m-%d"),
+         dMonth = days_in_month(datetime),
+         datetime = as.POSIXct(datetime),
+         Hour = format(datetime, format="%H:%M:%S"),
+         datetime = format(datetime, format="%Y-%m-%d"))
 
+#Year.Month = as.POSIXct(paste(Year.Month, "-01", sep = ""), format = "%Y-%m-%d"))
 
-############ il faut remplir les dates manquantes 
-
-
-#number of measure by month by year :
-#Nb_by_month_final <- summarise(group_by(test, datetime), NB_OBS_M=n()) 
-#must be 8 or 10
-
-#Nb_by_month_final <- Nb_by_month_final %>% 
-#   mutate(Year.Month = as.Date(paste(Year.Month, "-01", sep = ""), format = "%Y-%m-%d"))
-# ##
-# 
-# view_2021 <- SOMLIT_carbo_chemistry_missing_value %>% dplyr::filter(year == "2020")
-# table(SOMLIT_carbo_chemistry$depth, SOMLIT_carbo_chemistry$year)
-# for (i in 1:12) {print(countTuesday(2020,i))}
-# 
-# #plot number of measure by month (2077-2022)
-# Nb_by_month_final %>% 
-#   ggplot() +
-#   aes(x=Year.Month, y=NB_OBS_M) +
-#   geom_line(group=1) + 
-#   scale_x_date(name="", date_breaks = "2 years", labels = year) + 
-#   scale_y_continuous(name="", limits=c(0,11)) +
-#   ggtitle("Evolution of number of observations by month at Point B (2007-2022)")
-  
 
 ```
+
+
+
+## **Number of measurements EOL**  
+  
+- per year :  
+  
+
+```{r Number of measurements EOL - per year, echo=FALSE, warning=FALSE, message=FALSE}
+
+#number of measure/year :
+Nb_by_year <- summarise(group_by(data_EOL, Year), NB_OBS_Y=n()) 
+
+
+#plot number of measure/year (2013-2022)
+Nb_by_year %>% 
+  ggplot() +
+  aes(x=Year, y=NB_OBS_Y) +
+  geom_point() +
+  geom_line(group=1) + 
+  scale_x_discrete(name="") + 
+  scale_y_continuous(name="") +
+  ggtitle("Evolution of number of observations per year - EOL (2007-2022)")
+
+```
+- per month :  
+  
+
+```{r Number of measurements EOL - per month, echo=FALSE, warning=FALSE, message=FALSE}
+
+#number of measure/month :
+Nb_by_month <- summarise(group_by(data_EOL, Year.Month), NB_OBS_M=n()) 
+
+Nb_by_month <- Nb_by_month %>% 
+  mutate(Year.Month = as.Date(paste(Year.Month, "-01", sep = ""), format = "%Y-%m-%d"))
+
+
+#plot number of measure/month (2007-2022)
+Nb_by_month %>% 
+  ggplot() +
+  aes(x=Year.Month, y=NB_OBS_M) +
+  geom_point() +
+  geom_line(group=1) + 
+  scale_x_date(name="") + 
+  scale_y_continuous(name="") +
+  ggtitle("Evolution of number of observations per month- EOL (2007-2022)")
+```
+
+- per day :  
+  
+Data every hour since oct. 2017  
+```{r Number of measurements EOL - per day, echo=FALSE, warning=FALSE, message=FALSE}
+
+#number of measure/month :
+Nb_by_day <- summarise(group_by(data_EOL, Year.Month.Day), NB_OBS_M=n()) 
+
+
+Nb_by_day <- Nb_by_day %>% 
+  mutate(Year.Month.Day = as.Date(Year.Month.Day))
+         
+
+
+#plot number of measure/month (2007-2022)
+Nb_by_day %>% 
+  ggplot() +
+  aes(x=Year.Month.Day, y=NB_OBS_M) +
+  geom_point() +
+  geom_line(group=1) + 
+  scale_x_date(name="") + 
+  scale_y_continuous(name="") +
+  ggtitle("Evolution of number of observations per day- EOL (2007-2022)")
+
+```
+
+A partir de 2017 :
+Faire d'abord 1 data/jour à 09h, tous les jours (EOL 1)
+
+Faire ensuite 2 data/jour : 09h et 16h ? tous les jours (EOL 2)
+
+Faire toutes les heures, tous les jours (EOL 3)  
+  
+  
+  
+
+#### *Measure EOL : one per day (at 8 or 9 or 10AM)*  
+  
+
+```{r Measure EOL : one per day (morning), echo=FALSE, warning=FALSE, message=FALSE}
+
+EOL_test1 <- data_EOL %>% 
+  filter(Year >= 2017) %>% 
+  filter(Hour == "08:00:00" | Hour == "09:00:00" | Hour == "10:00:00") %>% 
+  group_by(datetime) %>% 
+  mutate(NB_OBS_DAY = n())
+
+EOL_test1 <- EOL_test1 %>% mutate(cond = case_when(NB_OBS_DAY > 1 ~ "TRUE", TRUE ~ "FALSE"))
+
+tab1 <- EOL_test1 %>% filter(cond=="FALSE")
+tab2 <- EOL_test1 %>% filter(cond=="TRUE") %>% filter(Hour == "08:00:00")
+
+#tableau clean
+EOL_1 <- full_join(tab1, tab2) %>% 
+  group_by(datetime) %>% 
+  mutate(NB_OBS_DAY = n()) %>% 
+  select(datetime, Hour, temp_eol_c, sal_eol_psu, oxy_eol_mll, Year, Month, Year.Month, Year.Month.Day, dMonth, NB_OBS_DAY)
+
+#save :
+write.table(EOL_1, "EOL_17-22_1perday_morning.csv", sep=";", col.names = TRUE, row.names = FALSE)
+
+
+```
+
+
+#### *Measure EOL : twice per day (at 8AM and 4PM)*  
+  
+
+```{r Measure EOL : 2 per day (morning & afternoon), echo=FALSE, warning=FALSE, message=FALSE}
+
+EOL_test2 <- data_EOL %>% 
+  filter(Year >= 2017) %>% 
+  filter(Hour == "08:00:00" | Hour == "09:00:00" | Hour == "10:00:00" | Hour == "16:00:00")
+  
+
+EOL_test2 <- EOL_test2 %>% group_by(datetime) %>% filter(Hour == "08:00:00" | Hour == "16:00:00") %>%
+  mutate(NB_OBS_DAY = n())
+
+EOL_test2 <- EOL_test2 %>% mutate(cond = case_when(NB_OBS_DAY > 1 ~ "TRUE", TRUE ~ "FALSE"))
+EOL_test2 <- EOL_test2 %>% filter(cond=="TRUE")
+
+
+#tableau clean
+EOL_2 <- EOL_test2 %>%
+  select(datetime, Hour, temp_eol_c, sal_eol_psu, oxy_eol_mll, Year, Month, Year.Month, Year.Month.Day, dMonth, NB_OBS_DAY)
+
+
+#save :
+write.table(EOL_2, "EOL_17-22_2perday_morning_afternoon.csv", sep=";", col.names = TRUE, row.names = FALSE)
+
+
+```
+
+
+#### *Measure EOL : 23 per day (hourly)*  
+  
+
+```{r Measure EOL : 23 per day (hourly), echo=FALSE, warning=FALSE, message=FALSE}
+
+EOL_test3 <- data_EOL %>% 
+  dplyr::filter(Year >= 2017) %>% 
+  group_by(datetime) %>% 
+  mutate(NB_OBS_DAY = n()) # 1 to 24 obs per day
+
+
+EOL_test3 <- EOL_test3 %>% mutate(cond = case_when(NB_OBS_DAY >= 23 ~ "TRUE", TRUE ~ "FALSE"))
+EOL_test3 <- EOL_test3 %>% dplyr::filter(cond=="TRUE")
+
+
+#tableau clean
+EOL_3 <- EOL_test3 %>%
+  select(datetime, Hour, temp_eol_c, sal_eol_psu, oxy_eol_mll, Year, Month, Year.Month, Year.Month.Day, dMonth, NB_OBS_DAY)
+
+
+#save :
+write.table(EOL_3, "EOL_17-22_23perday_hourly.csv", sep=";", col.names = TRUE, row.names = FALSE)
+
+
+```
+
