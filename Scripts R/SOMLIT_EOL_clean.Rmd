@@ -524,10 +524,56 @@ Frequency : hourly
 
 ```{r importation data EOL, echo=FALSE, warning=FALSE, message=FALSE}
 
-#from sept. 2013 to oct. 2023
+#from sept. 2013 to oct. 2022
 
 data_EOL <- read_csv("../Data/SEANOE_EOL.csv", 
     col_types = cols(...1 = col_skip()))
+
+#data 2022 Samir :
+#from nov. 2022 to march 2023 :
+EOL_22 <- read_delim("../Data/temp_CTD_EOL_nov22_mar23.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+EOL_22 <- EOL_22 %>% 
+  mutate(month = case_when(month == "Nov" ~ "11",
+                           month == "Jan" ~ "1",
+                           month == "Feb" ~ "2",
+                           month == "Mar" ~ "3", TRUE ~ ""))
+EOL_22$month <- as.double(EOL_22$month)
+
+EOL_22 <- EOL_22 %>% 
+  unite(col='datetime', c('year', 'month', 'day'), sep='-0') %>% 
+  unite(col='datetime', c('datetime', 'hour'), sep=' ') %>% 
+  mutate(datetime = str_replace(datetime, "011", "11")) %>%
+  rename(temp_eol_c = temperature, sal_eol_psu = salinity, oxy_eol_mll = oxygen_umol_kg) %>% 
+  select(datetime, temp_eol_c, sal_eol_psu, oxy_eol_mll)
+ 
+
+#data 2022 SEAFET Samir (only temperature):
+#from nov. 2022 to march 2023 :
+
+EOL_seafet_22 <- read_csv("../Data/temp_SEAFET_EOL_nov22_mar23.csv", 
+    col_types = cols(...1 = col_skip())) %>% 
+  dplyr::filter(format(datetime, format="%m") == "12") %>% 
+  rename(temp_eol_c = T_seaF_sf)
+
+
+EOL_seafet_22 <- data.frame(datetime = EOL_seafet_22$datetime, 
+                            temp_eol_c = EOL_seafet_22$temp_eol_c,
+                            sal_eol_psu = NA,
+                            oxy_eol_mll = NA)                         
+
+
+
+#merge data_EOL with EOL_2022 and EOL_seafet_22 (december) to have complete series :
+data_EOL <- rbind(data_EOL, EOL_22)
+data_EOL <- rbind(data_EOL, EOL_seafet_22)
+data_EOL <- data_EOL %>% arrange(datetime)
+
+#save :
+write.table(data_EOL, "EOL_raw_complete_1323.csv", sep=";", col.names = TRUE, row.names = FALSE)
+
+##
 
 
 #creation variables + number of days in the month (dMonth) :

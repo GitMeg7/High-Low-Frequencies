@@ -44,7 +44,7 @@ library("berryFunctions")
 Frequency : Hourly  
 Unity : m/s
 
-```{r Importation data wind speed 2009-2022, echo=FALSE, warning=FALSE, message=FALSE}
+```{r Importation data wind speed, echo=FALSE, warning=FALSE, message=FALSE}
 
 #importation data wind speed (model) of Azur buoy (2009-2022) :
 Wind_Azur <- read_csv("../Data/Wind_speed_10m_Azur_buoy/model_wind_speed_AZUR.csv")
@@ -98,7 +98,7 @@ Wind_EOL %>%
 
 ```{r filter 9 AM, echo=FALSE, warning=FALSE, message=FALSE}
 
-Wind_EOL <- Wind_EOL %>% 
+Wind_EOL_9AM <- Wind_EOL %>% 
   mutate(Hour = format(date, format="%H:%M:%S")) %>% 
   dplyr::filter(Hour == "09:00:00") %>% 
   mutate(datetime = format(date, format="%Y-%m-%d"),
@@ -110,13 +110,16 @@ Wind_EOL <- Wind_EOL %>%
 
 
 
-#### *Data pCO2 water (µatm)*:  
+#### *Data pCO2 water SOMLIT (µatm)*:  
   
 period : jan.2007 - jan.2023 
   
 Frequency : Weekly (every tuesday at 09 AM)  
 Unity : µatm  
-
+  
+  
+→ Linear interpolation pCO2 water :  
+  
 ```{r importation data pCO2 water, echo=FALSE, warning=FALSE, message=FALSE}
 
 #period : jan. 2007 - jan. 2023
@@ -133,13 +136,23 @@ SOMLIT_pcO2 <- SOMLIT_pcO2 %>%
   mutate(salinity = case_when(salinity < 35 ~ NA_real_ , TRUE ~ salinity))
 
 
-summary(SOMLIT_pcO2)
+
+#linear interpolation pCO2 atmos :
+impute_pCO2_w <- na_interpolation(SOMLIT_pcO2$pCO2_w, option="linear")
+
+ggplot_na_imputations(SOMLIT_pcO2$pCO2_w, impute_pCO2_w, x_axis_labels = SOMLIT_pcO2$datetime, xlab = "", ylab="pCO2 (µatm)", 
+                      title="Water pCO2 (µatm) time series interpolation - period 2007-2022")
+
 
 #merge wind speed & SOMLIT :
-merge1 <- left_join(SOMLIT_pcO2, Wind_EOL, by="datetime")
+merge1 <- left_join(SOMLIT_pcO2, Wind_EOL_9AM, by="datetime")
 
 
 ```
+
+  
+→ Linear interpolation temperature & salinity :  
+  
 
 ```{r interpolation temp & salinity, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -149,24 +162,30 @@ impute_sal <- na_interpolation(SOMLIT_pcO2$salinity, option="linear")
 ggplot_na_imputations(SOMLIT_pcO2$temperature, impute_temp, x_axis_labels = SOMLIT_pcO2$datetime, xlab = "", ylab="Temp. (°C)", title="Point B - Temperature time series (°C) - period 2007-2022")
 ggplot_na_imputations(SOMLIT_pcO2$salinity, impute_sal, x_axis_labels = SOMLIT_pcO2$datetime, xlab = "", ylab="Salinity", title="Point B - Salinity time series - period 2007-2022")
 
+
+merge1 <- merge1 %>% 
+  mutate(impute_temp = impute_temp, impute_sal = impute_sal)
+
+
 ```
 
 ```{r interpolation AT & CT, echo=FALSE, warning=FALSE, message=FALSE}
 
 impute_ta <- na_interpolation(SOMLIT_pcO2$ta, option="linear")
 #faire pour CT
-impute_sal <- na_interpolation(SOMLIT_pcO2$salinity, option="linear")
+#impute_CT <- na_interpolation()
 
-ggplot_na_imputations(SOMLIT_pcO2$ta, impute_ta, x_axis_labels = SOMLIT_pcO2$datetime, xlab = "", ylab="AT (µmol/kg)", title="Point B - Total alkalinity time series (µmol/kg) - period 2007-2022")
+ggplot_na_imputations(SOMLIT_pcO2$ta, impute_ta, x_axis_labels = SOMLIT_pcO2$datetime, xlab = "", ylab="AT (µmol/kg)", 
+                      title="Point B - Total alkalinity time series (µmol/kg) - period 2007-2022")
 #faire pour CT
-ggplot_na_imputations(SOMLIT_pcO2$salinity, impute_sal, x_axis_labels = SOMLIT_pcO2$datetime, xlab = "", ylab="Salinity", title="Point B - Salinity time series - period 2007-2022")
+# ggplot_na_imputations(SOMLIT_pcO2$, impute_CT, x_axis_labels = SOMLIT_pcO2$datetime, xlab = "", ylab="CT", 
+#                       title="Point B - Total Carbon time series (µmol/kg) - period 2007-2022")
+
+
+# merge1 <- merge1 %>% 
+#   mutate(impute_ta = impute_ta)
 
 ```
-
-
-
-
-
 
 
 #### *Data pCO2 air (µatm)*:  
@@ -175,8 +194,10 @@ period : jan.2007 - jan.2023
   
 Frequency : Hourly
 Unity : µatm  
-
-Corse Ersa (40m) - 2013-2020  
+  
+→ Corse Ersa (40m) - 2013-2020  
+→ Plateau Rosa (10m) - 2007-2022  
+→ Lampedusa (10m) - 2006-2022  
   
 ```{r importation data pCO2 air, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -192,7 +213,7 @@ pCO2_CORSE <- pCO2_CORSE[-65900,]
 pCO2_CORSE <- pCO2_CORSE %>% 
   unite(col='datetime', c('Year', 'Month', 'Day'), sep='-') %>% 
   unite(col='time', c('Hour', 'Minute'), sep=':') %>% 
-  filter(time == "09:00")
+  dplyr::filter(time == "09:00")
 
 #data sorting :
 pCO2_CORSE <- pCO2_CORSE %>% 
@@ -213,7 +234,7 @@ pCO2_PLATEAU_ROSA <- read_delim("../Data/atmospheric_co2_PLATEAU_ROSA_2007_2022.
 pCO2_PLATEAU_ROSA <- pCO2_PLATEAU_ROSA %>% 
   unite(col='datetime', c('Year', 'Month', 'Day'), sep='-') %>% 
   unite(col='time', c('Hour', 'Minute'), sep=':') %>% 
-  filter(time == "09:00")
+  dplyr::filter(time == "09:00")
 
 
 #data sorting :
@@ -235,7 +256,7 @@ pCO2_LAMPEDUSA <- read_delim("../Data/atmospheric_co2_LAMPEDUSA_2006_2022.CO2",
 pCO2_LAMPEDUSA <- pCO2_LAMPEDUSA %>% 
   unite(col='datetime', c('Year', 'Month', 'Day'), sep='-') %>% 
   unite(col='time', c('Hour', 'Minute'), sep=':') %>% 
-  filter(time == "09:00")
+  dplyr::filter(time == "09:00")
 
 #data sorting :
 pCO2_LAMPEDUSA <- pCO2_LAMPEDUSA %>% 
@@ -255,60 +276,81 @@ merge3 <- left_join(merge3, pCO2_LAMPEDUSA, by="datetime") #281 NA
 
 ```
 
+###### Interpolation of atmospheric pCO2 :  
+  
+→ Cross interpolation between 3 atmospheric sites : Corsica x Lampedusa x Plateau Rosa  
+  
+→ Then, linear interpolation :  
+*(+ conversion dry mol fraction into µatm)*  
+  
+```{r conversion dry mol fraction + interpolation data pCO2 air, echo=FALSE, warning=FALSE, message=FALSE}
 
-```{r interpolation data pCO2 air, echo=FALSE, warning=FALSE, message=FALSE}
-#jen suis la
-impute_pCO2_atmos <- na_interpolation(merge3$salinity, option="linear")
+#pCO2_atmos = interpolation between 3 sites (Corsica x Lampedusa x Plateau Rosa)
 
-ggplot_na_imputations(SOMLIT_pcO2$ta, impute_ta, x_axis_labels = SOMLIT_pcO2$datetime, xlab = "", ylab="AT (µmol/kg)", title="Point B - Total alkalinity time series (µmol/kg) - period 2007-2022")
+merge3 <- merge3 %>% 
+  mutate(CO2_CORSE = str_replace_na(CO2_CORSE, replacement = "NA"),
+         CO2_PR = str_replace_na(CO2_PR, replacement = "NA"),
+         CO2_LAMP = str_replace_na(CO2_LAMP, replacement = "NA"),
+         pCO2_atmos_dry = case_when(CO2_CORSE == "NA" ~ CO2_LAMP, TRUE ~ CO2_CORSE),
+         pCO2_atmos_dry = case_when(pCO2_atmos_dry == "NA" ~ CO2_PR, TRUE ~ pCO2_atmos_dry))
+
+merge3 <- merge3 %>% 
+  mutate(CO2_CORSE = as.numeric(CO2_CORSE),
+         CO2_PR = as.numeric(CO2_PR),
+         CO2_LAMP = as.numeric(CO2_LAMP),
+         pCO2_atmos_dry = as.numeric(pCO2_atmos_dry)) #102 NAs
+
+
+
+#conversion dry mol fraction pCO2 air into µatm :
+merge3 <- merge3 %>% 
+  mutate(pCO2_atmos = x2pCO2(S=35, T=25, Patm=1.0, xCO2=pCO2_atmos_dry))
+
+
+
+#linear interpolation pCO2 atmos :
+impute_pCO2_atmos <- na_interpolation(merge3$pCO2_atmos, option="linear")
+
+ggplot_na_imputations(merge3$pCO2_atmos, impute_pCO2_atmos, x_axis_labels = merge3$datetime, xlab = "", ylab="pCO2 (µatm)", 
+                      title="Atmospheric pCO2 (µatm) time series interpolation - period 2007-2022")
+
+merge3 <- merge3 %>% 
+  mutate(impute_pCO2_atmos = impute_pCO2_atmos)
 
 ```
-
-
 
 
 ```{r calcul delta pCO2, echo=FALSE, warning=FALSE, message=FALSE}
 
-#fusion pCO2 air Corsica & Plateau Rosa
-merge3$CO2_CORSE[is.na(merge3$CO2_CORSE)] <- "NA"
-merge3$CO2_PR[is.na(merge3$CO2_PR)] <- "NA"
-merge3$CO2_LAMP[is.na(merge3$CO2_LAMP)] <- "NA"
-
-merge3 <- merge3 %>% 
-  mutate(pCO2_air = case_when(CO2_CORSE == "NA" ~ CO2_PR, TRUE ~ CO2_CORSE),
-         pCO2_air = case_when(pCO2_air == "NA" ~ CO2_LAMP, TRUE ~ pCO2_air),
-         pCO2_air = as.numeric(pCO2_air))
-##
-
-#calcul of delta pCO2 = pCO2 water - pCO2 air :
+#calculation delta pCO2 = pCO2 water - pCO2 air :
 merge3 <- merge3 %>%
-  mutate(delta_CO2 = pCO2_w - pCO2_air)
+  mutate(delta_pCO2 = impute_pCO2_w - impute_pCO2_atmos)
 
-
-summary(merge3)
 
 ```
 
+  
 
-
-## Air-surface CO~2~ flux (with data wind speed complete)  
+## Air-surface CO~2~ flux  
+  
   
 ### Flux calculation  
-Method used : Wanninkhof (2014)  
   
 → **negative values = flux into the ocean**  
+  
+  
+Method used : Wanninkhof (2014)  
+  
 
 ```{r calcul flux, echo=FALSE, warning=FALSE, message=FALSE}
 
 #Calcul of F
-merge3 <- merge3 %>% 
-    mutate(Flux_CO2_2014 = 0.00077 * speed_ms^2 * delta_CO2)
-
-summary(merge3)
+tab_flux <- merge3 %>% 
+    mutate(Flux_CO2_2014 = 0.00077 * speed_ms^2 * delta_pCO2)
 
 
 #plot Flux Wanninkhof 2014 :
-merge3 %>% 
+tab_flux %>% 
   ggplot() + 
   aes(x=datetime, y=Flux_CO2_2014) + 
   geom_line(col="#967C5C") +
@@ -317,22 +359,127 @@ merge3 %>%
   ggtitle("CO2 fluxes ocean-atmosphere (Wanninkhof 2014)")
 
 ```
-###################
+Method used : Wanninkhof (1992)  
+  
+   
+Formulas :  
+  
+-   K600 = 0.266 \* U²  
+  
+-   SC = 2073.1 - (125.62 \* T) + (3.6276 \* T²) - (0.043219 \* T\^3)  
+  
+-   k = K600 \* (SC/600)\^0.5  
+  
+-   K0 = Henry's constant (seacarb)  
+  
+  
+Final formula : F = k \* K0 \* ΔpCO2  
+  
+unity : mol of C / m² / year  
+  
+```{r calcul Flux Wanninkhof (1992), echo=FALSE, warning=FALSE, message=FALSE}
+
+tab_flux <- tab_flux %>% 
+  mutate(SC = 2073.1 - (125.62 * impute_temp) + (3.6276 * impute_temp^2) - (0.043219 * impute_temp^3),
+         K600 = 0.266 * speed_ms^2,
+         k = K600 * (SC/600)^0.5,
+         rho = rho(S=impute_sal, T=impute_temp, P=0)/1000,
+         K0 = (K0(S=impute_sal, T=impute_temp, P=0, Patm=1, warn="n")),
+         K0 = (K0 * rho)/1000000, 
+         Flux_wan_92 = (k * K0 * delta_pCO2)*10*24*365)
+
+##unity steps :
+
+#K0 en mol/kg/atm
+#rho (density of water) en kg/m3
+#donc rho/1000 = kg/L
+#donc K0*(rho/1000) = mol/l/atm
+
+#K0/10^6 pour passer de mol/L/atm a mol/L/µatm
+
+#Flux*10 pour passer de 10 mol/m²/h a mol/m²/h
+#Flux*24*365 pour passer de mol/m²/h a mol/m²/y
 
 
-```{r comparison table, echo=FALSE, warning=FALSE, message=FALSE}
+#plot Flux wanninkhof 1992 :
+tab_flux %>% 
+  ggplot() + 
+  aes(x=datetime, y=Flux_wan_92) + 
+  geom_line(col="#677179") +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Flux (mol/m²/y)") +
+  ggtitle("CO2 fluxes ocean-atmosphere (Wanninkhof 1992)")
 
-comparison_table_wind <- data.frame(test3$datetime, test3$Flux_CO2, test3$Flux_NC)
 
-comparison_table_wind <- comparison_table_wind %>% 
-  mutate(delta = test3$Flux_CO2 - test3$Flux_NC)
+```
+  
+Method used : David T. Ho (2023)  
+  
+Formulas :  
+  
+-   K600 = 0.143 \* U²  
+  
+-   SC = 2073.1 - (125.62 \* T) + (3.6276 \* T²) - (0.043219 \* T\^3)  
+    or gas_schmidt() function of marelac package (same result)
+  
+-   k = K600 \* (SC/600)\^0.5  
+  
+-   K0 = Henry's constant (seacarb)
+Final formula : F = k \* K0 \* ΔpCO2  
+  
+unity : mol of C / m² / year
 
-colnames(comparison_table_wind) <- c("Datetime", "Flux_C", "Flux_NC", "Delta")
 
-comparison_table_wind
+```{r calcul Flux David T. Ho (2023), echo=FALSE, warning=FALSE, message=FALSE}
+
+tab_flux <- tab_flux %>% 
+  mutate(K600_M3 = 0.143 * speed_ms^2,
+         Flux_HO = ((K600_M3*(SC/600)^0.5) * K0 * delta_pCO2)*10*24*365)
+
+#plot Flux David T. Ho (2023) :
+tab_flux %>% 
+  ggplot() + 
+  aes(x=datetime, y=Flux_HO) + 
+  geom_line(col="#24445C") +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Flux (mol/m²/y)") +
+  ggtitle("CO2 fluxes ocean-atmosphere (David T. Ho 2023)")
+
+```
+  
+Summary table of 3 calculation methods results (Wanninkhof 1992 & 2014, David T. Ho 2023) :  
+  
+  
+```{r 3 methods comparison table, echo=FALSE, warning=FALSE, message=FALSE}
+
+summary_table <- data.frame(tab_flux$datetime, tab_flux$Flux_wan_92, tab_flux$Flux_CO2_2014, tab_flux$Flux_HO)
+
+colnames(summary_table) <- c("Datetime", "Flux_wan_92", "Flux_wan_2014", "Flux_Ho_2023")
+
+summary_table[104:837,]
 
 
 ```
 
+Plot comparing the 3 CO~2~ flux calculation results :  
+  
+
+```{r 3 methods comparison - plot, echo=FALSE, warning=FALSE, message=FALSE}
+
+#creation column for legend
+tab_flux_long <- tab_flux %>% 
+  rename(`Flux W (1992)` = Flux_wan_92, `Flux W (2014)` = Flux_CO2_2014,  `Flux Ho (2023)` = Flux_HO) %>% 
+  pivot_longer(cols=c(`Flux W (1992)`, `Flux W (2014)`, `Flux Ho (2023)`), names_to = "Legend", values_to = "value")
+
+#plot
+tab_flux_long %>% 
+  ggplot() +
+  ggtitle("CO2 fluxes ocean-atmosphere (3 methods comparison)") +
+  geom_line(aes(x=datetime, y=value, color= Legend), size=0.5) +
+  scale_y_continuous(name="CO2 flux (mol/m²/y)") + 
+  scale_x_datetime(name="")
+
+
+```
 
 

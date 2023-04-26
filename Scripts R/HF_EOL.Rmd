@@ -59,16 +59,17 @@ Mytheme <- function(size_labs = 6, face_font="plain", ...) {
 ```{r importation Data EOL raw, echo=FALSE, warning=FALSE, message=FALSE}
 
 #period : septembre 2013-octobre 2022
-EOL_RAW <- read_csv("../Data/SEANOE_EOL.csv")  
+EOL_RAW <- read_delim("../Data/EOL_raw_complete_1323.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)  
 
 #tri
 EOL_RAW <- EOL_RAW %>% 
   rename(temperature = temp_eol_c, salinity = sal_eol_psu, oxygen = oxy_eol_mll) %>% 
-  select(-...1) %>% 
   mutate(Year.Month = format(datetime, format="%Y-%m"),
          Year = format(datetime, format="%Y"),
          Year.Month.Day = format(datetime, format="%Y-%m-%d"),
-         Month = format(datetime, format="%m"))
+         Month = format(datetime, format="%m"),
+         oxygen = case_when(oxygen > 10 ~ NA_real_, TRUE ~ oxygen))
 
 summary(EOL_RAW) 
 
