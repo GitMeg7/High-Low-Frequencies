@@ -100,7 +100,7 @@ Wind_EOL %>%
 
 Wind_EOL <- Wind_EOL %>% 
   mutate(Hour = format(date, format="%H:%M:%S")) %>% 
-  filter(Hour == "09:00:00") %>% 
+  dplyr::filter(Hour == "09:00:00") %>% 
   mutate(datetime = format(date, format="%Y-%m-%d"),
          datetime = as.POSIXct(datetime)) %>% 
   select(datetime, speed_ms)
@@ -137,6 +137,7 @@ summary(SOMLIT_pcO2)
 
 #merge wind speed & SOMLIT :
 merge1 <- left_join(SOMLIT_pcO2, Wind_EOL, by="datetime")
+
 
 ```
 
