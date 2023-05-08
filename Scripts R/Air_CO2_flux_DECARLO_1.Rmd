@@ -371,10 +371,11 @@ corse_PR_long <- corse_PR %>%
 #plot
 corse_PR_long %>% 
   ggplot() +
-  ggtitle("Atmospheric pCO2 of Corsica and Plateau Rosa sites (ICOS) according to time") +
+  ggtitle("Atmospheric pCO2 of Corsica and Plateau Rosa sites according to time") +
   geom_point(aes(x=datetime, y=value, color= Legend), size=0.5) +
   scale_y_continuous(name="Atmospheric pCO2 (µatm)") + 
-  scale_x_datetime(name="")
+  scale_x_datetime(name="") +
+  scale_colour_discrete(type=c("#E9383F", "#175732"))
 ##
 
 #scatter plot :
@@ -385,7 +386,7 @@ corse_PR %>%
   stat_smooth(method="lm", formula = y ~ x) +
   scale_x_continuous(name="Plateau Rosa") +
   scale_y_continuous(name="Corsica") +
-  ggtitle("Relationship between Corsica and Plateau Rosa sites for pCO2 atmospheric measurements (µatm)")
+  ggtitle("Relationship between Corsica and Plateau Rosa sites")
 
 #slope + intercept
 
@@ -393,7 +394,7 @@ reg_corse_PR <- lm(data = corse_PR, CO2_CORSE ~ CO2_PR)
 slope_corse_PR <- reg_corse_PR$coefficients[[2]]
 intercept_corse_PR <- reg_corse_PR$coefficients[[1]]
 
-
+summary(reg_corse_PR)
 
 ```
 
@@ -418,10 +419,11 @@ corse_LAMP_long <- corse_LAMP %>%
 #plot
 corse_LAMP_long %>% 
   ggplot() +
-  ggtitle("Atmospheric pCO2 of Corsica and Lampedusa sites (ICOS) according to time") +
+  ggtitle("Atmospheric pCO2 of Corsica and Lampedusa sites according to time") +
   geom_point(aes(x=datetime, y=value, color= Legend), size=0.5) +
   scale_y_continuous(name="Atmospheric pCO2 (µatm)") + 
-  scale_x_datetime(name="")
+  scale_x_datetime(name="") + 
+  scale_colour_discrete(type=c("#E9383F", "#22427C"))
 ##
 
 #scatter plot :
@@ -432,7 +434,7 @@ corse_LAMP %>%
   stat_smooth(method="lm", formula = y ~ x) +
   scale_x_continuous(name="Lampedusa") +
   scale_y_continuous(name="Corsica") +
-  ggtitle("Relationship between Corsica and Lampedusa sites for pCO2 atmospheric measurements (µatm)")
+  ggtitle("Relationship between Corsica and Lampedusa sites")
 
 #slope + intercept
 
@@ -440,7 +442,7 @@ reg_corse_LAMP <- lm(data = corse_LAMP, CO2_CORSE ~ CO2_LAMP)
 slope_corse_LAMP <- reg_corse_LAMP$coefficients[[2]]
 intercept_corse_LAMP <- reg_corse_LAMP$coefficients[[1]]
 
-
+summary(reg_corse_LAMP)
 
 ```
 

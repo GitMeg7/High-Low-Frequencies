@@ -62,6 +62,7 @@ Mytheme <- function(size_labs = 6, face_font="plain", ...) {
 EOL_RAW <- read_delim("../Data/EOL_raw_complete_1323.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)  
 
+
 #tri
 EOL_RAW <- EOL_RAW %>% 
   rename(temperature = temp_eol_c, salinity = sal_eol_psu, oxygen = oxy_eol_mll) %>% 
@@ -83,7 +84,7 @@ EOL_RAW %>%
   geom_point(aes(x=datetime, y=temperature), size=0.6, col="#960018") + 
   geom_point(aes(x=datetime, y=salinity), size=0.6, col="#18391E") +
   geom_point(aes(x=datetime, y=oxygen), size=0.6, col="#357AB7") +
-  scale_x_datetime(name="") + 
+  scale_x_date(name="") + 
   scale_y_continuous(name="Temp. (°C)") + 
   ggtitle("High frequency surface data (2013-2022) - EOL buoy")
 
@@ -123,9 +124,10 @@ merge_EOL_SOMLIT_long <- merge_EOL_SOMLIT %>%
 merge_EOL_SOMLIT_long %>% 
   ggplot() +
   ggtitle("HF (EOL) vs LF (Point B) surface temperature (2013-2022)") +
-  geom_point(aes(x=datetime, y=value, color= Legend), size=1) +
+  geom_line(aes(x=datetime, y=value, color= Legend), size=1) +
   scale_y_continuous(name="Temp.(°C)") + 
-  scale_x_datetime(name="")
+  scale_x_date(name="") + 
+  scale_colour_discrete(type=c("#AE642D","#24445C"))
 
 
 # relier les points pour somlit
@@ -210,7 +212,7 @@ EOL_monthly_means %>%
   ggtitle("Temperature observations (blue) and monthly means calculated (brown)") +
   geom_point(aes(x=datetime, y=temperature), size=1, col="#357AB7") +
   geom_line(aes(x=datetime, y=Temperature_month), size=0.8, col="#856D4D") +
-  scale_x_datetime(name="") +
+  scale_x_date(name="") +
   scale_y_continuous(name="Temp. (°C)")
 ```
 
@@ -343,11 +345,11 @@ reg_anomalies_raw
 
 
 plot_ano_temp_EOL_raw <- ggplot(data = anomalies, aes(x = datetime, y = Temperature_ano), na.rm=TRUE) +
-  scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  scale_x_date(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_point(colour="blue", na.rm=TRUE, size=0.65) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
   labs(title=NULL,x="", y="Temp. (°C)") +
-  annotate("text", x =as.POSIXct("2016-01-01"), y= min(anomalies$Temperature_ano, na.rm=TRUE), 
+  annotate("text", x =as.Date("2016-01-01"), y= min(anomalies$Temperature_ano, na.rm=TRUE), 
            label="", colour="black", size=9, fontface="plain") +
   coord_fixed() +
   Mytheme(size_labs = 8) +
@@ -357,10 +359,10 @@ plot_ano_temp_EOL_raw <- ggplot(data = anomalies, aes(x = datetime, y = Temperat
 plot_temp_EOL_raw <- EOL_RAW %>% 
   ggplot() +
   aes(x=datetime, y=temperature) + 
-  geom_point(size=1) +
-  scale_x_datetime(name="") +
+  geom_line(size=0.7, col = "#030303",) +
+  scale_x_date(name="") +
   scale_y_continuous(name="Temp. (°C)") +
-  ggtitle("EOL time series observations of temperature (°C) 2013-2022")
+  ggtitle("EOL temperature time series (°C) 2013-2022")
 
 plot_temp_EOL_raw
 plot_ano_temp_EOL_raw
@@ -383,15 +385,48 @@ plot_ano_sal_EOL_raw <- ggplot(data = anomalies, aes(x = datetime, y = Salinity_
   ggtitle("EOL - Salinity anomalies + trend")
 
 plot_sal_EOL_raw <- EOL_RAW %>% 
+  mutate(salinity = case_when(salinity <=35 ~ NA_real_, TRUE ~ salinity)) %>% 
   ggplot() +
   aes(x=datetime, y=salinity) + 
-  geom_point(size=1) +
+  geom_line(size=0.7, col = "#1B4F08") +
   scale_x_datetime(name="") +
   scale_y_continuous(name="Salinity") +
-  ggtitle("EOL time series observations of salinity  2013-2022")
+  ggtitle("EOL salinity time series (2013-2022)")
 
 plot_sal_EOL_raw
 plot_ano_sal_EOL_raw
+
+
+```
+```{r Travail sur oxygen, echo=FALSE, warning=FALSE, message=FALSE}
+
+
+#conversion des valeurs ml/l en umol/kg (voire protocole oxygene SOMLIT)
+# *44.66 -> mmol/m3 ou umol/l
+# densite eau de mer = 1030 kg/m3 = 1.030 kg/l
+#ici, utilisation de rho, package seacarb pour calcul de la densité
+#rho/1000 pour avoir en kg/l
+# 44.66/rho = convert_o2
+# ml/l * convert_o2 -> umol/kg
+
+#creation des 2 variables
+test_oxy <- EOL_RAW %>% 
+  mutate(SW_density = rho(S = salinity, T=temperature, P=0)/1000,
+         Conver_o2 = 44.66/SW_density,
+         O2_umol_kg = oxygen*Conver_o2)
+
+## 
+
+#plot :
+
+test_oxy %>% 
+  ggplot() +
+  aes(x=datetime, y=O2_umol_kg) + 
+  geom_line(size=0.7, col = "#77B5FE") +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Oxygen (mol/kg)") +
+  ggtitle("EOL oxygen time series (2017-2022)")
+
 
 ```
 
@@ -1314,13 +1349,24 @@ pelagic_coast <- pelagic_coast %>%
 
 ```{r plot pelagic and costal temperatures, echo=FALSE, warning=FALSE, message=FALSE}
 
-pelagic_coast %>% 
-  ggplot() +
-  ggtitle("Coastal (EOL) & pelagic (Azur) SST observations (2013-2022)") +
-  geom_point(aes(x=datetime, y=temperature), size=0.8, col="#A5260A") +
-  geom_point(aes(x=datetime, y=temp_pelag), size=0.8, col="#3A8EBA")
 
-#put legend
+pelagic_coast_plot_long <- pelagic_coast %>% 
+  rename(`Coast temp. (EOL)` = temperature, `Pelagic temp. (Azur)` = temp_pelag) %>% 
+  pivot_longer(cols = c(`Coast temp. (EOL)`, `Pelagic temp. (Azur)`), 
+               names_to = "Legend", values_to = "value")
+
+#plot
+pelagic_coast_plot <- pelagic_coast_plot_long %>% 
+  ggplot() +
+  ggtitle("Coastal & offshore SST observations (2013-2022)") +
+  geom_line(aes(x=datetime, y=value, color= Legend), size=0.5) +
+  scale_y_continuous(name="Temp. (°C)") + 
+  scale_x_datetime(name="") + 
+  scale_colour_discrete(type=c("#9683EC", "#067790"))
+
+pelagic_coast_plot
+
+
 
 ```
   
@@ -1331,10 +1377,10 @@ pelagic_coast %>%
   
 ```{r  scatterplot pelagic vs costal temperatures, echo=FALSE, warning=FALSE, message=FALSE}
 
-pelagic_coast %>% 
+pelagic_coast_scatter_plot <- pelagic_coast %>% 
   ggplot() +
   aes(x=temp_pelag, y=temperature) +
-  geom_point() +
+  geom_point(size = 0.7) +
   stat_smooth(method="lm", formula = y ~ x) +
   scale_x_continuous(name="Pelagic Temp. (Azur)") +
   scale_y_continuous(name="Coastal Temp. (EOL)")
@@ -1344,8 +1390,14 @@ reg_pelagic_coast <- lm(data = pelagic_coast, temperature ~ temp_pelag)
 slope_pelagic_coast <- reg_pelagic_coast$coefficients[[2]]
 intercept_pelagic_coast <- reg_pelagic_coast$coefficients[[1]]
 
+ggsave(filename = "pelagic_coast_scatter_plot.jpg", # Nommez le fichier dans lequel vous voulez enregistrer, ajoutez l'extension du format de fichier que vous voulez utiliser (ex. pdf).
+       plot = pelagic_coast_scatter_plot, # Fournir le nom de l'objet plot dans R
+       height = 6, # Fournir les dimensions voulues
+       width = 10, 
+       units = "in") 
 
 
+summary(reg_pelagic_coast)
 ```
 
 

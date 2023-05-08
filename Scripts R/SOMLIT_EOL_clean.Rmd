@@ -34,6 +34,7 @@ library("marelac")
 library("kableExtra")
 library("stringr")
 library("berryFunctions")
+library("hms")
 ```
 
 ## Importation data carbo chemistry (Point B SOMLIT) : 2007-2022 complete
@@ -444,7 +445,7 @@ SOMLIT_carbo_chemistry_missing_value <- SOMLIT_carbo_chemistry_missing_value %>%
 ```
 
 
-```{r}
+```{r ajout MAJ pangaea, echo=FALSE, warning=FALSE, message=FALSE}
 
 #ajout maj Pangaea (mail Samir) : 
 new_SOMLIT <- read_csv("../Data/SOMLIT_MAJ_Samir.csv") %>% mutate(depth = str_replace(depth, "1", "0"))
@@ -509,48 +510,184 @@ new_one <- new_one %>%
          fCO2insitu, pCO2insitu, HCO3, CO3, OmegaAragonite, OmegaCalcite, Nta, Ndic, pH18, Year.Month, Year, Month)
 
 
+```
+
+```{r pH calcultations, echo=FALSE, warning=FALSE, message=FALSE}
+
+###############################################################
+#part pH :
+#pH calc (fonction carb with ta & dic)
+#flag15 = alk & dic
+
+new_one$depth <- as.numeric(new_one$depth)
+
+new_one_drop_na <- new_one %>% 
+  tidyr::drop_na(salinity, temperature, ta, dic)
+
+carb <- seacarb::carb(flag=15, var1=new_one_drop_na$ta*1e-6, var2=new_one_drop_na$dic*1e-6,
+             S=new_one_drop_na$salinity, T=new_one_drop_na$temperature, P=new_one_drop_na$depth/10,
+             Pt=1e-6*new_one_drop_na$Pt, Sit=1e-6*new_one_drop_na$Sit, 
+             k1k2 = "l", kf = "pf", pHscale = "T", b="l10")
+
+pH_meg <- data.frame(sampling_date=new_one_drop_na$sampling_date, depth=carb$P*10 ,pH_calc_meg=carb$pH)
+
+new_one_drop_na <- new_one_drop_na %>% select("sampling_date")
+
+carb_date <- cbind(new_one_drop_na, carb) %>% mutate(depth=P*10)
+  
+new_one <- left_join(new_one, carb_date, by=c("sampling_date","depth"))
+##
+
+#pH18 calculation (fonction pHinsi) :
+#pH normalized (without temperature effect)
+
+new_one_drop_na_2 <- new_one %>% 
+  tidyr::drop_na(salinity, temperature, ta, pH)
+
+pHat18 <- seacarb::pHinsi(pH=new_one_drop_na_2$pH, ALK=new_one_drop_na_2$ta*1e-6, Tinsi=18,
+                            Tlab=new_one_drop_na_2$temperature, S=new_one_drop_na_2$salinity,
+                            Pt=1e-6*new_one_drop_na_2$Pt, Sit=1e-6*new_one_drop_na_2$Sit,
+                            k1k2 = "l", kf = "pf", pHscale = "T")
+
+pH_18_meg <- data.frame(sampling_date=carb_date$sampling_date, depth=carb_date$P*10 ,pH_18=pHat18)
+
+new_one <- left_join(new_one, pH_18_meg, by=c("sampling_date","depth"))
+
+#sorting data :
+
+new_one <- new_one %>% 
+  mutate(temperature = case_when(temperature == NA_real_ ~ T, TRUE ~ temperature),
+         salinity = case_when(salinity == NA_real_ ~ S, TRUE ~ salinity),
+         ta = case_when(ta == NA_real_ ~ ALK, TRUE ~ ta),
+         dic = case_when(dic == NA_real_ ~ DIC, TRUE ~ dic),
+         Patm = case_when(Patm.x == NA_real_ ~ Patm.y, TRUE ~ Patm.x),
+         P = case_when(P.x == NA_real_ ~ P.y, TRUE ~ P.x),
+         pH_calc = case_when(pH_calc == NA_real_ ~ pH, TRUE ~ pH_calc),
+         CO2 = case_when(CO2.x == NA_real_ ~ CO2.y, TRUE ~ CO2.x),
+         fCO2 = case_when(fCO2.x == NA_real_ ~ fCO2.y, TRUE ~ fCO2.x),
+         pCO2 = case_when(pCO2.x == NA_real_ ~ pCO2.y, TRUE ~ pCO2.x),
+         fCO2pot = case_when(fCO2pot.x == NA_real_ ~ fCO2pot.y, TRUE ~ fCO2pot.x),
+         pCO2pot = case_when(pCO2pot.x == NA_real_ ~ pCO2pot.y, TRUE ~ pCO2pot.x),
+         fCO2insitu = case_when(fCO2insitu.x == NA_real_ ~ fCO2insitu.y, TRUE ~ fCO2insitu.x),
+         pCO2insitu = case_when(pCO2insitu.x == NA_real_ ~ pCO2insitu.y, TRUE ~ pCO2insitu.x),
+         HCO3 = case_when(HCO3.x == NA_real_ ~ HCO3.y, TRUE ~ HCO3.x),
+         CO3 = case_when(CO3.x == NA_real_ ~ CO3.y, TRUE ~ CO3.x),
+         OmegaAragonite = case_when(OmegaAragonite.x == NA_real_ ~ OmegaAragonite.y, TRUE ~ OmegaAragonite.x),
+         OmegaCalcite = case_when(OmegaCalcite.x == NA_real_ ~ OmegaCalcite.y, TRUE ~ OmegaCalcite.x),
+         pH_18 = case_when(pH18 == NA_real_ ~ pH_18, TRUE ~ pH18))
+
+
+new_one <- new_one %>% 
+  select(c("sampling_date", "depth", "temperature", "salinity", "ta", "dic", "NO2", "NO3", "Chla", "pH_s_somlit_temp_25",
+           "pH_s_somlit_temp_insi", "diff_pH", "pH_insi", "Pt", "Sit", "quarter", "monthd", "week", "Patm", "P", "pH_calc",
+           "CO2", "fCO2", "pCO2", "fCO2pot", "pCO2pot", "fCO2insitu", "pCO2insitu", "HCO3", "CO3", "OmegaAragonite", "OmegaCalcite",
+           "pH_18", "Nta", "Ndic", "Year.Month", "Year", "Month"))
+
+
 
 #save :
-write.table(new_one, "DATA_SOMLIT_07-23_CLEAN.csv", sep=";", col.names = TRUE, row.names = FALSE)
+#write.table(new_one, "DATA_SOMLIT_07-23_CLEAN.csv", sep=";", col.names = TRUE, row.names = FALSE)
+
 
 ```
 
 
 
   
-## Importation data EOL : 2013-2022   
+### Raw data EOL (seanoe) : sept.2013 - october.2022   
   
-Frequency : hourly
-
-```{r importation data EOL, echo=FALSE, warning=FALSE, message=FALSE}
+Frequency : hourly  
+  
+→ oxygen in ml/l convert into micromol/kg  
+  
+```{r importation data EOL raw + convert into umol/kg, echo=FALSE, warning=FALSE, message=FALSE}
 
 #from sept. 2013 to oct. 2022
+#stop at october 2022
+#oxygen in mll/l
 
-data_EOL <- read_csv("../Data/SEANOE_EOL.csv", 
+data_EOL_raw <- read_csv("../Data/SEANOE_EOL.csv", 
     col_types = cols(...1 = col_skip()))
 
-#data 2022 Samir :
-#from nov. 2022 to march 2023 :
+
+#conversion des valeurs ml/l en umol/kg (voire protocole oxygene SOMLIT)
+# *44.66 -> mmol/m3 ou umol/l
+# densite eau de mer = 1030 kg/m3 = 1.030 kg/l
+#ici, utilisation de rho, package seacarb pour calcul de la densité
+#rho/1000 pour avoir en kg/l
+# 44.66/rho = convert_o2
+# ml/l * convert_o2 -> umol/kg
+
+#creation des 2 variables
+SW_density <- rho(S = data_EOL_raw$sal_eol_psu, T=data_EOL_raw$temp_eol_c, P=0)/1000
+convert_o2 <- 44.66/SW_density
+
+#creation colonne o2 converti en umol/kg
+data_EOL <- data_EOL_raw %>% 
+  mutate(oxy_umol_kg = oxy_eol_mll*convert_o2) %>% 
+  select(-oxy_eol_mll)
+
+```
+
+### Data EOL + import data end 2022 until march 2023  
+  
+
+```{r, import data samir, echo=FALSE, warning=FALSE, message=FALSE}
+
+#new data EOL :
+#from nov. 2022 to march 2023 
+#frequency : every 30 min 
+#month of december 2022 is missing
+#oxygen in micromol/kg
+
 EOL_22 <- read_delim("../Data/temp_CTD_EOL_nov22_mar23.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
 EOL_22 <- EOL_22 %>% 
   mutate(month = case_when(month == "Nov" ~ "11",
-                           month == "Jan" ~ "1",
-                           month == "Feb" ~ "2",
-                           month == "Mar" ~ "3", TRUE ~ ""))
-EOL_22$month <- as.double(EOL_22$month)
+                           month == "Jan" ~ "01",
+                           month == "Feb" ~ "02",
+                           month == "Mar" ~ "03", TRUE ~ ""))
+EOL_22$month <- as.character(EOL_22$month)
+EOL_22$hour <- as.character(EOL_22$hour)
+EOL_22$year <- as.character(EOL_22$year)
+EOL_22$day <- as.character(EOL_22$day)
+
+# EOL_22 <- EOL_22 %>%
+#   mutate(day = str_replace_all(day, c("1"="01", "2"="02", "3"="03", "4"="04", "5"="05",
+#                                        "6"="06", "7"="07", "8"="08", "9"="09")))
+##
+
+#creation heures pleines + moyenne data 30min per hour :
+
+test <- EOL_22 %>% 
+  mutate(HH = substr(hour, 1,2),
+         HH = paste(HH, "00:00", sep=":"))
+
+test <- test %>% 
+  group_by(HH) %>% 
+  mutate(moy_oxy = mean(oxygen_umol_kg),
+         moy_sal = mean(salinity),
+         moy_temp = mean(temperature))
+##
+
+#clean :
+EOL_22 <- test %>% 
+  unite(col='datetime', c('year', 'month', 'day'), sep='-') %>% 
+  unite(col='datetime', c('datetime', 'HH'), sep=' ') %>% 
+  rename(temp_eol_c = moy_temp, sal_eol_psu = moy_sal, oxy_umol_kg = moy_oxy) %>% 
+  select(datetime, temp_eol_c, sal_eol_psu, oxy_umol_kg)
+
+EOL_22 <- distinct(EOL_22)
 
 EOL_22 <- EOL_22 %>% 
-  unite(col='datetime', c('year', 'month', 'day'), sep='-0') %>% 
-  unite(col='datetime', c('datetime', 'hour'), sep=' ') %>% 
-  mutate(datetime = str_replace(datetime, "011", "11")) %>%
-  rename(temp_eol_c = temperature, sal_eol_psu = salinity, oxy_eol_mll = oxygen_umol_kg) %>% 
-  select(datetime, temp_eol_c, sal_eol_psu, oxy_eol_mll)
- 
+  mutate(datetime = as.POSIXct(datetime))
 
-#data 2022 SEAFET Samir (only temperature):
-#from nov. 2022 to march 2023 :
+##
+
+
+#data from nov. 2022 to march 2023 (seafet)
+#selection of december only for temperature :
 
 EOL_seafet_22 <- read_csv("../Data/temp_SEAFET_EOL_nov22_mar23.csv", 
     col_types = cols(...1 = col_skip())) %>% 
@@ -561,23 +698,53 @@ EOL_seafet_22 <- read_csv("../Data/temp_SEAFET_EOL_nov22_mar23.csv",
 EOL_seafet_22 <- data.frame(datetime = EOL_seafet_22$datetime, 
                             temp_eol_c = EOL_seafet_22$temp_eol_c,
                             sal_eol_psu = NA,
-                            oxy_eol_mll = NA)                         
+                            oxy_umol_kg = NA)     
 
+EOL_seafet_22$sal_eol_psu <- as.numeric(EOL_seafet_22$sal_eol_psu)
+EOL_seafet_22$oxy_umol_kg <- as.numeric(EOL_seafet_22$oxy_umol_kg)
 
+```
+
+### Merge of Data EOL (temperature + salinity complete)  
+  
+
+```{r data EOL complete : for salinity the 01/11/2022, echo=FALSE, warning=FALSE, message=FALSE}
+
+EOL_01_11_22 <- read_delim("../Data/EOL_01_11_22.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
+  unite(col='datetime', c('year', 'month', 'day'), sep='-') %>%
+  unite(col='datetime', c('datetime', 'hour'), sep=' ') %>% 
+  select(datetime, salinity) #je sais pas ce que c'est ?
+##
 
 #merge data_EOL with EOL_2022 and EOL_seafet_22 (december) to have complete series :
-data_EOL <- rbind(data_EOL, EOL_22)
-data_EOL <- rbind(data_EOL, EOL_seafet_22)
-data_EOL <- data_EOL %>% arrange(datetime)
+data_EOL_complete <- rbind(data_EOL, EOL_22) #december 2022 is missing
+
+#addition of december 2022 only for temperature :
+data_EOL_complete <- rbind(data_EOL_complete, EOL_seafet_22)
+data_EOL_complete <- data_EOL_complete %>% arrange(datetime) #probleme avec les heures en 2022
+
+#missing of 2 weeks in october 2022
 
 #save :
-write.table(data_EOL, "EOL_raw_complete_1323.csv", sep=";", col.names = TRUE, row.names = FALSE)
+#write.table(data_EOL_complete, "EOL_raw_complete_1323.csv", sep=";", col.names = TRUE, row.names = FALSE)
 
 ##
 
+```
+
+
+
+
+#### **Number of measurements EOL**  
+  
+- per year :  
+  
+
+```{r Number of measurements EOL - per year, echo=FALSE, warning=FALSE, message=FALSE}
 
 #creation variables + number of days in the month (dMonth) :
-data_EOL <- data_EOL %>%
+data_EOL_complete <- data_EOL_complete %>%
   mutate(Year = format(datetime, format="%Y"),
          Month = format(datetime, format="%m"),
          Year.Month = format(datetime, format="%Y-%m"),
@@ -587,22 +754,9 @@ data_EOL <- data_EOL %>%
          Hour = format(datetime, format="%H:%M:%S"),
          datetime = format(datetime, format="%Y-%m-%d"))
 
-#Year.Month = as.POSIXct(paste(Year.Month, "-01", sep = ""), format = "%Y-%m-%d"))
-
-
-```
-
-
-
-## **Number of measurements EOL**  
-  
-- per year :  
-  
-
-```{r Number of measurements EOL - per year, echo=FALSE, warning=FALSE, message=FALSE}
 
 #number of measure/year :
-Nb_by_year <- summarise(group_by(data_EOL, Year), NB_OBS_Y=n()) 
+Nb_by_year <- summarise(group_by(data_EOL_complete, Year), NB_OBS_Y=n()) 
 
 
 #plot number of measure/year (2013-2022)
@@ -613,7 +767,7 @@ Nb_by_year %>%
   geom_line(group=1) + 
   scale_x_discrete(name="") + 
   scale_y_continuous(name="") +
-  ggtitle("Evolution of number of observations per year - EOL (2007-2022)")
+  ggtitle("Evolution of number of observations per year - EOL (sept.2013 - march.2023)")
 
 ```
 - per month :  
@@ -622,7 +776,7 @@ Nb_by_year %>%
 ```{r Number of measurements EOL - per month, echo=FALSE, warning=FALSE, message=FALSE}
 
 #number of measure/month :
-Nb_by_month <- summarise(group_by(data_EOL, Year.Month), NB_OBS_M=n()) 
+Nb_by_month <- summarise(group_by(data_EOL_complete, Year.Month), NB_OBS_M=n()) 
 
 Nb_by_month <- Nb_by_month %>% 
   mutate(Year.Month = as.Date(paste(Year.Month, "-01", sep = ""), format = "%Y-%m-%d"))
@@ -636,16 +790,16 @@ Nb_by_month %>%
   geom_line(group=1) + 
   scale_x_date(name="") + 
   scale_y_continuous(name="") +
-  ggtitle("Evolution of number of observations per month- EOL (2007-2022)")
+  ggtitle("Evolution of number of observations per month- EOL (sept.2013 - march.2023)")
 ```
 
 - per day :  
   
-Data every hour since oct. 2017  
+*Data every hour since oct. 2017*  
 ```{r Number of measurements EOL - per day, echo=FALSE, warning=FALSE, message=FALSE}
 
 #number of measure/month :
-Nb_by_day <- summarise(group_by(data_EOL, Year.Month.Day), NB_OBS_M=n()) 
+Nb_by_day <- summarise(group_by(data_EOL_complete, Year.Month.Day), NB_OBS_M=n()) 
 
 
 Nb_by_day <- Nb_by_day %>% 
@@ -661,26 +815,26 @@ Nb_by_day %>%
   geom_line(group=1) + 
   scale_x_date(name="") + 
   scale_y_continuous(name="") +
-  ggtitle("Evolution of number of observations per day- EOL (2007-2022)")
+  ggtitle("Evolution of number of observations per day- EOL (sept.2013 - march.2023)")
 
 ```
 
-A partir de 2017 :
-Faire d'abord 1 data/jour à 09h, tous les jours (EOL 1)
+*A partir de 2017 :*
+*Faire d'abord 1 data/jour à 09h, tous les jours (EOL 1)*
 
-Faire ensuite 2 data/jour : 09h et 16h ? tous les jours (EOL 2)
+*Faire ensuite 2 data/jour : 09h et 16h ? tous les jours (EOL 2)*
 
-Faire toutes les heures, tous les jours (EOL 3)  
+*Faire toutes les heures, tous les jours (EOL 3)*  
   
   
   
 
-#### *Measure EOL : one per day (at 8 or 9 or 10AM)*  
+### *Measure EOL : one per day (at 8 or 9 or 10AM)*  
   
 
 ```{r Measure EOL : one per day (morning), echo=FALSE, warning=FALSE, message=FALSE}
 
-EOL_test1 <- data_EOL %>% 
+EOL_test1 <- data_EOL_complete %>% 
   filter(Year >= 2017) %>% 
   filter(Hour == "08:00:00" | Hour == "09:00:00" | Hour == "10:00:00") %>% 
   group_by(datetime) %>% 
@@ -695,21 +849,21 @@ tab2 <- EOL_test1 %>% filter(cond=="TRUE") %>% filter(Hour == "08:00:00")
 EOL_1 <- full_join(tab1, tab2) %>% 
   group_by(datetime) %>% 
   mutate(NB_OBS_DAY = n()) %>% 
-  select(datetime, Hour, temp_eol_c, sal_eol_psu, oxy_eol_mll, Year, Month, Year.Month, Year.Month.Day, dMonth, NB_OBS_DAY)
+  select(datetime, Hour, temp_eol_c, sal_eol_psu, oxy_umol_kg, Year, Month, Year.Month, Year.Month.Day, dMonth, NB_OBS_DAY)
 
 #save :
-write.table(EOL_1, "EOL_17-22_1perday_morning.csv", sep=";", col.names = TRUE, row.names = FALSE)
+#write.table(EOL_1, "EOL_17-22_1perday_morning.csv", sep=";", col.names = TRUE, row.names = FALSE)
 
 
 ```
 
 
-#### *Measure EOL : twice per day (at 8AM and 4PM)*  
+### *Measure EOL : twice per day (at 8AM and 4PM)*  
   
 
 ```{r Measure EOL : 2 per day (morning & afternoon), echo=FALSE, warning=FALSE, message=FALSE}
 
-EOL_test2 <- data_EOL %>% 
+EOL_test2 <- data_EOL_complete %>% 
   filter(Year >= 2017) %>% 
   filter(Hour == "08:00:00" | Hour == "09:00:00" | Hour == "10:00:00" | Hour == "16:00:00")
   
@@ -723,22 +877,22 @@ EOL_test2 <- EOL_test2 %>% filter(cond=="TRUE")
 
 #tableau clean
 EOL_2 <- EOL_test2 %>%
-  select(datetime, Hour, temp_eol_c, sal_eol_psu, oxy_eol_mll, Year, Month, Year.Month, Year.Month.Day, dMonth, NB_OBS_DAY)
+  select(datetime, Hour, temp_eol_c, sal_eol_psu, oxy_umol_kg, Year, Month, Year.Month, Year.Month.Day, dMonth, NB_OBS_DAY)
 
 
 #save :
-write.table(EOL_2, "EOL_17-22_2perday_morning_afternoon.csv", sep=";", col.names = TRUE, row.names = FALSE)
+#write.table(EOL_2, "EOL_17-22_2perday_morning_afternoon.csv", sep=";", col.names = TRUE, row.names = FALSE)
 
 
 ```
 
 
-#### *Measure EOL : 23 per day (hourly)*  
+### *Measure EOL : 23 per day (hourly)*  
   
 
 ```{r Measure EOL : 23 per day (hourly), echo=FALSE, warning=FALSE, message=FALSE}
 
-EOL_test3 <- data_EOL %>% 
+EOL_test3 <- data_EOL_complete %>% 
   dplyr::filter(Year >= 2017) %>% 
   group_by(datetime) %>% 
   mutate(NB_OBS_DAY = n()) # 1 to 24 obs per day
@@ -750,11 +904,11 @@ EOL_test3 <- EOL_test3 %>% dplyr::filter(cond=="TRUE")
 
 #tableau clean
 EOL_3 <- EOL_test3 %>%
-  select(datetime, Hour, temp_eol_c, sal_eol_psu, oxy_eol_mll, Year, Month, Year.Month, Year.Month.Day, dMonth, NB_OBS_DAY)
+  select(datetime, Hour, temp_eol_c, sal_eol_psu, oxy_umol_kg, Year, Month, Year.Month, Year.Month.Day, dMonth, NB_OBS_DAY)
 
 
 #save :
-write.table(EOL_3, "EOL_17-22_23perday_hourly.csv", sep=";", col.names = TRUE, row.names = FALSE)
+#write.table(EOL_3, "EOL_17-22_23perday_hourly.csv", sep=";", col.names = TRUE, row.names = FALSE)
 
 
 ```

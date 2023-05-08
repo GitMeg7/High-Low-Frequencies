@@ -1,0 +1,51 @@
+---
+title: "Oxygen"
+author: "Mégane"
+date: "2023-05-08"
+output: html_document
+---
+
+```{r libraries, echo=FALSE, warning=FALSE, message=FALSE}
+library("readr")
+library("viridis")
+library("scales")
+library("lubridate")
+library("gsignal")
+library("FactoMineR")
+library("factoextra")
+library("gplots")
+library("heatwaveR")
+library("dplyr")
+library("imputeTS")
+library("Metrics")
+library("tidyr")
+library("tseries")
+library("forecast")
+library("tsDyn")
+library("tsoutliers")
+library("seacarb")
+library("lmodel2")
+library("lmtest")
+library("ggExtra")
+library("corrplot")
+library("ggcorrplot")
+library("marelac")
+library("kableExtra")
+library("stringr")
+library("berryFunctions")
+```
+
+
+```{r data oxygen EOL - somlit, echo=FALSE, warning=FALSE, message=FALSE}
+
+data_EOL <- read_delim("Data/EOL_raw_complete_1323.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+
+```
+
+
+
+```{r}
+
+```
+

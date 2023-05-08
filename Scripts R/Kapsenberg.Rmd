@@ -691,16 +691,40 @@ plot_pCO2_0715_50m
 plot_ano_pCO2_0715_50m
 ```
 
-## Method extension for 2007-2022 period
-
-##### [Table of monthly means (2007-2022) - surface data]{style="color:blue"}
-
-*(rajouter les SD)*
+## Method extension for 2007-2022 period  
+  
+→ SOMLIT clean + interpolations ok ☑  
+  
+  
+##### [Table of monthly means (2007-2022) - surface data]{style="color:blue"}  
+  
+*(rajouter les SD)*  
+  
 
 ```{r import data 2007-2022 at 0m and 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
-data_0722 <- data_raw_surf %>% dplyr::filter(sampling_date < "2022-01-11")#774 valeurs
-data_0722_50m <- data_raw_prof %>% dplyr::filter(sampling_date < "2022-01-11")#752 valeurs
+#data surface
+data_0722 <- read_delim("../Data/DATA_SOMLIT_07-23_impute_0m.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
+    mutate(Month = as.numeric(Month))
+
+#data 50m
+ # data_0722_50m <- read_delim("../Data/DATA_SOMLIT_07-23_CLEAN.csv", 
+ #     delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
+ #   dplyr::filter(depth == 50) %>% 
+ #   mutate(Month = as.numeric(Month),
+ #          impute_temp = na_interpolation(temperature, option="linear"),
+ #          impute_sal = na_interpolation(salinity, option="linear"),
+ #          impute_ta = na_interpolation(ta, option="linear"),
+ #          impute_dic = na_interpolation(dic, option="linear"),
+ #          impute_pCO2_w = na_interpolation(pCO2, option="linear"))
+ # 
+ # #save :
+ # write.table(data_0722_50m, "DATA_SOMLIT_07-23_impute_50m.csv", sep=";", col.names = TRUE, row.names = FALSE)
+
+data_0722_50m <- read_delim("../Data/DATA_SOMLIT_07-23_impute_50m.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
+    mutate(Month = as.numeric(Month))
 
 
 ```
@@ -708,15 +732,15 @@ data_0722_50m <- data_raw_prof %>% dplyr::filter(sampling_date < "2022-01-11")#7
 ```{r calculate monthly means 2007-2022 - surface, echo=FALSE, warning=FALSE, message=FALSE}
 
 monthly_means_0m_0722 <- ungroup(data_0722) %>% 
-  group_by(monthd) %>%
+  group_by(Month) %>%
   summarise(
-    Salinity_month = mean(salinity, na.rm = TRUE),
-    Temperature_month = mean(temperature, na.rm = TRUE),
-    dic_month = mean(dic, na.rm = TRUE),
-    ta_month = mean(ta, na.rm = TRUE),
+    Salinity_month = mean(impute_sal, na.rm = TRUE),
+    Temperature_month = mean(impute_temp, na.rm = TRUE),
+    dic_month = mean(impute_dic, na.rm = TRUE),
+    ta_month = mean(impute_ta, na.rm = TRUE),
     pH_calc_month = mean(pH_calc, na.rm = TRUE),
-    pH18_month = mean(pH18, na.rm = TRUE),
-    pCO2_month = mean(pCO2, na.rm = TRUE),
+    pH18_month = mean(pH_18, na.rm = TRUE),
+    pCO2_month = mean(impute_pCO2_w, na.rm = TRUE),
     OmegaCalcite_month = mean(OmegaCalcite, na.rm = TRUE),
     OmegaAragonite_month = mean(OmegaAragonite, na.rm = TRUE),
     Nta_month = mean(Nta, na.rm = TRUE),
@@ -730,15 +754,15 @@ monthly_means_0m_0722
 
 ```{r calculate anomalies + regression 2007-2022 - surface, echo=FALSE, warning=FALSE, message=FALSE}
 
-ano_0m_0722 <- left_join(ungroup(data_0722), monthly_means_0m_0722, by = "monthd") %>%
+ano_0m_0722 <- left_join(ungroup(data_0722), monthly_means_0m_0722, by = "Month") %>%
   mutate(
-    Salinity_ano = salinity - Salinity_month,
-    Temperature_ano = temperature - Temperature_month,
-    dic_ano = dic - dic_month,
-    ta_ano = ta - ta_month,
+    Salinity_ano = impute_sal - Salinity_month,
+    Temperature_ano = impute_temp - Temperature_month,
+    dic_ano = impute_dic - dic_month,
+    ta_ano = impute_ta - ta_month,
     pH_calc_ano = pH_calc - pH_calc_month,
-    pH18_ano = pH18 - pH18_month,
-    pCO2_ano = pCO2 - pCO2_month,
+    pH18_ano = pH_18 - pH18_month,
+    pCO2_ano = pCO2_w - pCO2_month,
     OmegaCalcite_ano = OmegaCalcite - OmegaCalcite_month,
     OmegaAragonite_ano = OmegaAragonite - OmegaAragonite_month,
     Nta_ano = Nta - Nta_month,
@@ -751,8 +775,8 @@ var_list2 <-
     "dic",
     "ta",
     "pH_calc",
-    "pH18",
-    "pCO2",
+    "pH_18",
+    "pCO2_w",
     "OmegaCalcite",
     "OmegaAragonite",
     "Nta",
@@ -761,13 +785,13 @@ var_list2 <-
 lm.test2 <- vector("list", length(var_list2))
 
 for(i in seq_along(var_list2)){
-  lm.test2[[i]] <- lm(reformulate(var_list2[i], "sampling_date"), data = ano_0m_0722)
+  lm.test2[[i]] <- lm(reformulate(var_list2[i], "datetime"), data = ano_0m_0722)
 }
 
 #cutoff_date <- "2016-01-01" #to limit regressions on complete years
 
 lms2 <- lapply(var_list2, function(x) {
-  summary(lm(substitute(i ~ decimal_date(sampling_date), list(i = as.name(x))), 
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
              data = ano_0m_0722))
 })
 
@@ -830,7 +854,7 @@ var_list2 <-
     "Ndic_ano"
   )
 lms2 <- lapply(var_list2, function(x) {
-  summary(lm(substitute(i ~ decimal_date(sampling_date), list(i = as.name(x))), data = ano_0m_0722))
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), data = ano_0m_0722))
 })
 reg2 <- NULL
 for (i in 1:length(var_list2)) {
@@ -883,12 +907,12 @@ reg_ano_surf2
 
 ```{r, plot anomalies temperature 2007-2022 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
-plot_ano_temp2 <- ggplot(data = ano_0m_0722, aes(x = sampling_date, y = Temperature_ano), na.rm=TRUE) +
-  scale_x_datetime(date_breaks="5 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+plot_ano_temp2 <- ggplot(data = ano_0m_0722, aes(x = datetime, y = Temperature_ano), na.rm=TRUE) +
+  scale_x_date(date_breaks="5 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_point(colour="blue", na.rm=TRUE, size=1) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
   labs(title="Anomalies trend for temperature (2007-2022)",x="", y="Temp. (°C)") +
-  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano_0m_0722$Temperature_ano, na.rm=TRUE), 
+  annotate("text", x =as.Date("2016-01-01"), y= min(ano_0m_0722$Temperature_ano, na.rm=TRUE), 
            label="", colour="black", size=9, fontface="plain") +
   coord_fixed() +
   Mytheme(size_labs = 8) +
@@ -896,21 +920,38 @@ plot_ano_temp2 <- ggplot(data = ano_0m_0722, aes(x = sampling_date, y = Temperat
 
 plot_temp_0722 <- data_0722 %>% 
   ggplot() +
-  aes(x=sampling_date, y=temperature) + 
-  geom_point(size=0.8) +
-  scale_x_datetime(name="") +
+  aes(x=datetime, y=impute_temp) + 
+  geom_line(size=0.8, col = "#303030") +
+  scale_x_date(name="") +
   scale_y_continuous(name="Temp. (°C)") +
-  ggtitle("Time series observations at 0m of temperature (2007-2022)")
+  ggtitle("Surface temperature time series (2007-2022)")
 
 plot_temp_0722
 plot_ano_temp2
 ```
 
+
+```{r}
+
+# data_0722 %>% 
+#   ggplot() +
+#   aes(x=datetime, y=impute_temp) + 
+#   geom_point(size=0.8) +
+#   scale_x_date(name="") +
+#   scale_y_continuous(name="Temp. (°C)") +
+#   ggtitle("Surface temperature time series (2007-2022)")
+
+
+```
+
+
+
+
 #### Plot of anomalies : salinity (2007-2022) - surface
 
 ```{r, plot anomalies salinity 2007-2022 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
-plot_ano_sal2 <- ggplot(data = ano_0m_0722, aes(x = sampling_date, y = Salinity_ano), na.rm=TRUE) +
-  scale_x_datetime(date_breaks="5 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+plot_ano_sal2 <- ggplot(data = ano_0m_0722, aes(x = datetime, y = Salinity_ano), na.rm=TRUE) +
+  scale_x_date(date_breaks="5 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   scale_y_continuous(breaks=c(-2,-1,0,0.5)) +
   geom_point(colour="blue", na.rm=TRUE, size=1) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
@@ -921,11 +962,11 @@ plot_ano_sal2 <- ggplot(data = ano_0m_0722, aes(x = sampling_date, y = Salinity_
 
 plot_sal_0722 <- data_0722 %>% 
   ggplot() +
-  aes(x=sampling_date, y=salinity) + 
-  geom_point(size=1) +
-  scale_x_datetime(name="") +
+  aes(x=datetime, y=impute_sal) + 
+  geom_line(size=0.8, col = "#175732") +
+  scale_x_date(name="") +
   scale_y_continuous(name="Salinity") +
-  ggtitle("Time series observations at 0m of salinity (2007-2022)")
+  ggtitle("Surface salinity time series at Point B (2007-2022)")
 
 plot_sal_0722
 plot_ano_sal2
@@ -935,12 +976,12 @@ plot_ano_sal2
 
 ```{r, plot anomalies pH 2007-2022 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
-plot_ano_ph2 <- ggplot(data = ano_0m_0722, aes(x = sampling_date, y = pH_calc_ano), na.rm=TRUE) +
-  scale_x_datetime(date_breaks="5 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+plot_ano_ph2 <- ggplot(data = ano_0m_0722, aes(x = datetime, y = pH_calc_ano), na.rm=TRUE) +
+  scale_x_date(date_breaks="5 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_point(colour="blue", na.rm=TRUE, size=1) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
-  labs(title="Anomalies trend for pH (2007-2022)", x="", y="pH") +
-  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano_0m_0722$pH_calc_ano, na.rm=TRUE), 
+  labs(title="Anomalies trend for pH calculated (2007-2022)", x="", y="pH_calc") +
+  annotate("text", x =as.Date("2016-01-01"), y= min(ano_0m_0722$pH18_ano, na.rm=TRUE), 
            label="", colour="black", size=9, fontface="plain") +
   coord_fixed() +
   Mytheme(size_labs = 8) +
@@ -948,9 +989,9 @@ plot_ano_ph2 <- ggplot(data = ano_0m_0722, aes(x = sampling_date, y = pH_calc_an
 
 plot_ph_0722 <- data_0722 %>% 
   ggplot() +
-  aes(x=sampling_date, y=pH_calc) + 
+  aes(x=datetime, y=pH_calc) + 
   geom_point(size=1) +
-  scale_x_datetime(name="") +
+  scale_x_date(name="") +
   scale_y_continuous(name="pH") +
   ggtitle("Time series observations at 0m of pH (2007-2022)")
 
@@ -962,12 +1003,12 @@ plot_ano_ph2
 
 ```{r, plot anomalies alcalinity 2007-2022 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
-plot_ano_ta_0722 <- ggplot(data = ano_0m_0722, aes(x = sampling_date, y = ta_ano), na.rm=TRUE) +
-  scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+plot_ano_ta_0722 <- ggplot(data = ano_0m_0722, aes(x = datetime, y = ta_ano), na.rm=TRUE) +
+  scale_x_date(date_breaks="5 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_point(colour="blue", na.rm=TRUE, size=1) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
-  labs(title=NULL,x="",y=expression(paste(pCO[2], " (",mu, "atm)"))) +
-  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano_0m_0722$ta_ano, na.rm=TRUE), 
+  labs(title="Anomalies trend for AT (2007-2022)",x="",y= "Total alcalinity (µmol/kg)") +
+  annotate("text", x =as.Date("2016-01-01"), y= min(ano_0m_0722$ta_ano, na.rm=TRUE), 
            label="", colour="black", size=9, fontface="plain") +
   coord_fixed() +
   Mytheme(size_labs = 8) +
@@ -975,11 +1016,11 @@ plot_ano_ta_0722 <- ggplot(data = ano_0m_0722, aes(x = sampling_date, y = ta_ano
 
 plot_ta_0722 <- data_0722 %>% 
   ggplot() +
-  aes(x=sampling_date, y=ta) + 
-  geom_point(size=1) +
-  scale_x_datetime(name="") +
-  scale_y_continuous(name="Alcalinity (umol/kg") +
-  ggtitle("Time series observations at 0m of alcalinity (2007-2022)")
+  aes(x=datetime, y=impute_ta) + 
+  geom_line(size=0.8, col = "#723E64") +
+  scale_x_date(name="") +
+  scale_y_continuous(name="Alcalinity (umol/kg)") +
+  ggtitle("Surface total alcalinity time series (2007-2022)")
 
 plot_ta_0722
 plot_ano_ta_0722
@@ -989,12 +1030,12 @@ plot_ano_ta_0722
 
 ```{r, plot anomalies CO2 2007-2015 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
-plot_ano_pCO22 <- ggplot(data = ano_0m_0722, aes(x = sampling_date, y = pCO2_ano), na.rm=TRUE) +
-  scale_x_datetime(date_breaks="5 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+plot_ano_pCO22 <- ggplot(data = ano_0m_0722, aes(x = datetime, y = pCO2_ano), na.rm=TRUE) +
+  scale_x_date(date_breaks="5 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_point(colour="blue", na.rm=TRUE, size=1) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
   labs(title="Anomalies trend for pCO2 (2007-2022)",x="",y=expression(paste(pCO[2], " (",mu, "atm)"))) +
-  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano_0m_0722$pCO2_ano, na.rm=TRUE), 
+  annotate("text", x =as.Date("2016-01-01"), y= min(ano_0m_0722$pCO2_ano, na.rm=TRUE), 
            label="", colour="black", size=9, fontface="plain") +
   coord_fixed() +
   Mytheme(size_labs = 8) +
@@ -1002,9 +1043,9 @@ plot_ano_pCO22 <- ggplot(data = ano_0m_0722, aes(x = sampling_date, y = pCO2_ano
 
 plot_pCO2_0722 <- data_0722 %>% 
   ggplot() +
-  aes(x=sampling_date, y=pCO2) + 
+  aes(x=datetime, y=impute_pCO2_w) + 
   geom_point(size=1) +
-  scale_x_datetime(name="") +
+  scale_x_date(name="") +
   scale_y_continuous(name="pCO2 (uatm)") +
   ggtitle("Time series observations at 0m of pCO2 (2007-2022)")
 
@@ -1012,22 +1053,22 @@ plot_pCO2_0722
 plot_ano_pCO22
 ```
 
-##### [Table of monthly means (2007-2022) - 50m data]{style="color:blue"}
+ ##### [Table of monthly means (2007-2022) - 50m data]{style="color:blue"}
 
 *(rajouter les SD)*
 
 ```{r calculate monthly means 2007-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
 monthly_means_50m_0722 <- ungroup(data_0722_50m) %>% 
-  group_by(monthd) %>%
+  group_by(Month) %>%
   summarise(
-    Salinity_month = mean(salinity, na.rm = TRUE),
-    Temperature_month = mean(temperature, na.rm = TRUE),
-    dic_month = mean(dic, na.rm = TRUE),
-    ta_month = mean(ta, na.rm = TRUE),
+    Salinity_month = mean(impute_sal, na.rm = TRUE),
+    Temperature_month = mean(impute_temp, na.rm = TRUE),
+    dic_month = mean(impute_dic, na.rm = TRUE),
+    ta_month = mean(impute_ta, na.rm = TRUE),
     pH_calc_month = mean(pH_calc, na.rm = TRUE),
-    pH18_month = mean(pH18, na.rm = TRUE),
-    pCO2_month = mean(pCO2, na.rm = TRUE),
+    pH18_month = mean(pH_18, na.rm = TRUE),
+    pCO2_month = mean(impute_pCO2_w, na.rm = TRUE),
     OmegaCalcite_month = mean(OmegaCalcite, na.rm = TRUE),
     OmegaAragonite_month = mean(OmegaAragonite, na.rm = TRUE),
     Nta_month = mean(Nta, na.rm = TRUE),
@@ -1041,76 +1082,75 @@ monthly_means_50m_0722
 
 ```{r calculate anomalies + regression 2007-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
-ano_50m_0722 <- left_join(ungroup(data_0722_50m), monthly_means_50m_0722, by = "monthd") %>%
+ano_50m_0722 <- left_join(ungroup(data_0722_50m), monthly_means_50m_0722, by = "Month") %>%
   mutate(
-    Salinity_ano = salinity - Salinity_month,
-    Temperature_ano = temperature - Temperature_month,
-    dic_ano = dic - dic_month,
-    ta_ano = ta - ta_month,
+    Salinity_ano = impute_sal - Salinity_month,
+    Temperature_ano = impute_temp - Temperature_month,
+    dic_ano = impute_dic - dic_month,
+    ta_ano = impute_ta - ta_month,
     pH_calc_ano = pH_calc - pH_calc_month,
-    pH18_ano = pH18 - pH18_month,
-    pCO2_ano = pCO2 - pCO2_month,
+    pH18_ano = pH_18 - pH18_month,
+    pCO2_ano = impute_pCO2_w - pCO2_month,
     OmegaCalcite_ano = OmegaCalcite - OmegaCalcite_month,
     OmegaAragonite_ano = OmegaAragonite - OmegaAragonite_month,
     Nta_ano = Nta - Nta_month,
     Ndic_ano = dic - Ndic_month)
 
 # Regressions and tables of key parameters
-var_list2 <-
+var_list <-
   c("salinity",
     "temperature",
     "dic",
     "ta",
     "pH_calc",
-    "pH18",
+    "pH_18",
     "pCO2",
     "OmegaCalcite",
     "OmegaAragonite",
     "Nta",
     "Ndic")
 
-lm.test2 <- vector("list", length(var_list2))
+lm.test <- vector("list", length(var_list))
 
 for(i in seq_along(var_list2)){
-  lm.test2[[i]] <- lm(reformulate(var_list2[i], "sampling_date"), data = ano_50m_0722)
+  lm.test[[i]] <- lm(reformulate(var_list[i], "sampling_date"), data = ano_50m_0722)
 }
 
-#cutoff_date <- "2016-01-01" #to limit regressions on complete years
 
-lms2 <- lapply(var_list2, function(x) {
+lms <- lapply(var_list, function(x) {
   summary(lm(substitute(i ~ decimal_date(sampling_date), list(i = as.name(x))), 
              data = ano_50m_0722))
 })
 
-reg2 <- NULL
-for (i in 1:length(var_list2)) {
+reg <- NULL
+for (i in 1:length(var_list)) {
   #one loops through all anomalies
   # calculate probability of fstatistic because it cannot be extracted from lms above
   # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
   # slope returned by lm is per second
-  prob2 <-
-    pf(lms2[[i]]$fstatistic[1],
-       lms2[[i]]$fstatistic[2],
-       lms2[[i]]$fstatistic[3],
+  prob <-
+    pf(lms[[i]]$fstatistic[1],
+       lms[[i]]$fstatistic[2],
+       lms[[i]]$fstatistic[3],
        lower.tail = FALSE)
-  reg2 <-
-    rbind(reg2, as.numeric(
+  reg <-
+    rbind(reg, as.numeric(
       c(
-        lms2[[i]]$coefficients[2, 1],
-        lms2[[i]]$coefficients[2, 2],
-        lms2[[i]]$coefficients[2, 4],
-        lms2[[i]]$coefficients[1, 1],
-        lms2[[i]]$coefficients[1, 2],
-        lms2[[i]]$coefficients[1, 4],
-        lms2[[i]]$fstatistic[1],
-        lms2[[i]]$fstatistic[3],
-        lms2[[i]]$r.squared,
-        prob2
+        lms[[i]]$coefficients[2, 1],
+        lms[[i]]$coefficients[2, 2],
+        lms[[i]]$coefficients[2, 4],
+        lms[[i]]$coefficients[1, 1],
+        lms[[i]]$coefficients[1, 2],
+        lms[[i]]$coefficients[1, 4],
+        lms[[i]]$fstatistic[1],
+        lms[[i]]$fstatistic[3],
+        lms[[i]]$r.squared,
+        prob
       )
     ))
 }
 
-colnames(reg2) <-
+colnames(reg) <-
   c("Slope",
     "SE Slope",
     "P Slope",
@@ -1121,11 +1161,11 @@ colnames(reg2) <-
     "df",
     "R2",
     "P value")
-row.names(reg2) <- var_list2
-reg_ano_50m2 <- reg2
+row.names(reg) <- var_list
+reg_ano_50m <- reg
 
 # Regression and table anomalies
-var_list2 <-
+var_list <-
   c(
     "Salinity_ano",
     "Temperature_ano",
@@ -1139,37 +1179,37 @@ var_list2 <-
     "Nta_ano",
     "Ndic_ano"
   )
-lms2 <- lapply(var_list2, function(x) {
+lms <- lapply(var_list, function(x) {
   summary(lm(substitute(i ~ decimal_date(sampling_date), list(i = as.name(x))), data = ano_50m_0722))
 })
-reg2 <- NULL
-for (i in 1:length(var_list2)) {
+reg <- NULL
+for (i in 1:length(var_list)) {
   #one loops through all anomalies
   # calculate probability of fstatistic because it cannot be extracted from lms above
   # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
   # slope returned by lm is per second
-  prob2 <-
-    pf(lms2[[i]]$fstatistic[1],
-       lms2[[i]]$fstatistic[2],
-       lms2[[i]]$fstatistic[3],
+  prob <-
+    pf(lms[[i]]$fstatistic[1],
+       lms[[i]]$fstatistic[2],
+       lms[[i]]$fstatistic[3],
        lower.tail = FALSE)
-  reg2 <-
-    rbind(reg2, as.numeric(
+  reg <-
+    rbind(reg, as.numeric(
       c(
-        lms2[[i]]$coefficients[2, 1],
-        lms2[[i]]$coefficients[2, 2],
-        lms2[[i]]$coefficients[2, 4],
-        lms2[[i]]$coefficients[1, 1],
-        lms2[[i]]$coefficients[1, 2],
-        lms2[[i]]$coefficients[1, 4],
-        lms2[[i]]$fstatistic[1],
-        lms2[[i]]$fstatistic[3],
-        lms2[[i]]$r.squared,
-        prob2
+        lms[[i]]$coefficients[2, 1],
+        lms[[i]]$coefficients[2, 2],
+        lms[[i]]$coefficients[2, 4],
+        lms[[i]]$coefficients[1, 1],
+        lms[[i]]$coefficients[1, 2],
+        lms[[i]]$coefficients[1, 4],
+        lms[[i]]$fstatistic[1],
+        lms[[i]]$fstatistic[3],
+        lms[[i]]$r.squared,
+        prob
       )
     ))
 }
-colnames(reg2) <-
+colnames(reg) <-
   c("Slope",
     "SE Slope",
     "P Slope",
@@ -1180,10 +1220,10 @@ colnames(reg2) <-
     "df",
     "R2",
     "P value")
-row.names(reg2) <- var_list2
-reg_ano_50m2 <- reg2
+row.names(reg) <- var_list
+reg_ano_50m <- reg
 
-reg_ano_50m2
+reg_ano_50m
 
 ```
 
@@ -1192,11 +1232,11 @@ reg_ano_50m2
 ```{r, plot anomalies temperature 2007-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
 plot_ano_temp2_50m <- ggplot(data = ano_50m_0722, aes(x = sampling_date, y = Temperature_ano), na.rm=TRUE) +
-  scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  scale_x_date(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_point(colour="blue", na.rm=TRUE, size=1) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
   labs(title=NULL,x="", y="Temp. (°C)") +
-  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano_50m_0722$Temperature_ano, na.rm=TRUE), 
+  annotate("text", x =as.Date("2016-01-01"), y= min(ano_50m_0722$Temperature_ano, na.rm=TRUE), 
            label="", colour="black", size=9, fontface="plain") +
   coord_fixed() +
   Mytheme(size_labs = 8) +
@@ -1204,11 +1244,11 @@ plot_ano_temp2_50m <- ggplot(data = ano_50m_0722, aes(x = sampling_date, y = Tem
 
 plot_temp_0722_50m <- data_0722_50m %>% 
   ggplot() +
-  aes(x=sampling_date, y=temperature) + 
-  geom_point(size=1) +
-  scale_x_datetime(name="") +
+  aes(x=sampling_date, y=impute_temp) + 
+  geom_line(size=0.8, linetype="dashed", col = "#5A5E6B") +
+  scale_x_date(name="") +
   scale_y_continuous(name="Temp. (°C)") +
-  ggtitle("Time series observations at 50m of temperature (2007-2022)")
+  ggtitle("50m temperature time series (2007-2022)")
 
 plot_temp_0722_50m
 plot_ano_temp2_50m
@@ -1219,7 +1259,7 @@ plot_ano_temp2_50m
 ```{r, plot anomalies salinity 2007-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
 plot_ano_sal2_50m <- ggplot(data = ano_50m_0722, aes(x = sampling_date, y = Salinity_ano), na.rm=TRUE) +
-  scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  scale_x_date(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   scale_y_continuous(breaks=c(-2,-1,0,0.5)) +
   geom_point(colour="blue", na.rm=TRUE, size=1) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
@@ -1230,11 +1270,11 @@ plot_ano_sal2_50m <- ggplot(data = ano_50m_0722, aes(x = sampling_date, y = Sali
 
 plot_sal_0722_50m <- data_0722_50m %>% 
   ggplot() +
-  aes(x=sampling_date, y=salinity) + 
-  geom_point(size=1) +
-  scale_x_datetime(name="") +
+  aes(x=sampling_date, y=impute_sal) + 
+  geom_line(size=0.8, linetype="dashed", col = "#22780F") +
+  scale_x_date(name="") +
   scale_y_continuous(name="Salinity") +
-  ggtitle("Time series observations at 50m of salinity (2007-2022)")
+  ggtitle("50m salinity time series (2007-2022)")
 
 plot_sal_0722_50m
 plot_ano_sal2_50m
@@ -1244,12 +1284,12 @@ plot_ano_sal2_50m
 
 ```{r, plot anomalies pH 2007-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
-plot_ano_ph2_50m <- ggplot(data = ano_50m_0722, aes(x = sampling_date, y = pH_calc_ano), na.rm=TRUE) +
-  scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+plot_ano_ph2_50m <- ggplot(data = ano_50m_0722, aes(x = sampling_date, y = pH18_ano), na.rm=TRUE) +
+  scale_x_date(date_breaks="5 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_point(colour="blue", na.rm=TRUE, size=1) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
-  labs(title=NULL, x="", y=expression(paste(pH[T]," calculated"))) +
-  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano_50m_0722$pH_calc_ano, na.rm=TRUE), 
+  labs(title="Anomalies trend for pH normalized (2007-2022)", x="", y="pH_25") +
+  annotate("text", x =as.Date("2016-01-01"), y= min(ano_50m_0722$pH18_ano, na.rm=TRUE), 
            label="", colour="black", size=9, fontface="plain") +
   coord_fixed() +
   Mytheme(size_labs = 8) +
@@ -1259,7 +1299,7 @@ plot_ph_0722_50m <- data_0722_50m %>%
   ggplot() +
   aes(x=sampling_date, y=pH_calc) + 
   geom_point(size=1) +
-  scale_x_datetime(name="") +
+  scale_x_date(name="") +
   scale_y_continuous(name="pH") +
   ggtitle("Time series observations at 50m of pH (2007-2022)")
 
@@ -1272,11 +1312,11 @@ plot_ano_ph2_50m
 ```{r, plot anomalies alcalinity 2007-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
 plot_ano_ta_0722_50m <- ggplot(data = ano_50m_0722, aes(x = sampling_date, y = ta_ano), na.rm=TRUE) +
-  scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  scale_x_date(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_point(colour="blue", na.rm=TRUE, size=1) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
   labs(title=NULL,x="",y=expression(paste(pCO[2], " (",mu, "atm)"))) +
-  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano_50m_0722$ta_ano, na.rm=TRUE), 
+  annotate("text", x =as.Date("2016-01-01"), y= min(ano_50m_0722$ta_ano, na.rm=TRUE), 
            label="", colour="black", size=9, fontface="plain") +
   coord_fixed() +
   Mytheme(size_labs = 8) +
@@ -1284,11 +1324,11 @@ plot_ano_ta_0722_50m <- ggplot(data = ano_50m_0722, aes(x = sampling_date, y = t
 
 plot_ta_0722_50m <- data_0722_50m %>% 
   ggplot() +
-  aes(x=sampling_date, y=ta) + 
-  geom_point(size=1) +
-  scale_x_datetime(name="") +
-  scale_y_continuous(name="Alcalinity (umol/kg") +
-  ggtitle("Time series observations at 50m of alcalinity (2007-2022)")
+  aes(x=sampling_date, y=impute_ta) + 
+  geom_line(size=0.8, linetype="dashed", col = "#C4698F") +
+  scale_x_date(name="") +
+  scale_y_continuous(name="Alcalinity (umol/kg)") +
+  ggtitle("50m total alcalinity time series (2007-2022)")
 
 plot_ta_0722_50m
 plot_ano_ta_0722_50m
@@ -1300,11 +1340,11 @@ plot_ano_ta_0722_50m
 ```{r, plot anomalies CO2 2007-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
 plot_ano_pCO22_50m <- ggplot(data = ano_50m_0722, aes(x = sampling_date, y = pCO2_ano), na.rm=TRUE) +
-  scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  scale_x_date(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_point(colour="blue", na.rm=TRUE, size=1) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
   labs(title=NULL,x="",y=expression(paste(pCO[2], " (",mu, "atm)"))) +
-  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano_50m_0722$pCO2_ano, na.rm=TRUE), 
+  annotate("text", x =as.Date("2016-01-01"), y= min(ano_50m_0722$pCO2_ano, na.rm=TRUE), 
            label="", colour="black", size=9, fontface="plain") +
   coord_fixed() +
   Mytheme(size_labs = 8) +
@@ -1312,9 +1352,9 @@ plot_ano_pCO22_50m <- ggplot(data = ano_50m_0722, aes(x = sampling_date, y = pCO
 
 plot_pCO2_0722_50m <- data_0722_50m %>% 
   ggplot() +
-  aes(x=sampling_date, y=pCO2) + 
+  aes(x=sampling_date, y=impute_pCO2_w) + 
   geom_point(size=1) +
-  scale_x_datetime(name="") +
+  scale_x_date(name="") +
   scale_y_continuous(name="pCO2 (uatm)") +
   ggtitle("Time series observations at 50m of pCO2 (2007-2022)")
 
@@ -1404,7 +1444,13 @@ Data_TS_2022_surf <- dplyr::mutate(Data_TS_2022_surf, salinity = case_when(salin
 
 #fusionner les 2 datasets (SOMLIT_1m + Data_TS_2022) = Data_SOMLIT_9222
 
-Data_SOMLIT_9222_surf <- rbind(SOMLIT_1m, Data_TS_2022_surf)
+Data_SOMLIT_9222_surf <- rbind(SOMLIT_1m, Data_TS_2022_surf) 
+
+Data_SOMLIT_9222_surf <- Data_SOMLIT_9222_surf %>% 
+  mutate(datetime = as.POSIXct(datetime))
+
+#save :
+#write.table(Data_SOMLIT_9222_surf, "DATA_SOMLIT_92-22_TS_0m.csv", sep=";", col.names = TRUE, row.names = FALSE)
 
 ##
 
@@ -1433,63 +1479,85 @@ Data_TS_2022_prof <- dplyr::mutate(Data_TS_2022_prof, salinity = case_when(salin
 
 Data_SOMLIT_9222_prof <- rbind(SOMLIT_50m, Data_TS_2022_prof)
 
+Data_SOMLIT_9222_prof <- Data_SOMLIT_9222_prof %>% 
+  mutate(datetime = as.POSIXct(datetime))
+
+#save :
+#write.table(Data_SOMLIT_9222_prof, "DATA_SOMLIT_92-22_TS_50m.csv", sep=";", col.names = TRUE, row.names = FALSE)
+
+```
+  
+→ Linear interpolation for temperature & salinity (surface) :  
+  
+
+```{r interpolation temperature & salinity - surface, echo=FALSE, warning=FALSE, message=FALSE}
+
+#temperature :
+impute_temp_9222_0m <- na_interpolation(Data_SOMLIT_9222_surf$temperature, option="linear")
+
+ggplot_na_imputations(Data_SOMLIT_9222_surf$temperature, impute_temp_9222_0m, x_axis_labels = Data_SOMLIT_9222_surf$datetime, 
+                      xlab = "", ylab="Temp. (°C)", 
+                      title="Surface temperature (°C) time series interpolation - period 1992-2022")
+
+#salinity :
+impute_sal_9222_0m <- na_interpolation(Data_SOMLIT_9222_surf$salinity, option="linear")
+
+ggplot_na_imputations(Data_SOMLIT_9222_surf$salinity, impute_sal_9222_0m, x_axis_labels = Data_SOMLIT_9222_surf$datetime, 
+                      xlab = "", ylab="Salinity", 
+                      title="Surface salinity time series interpolation - period 1992-2022")
+
+```
+  
+
+→ Linear interpolation for temperature & salinity (50m) :  
+  
+
+```{r interpolation temperature & salinity - 50m, echo=FALSE, warning=FALSE, message=FALSE}
+
+#temperature :
+impute_temp_9222_50m <- na_interpolation(Data_SOMLIT_9222_prof$temperature, option="linear")
+
+ggplot_na_imputations(Data_SOMLIT_9222_prof$temperature, impute_temp_9222_50m, x_axis_labels = Data_SOMLIT_9222_prof$datetime, 
+                      xlab = "", ylab="Temp. (°C)", 
+                      title="Temperature (°C) at 50m time series interpolation - period 1992-2022")
+
+#salinity :
+impute_sal_9222_50m <- na_interpolation(Data_SOMLIT_9222_prof$salinity, option="linear")
+
+ggplot_na_imputations(Data_SOMLIT_9222_prof$salinity, impute_sal_9222_50m, x_axis_labels = Data_SOMLIT_9222_prof$datetime, 
+                      xlab = "", ylab="Salinity", 
+                      title="Salinity at 50m time series interpolation - period 1992-2022")
+
+#merge :
+impute_temp_9222_surf <- data.frame(datetime = Data_SOMLIT_9222_surf$datetime, impute_temp_9222_0m = impute_temp_9222_0m,
+                                    impute_sal_9222_0m = impute_sal_9222_0m)
+Data_SOMLIT_9222_surf <- left_join(Data_SOMLIT_9222_surf, impute_temp_9222_surf, by="datetime")
+Data_SOMLIT_9222_surf <- Data_SOMLIT_9222_surf %>% 
+  mutate(datetime = as.character(datetime))
+##
+impute_temp_9222_prof <- data.frame(datetime = Data_SOMLIT_9222_prof$datetime, impute_temp_9222_50m = impute_temp_9222_50m,
+                                    impute_sal_9222_50m = impute_sal_9222_50m)
+Data_SOMLIT_9222_prof <- left_join(Data_SOMLIT_9222_prof, impute_temp_9222_prof, by="datetime")
+Data_SOMLIT_9222_prof <- Data_SOMLIT_9222_prof %>% 
+  mutate(datetime = as.character(datetime))
+
 ```
 
 
-```{r creation dataset fusion de Data_SOMLIT_9222 with data_raw -  salinity + temperature - 0m et 50m, echo=FALSE, warning=FALSE, message=FALSE}
+
+```{r arrange datasets 0 & 50m, echo=FALSE, warning=FALSE, message=FALSE}
+
 
 ##surface
-combined_data_surf <- full_join(data_raw_surf, Data_SOMLIT_9222_surf, by = "datetime")
+Data_SOMLIT_9222_surf <- Data_SOMLIT_9222_surf %>% 
+  mutate(datetime = as.POSIXct(datetime),
+         Month = as.numeric(format(datetime, format="%m")))
 
-combined_data_surf = combined_data_surf %>% arrange(datetime)
-
-#temperature
-combined_data_surf$temperature.x[is.na(combined_data_surf$temperature.x)] <- "NA"
-combined_data_surf$temperature.y <- as.character(combined_data_surf$temperature.y)
-
-combined_data_surf <- combined_data_surf %>% 
-  mutate(temperature = case_when(temperature.x == "NA" ~ temperature.y , TRUE ~ temperature.x))
-
-#salinity
-combined_data_surf$salinity.x[is.na(combined_data_surf$salinity.x)] <- "NA"
-combined_data_surf$salinity.y <- as.character(combined_data_surf$salinity.y)
-
-combined_data_surf <- combined_data_surf %>% 
-  mutate(temperature = case_when(temperature.x == "NA" ~ temperature.y , TRUE ~ temperature.x),
-         salinity = case_when(salinity.x == "NA" ~ salinity.y , TRUE ~ salinity.x))
-
-combined_data_surf <- combined_data_surf %>% 
-  select(datetime, salinity, temperature, ta, dic, NO2, NO3, Chla, year, monthd, pH_calc, pCO2) %>% 
-  mutate(datetime = as.POSIXct(datetime), salinity = as.numeric(salinity), temperature = as.numeric(temperature)) %>% 
-  mutate(Month = format(datetime, format="%m"))
-
-##
 
 ##50m
-combined_data_prof <- full_join(data_raw_prof, Data_SOMLIT_9222_prof, by = "datetime")
-
-combined_data_prof = combined_data_prof %>% arrange(datetime)
-
-#temperature
-combined_data_prof$temperature.x[is.na(combined_data_prof$temperature.x)] <- "NA"
-combined_data_prof$temperature.y <- as.character(combined_data_prof$temperature.y)
-
-combined_data_prof <- combined_data_prof %>% 
-  mutate(temperature = case_when(temperature.x == "NA" ~ temperature.y , TRUE ~ temperature.x))
-
-#salinity
-combined_data_prof$salinity.x[is.na(combined_data_prof$salinity.x)] <- "NA"
-combined_data_prof$salinity.y <- as.character(combined_data_prof$salinity.y)
-
-combined_data_prof <- combined_data_prof %>% 
-  mutate(temperature = case_when(temperature.x == "NA" ~ temperature.y , TRUE ~ temperature.x),
-         salinity = case_when(salinity.x == "NA" ~ salinity.y , TRUE ~ salinity.x))
-
-combined_data_prof <- combined_data_prof %>% 
-  select(datetime, salinity, temperature, ta, dic, NO2, NO3, Chla, year, monthd, pH_calc, pCO2) %>% 
-  mutate(datetime = as.POSIXct(datetime), salinity = as.numeric(salinity), temperature = as.numeric(temperature)) %>% 
-  mutate(Month = format(datetime, format="%m"))
-
+Data_SOMLIT_9222_prof <- Data_SOMLIT_9222_prof %>% 
+  mutate(datetime = as.POSIXct(datetime),
+         Month = as.numeric(format(datetime, format="%m")))
 
 ```
 
@@ -1497,11 +1565,10 @@ combined_data_prof <- combined_data_prof %>%
 
 ```{r calculate monthly means 1992-2022 - 0m, echo=FALSE, warning=FALSE, message=FALSE}
 
-monthly_means_0m_9222 <- ungroup(combined_data_surf) %>% 
+monthly_means_0m_9222 <- Data_SOMLIT_9222_surf %>% 
   group_by(Month) %>%
-  summarise(
-    Salinity_month = mean(salinity, na.rm = TRUE),
-    Temperature_month = mean(temperature, na.rm = TRUE))
+  summarise(Salinity_month = mean(impute_sal_9222_0m),
+            Temperature_month = mean(impute_temp_9222_0m))
 
 monthly_means_0m_9222
 
@@ -1511,10 +1578,10 @@ monthly_means_0m_9222
 
 ```{r calculate anomalies + regression on salinity and temperature (1992-2022) - 0m, echo=FALSE, warning=FALSE, message=FALSE}
 
-ano_ST_0m_9222 <- left_join(ungroup(combined_data_surf), monthly_means_0m_9222, by = "Month") %>%
+ano_ST_0m_9222 <- left_join(ungroup(Data_SOMLIT_9222_surf), monthly_means_0m_9222, by = "Month") %>%
   mutate(
-    Salinity_ano = salinity - Salinity_month,
-    Temperature_ano = temperature - Temperature_month)
+    Salinity_ano = impute_sal_9222_0m - Salinity_month,
+    Temperature_ano = impute_temp_9222_0m - Temperature_month)
 
 # Regressions and tables of key parameters
 var_list_ST <-
@@ -1647,13 +1714,13 @@ plot_ano_temp_9222_0m <- ggplot(data = ano_ST_0m_9222, aes(x = datetime, y = Tem
   Mytheme(size_labs = 8) +
   theme(axis.text.x=element_blank())
 
-plot_temp_9222_0m <- combined_data_surf %>% 
+plot_temp_9222_0m <- Data_SOMLIT_9222_surf %>% 
   ggplot() +
-  aes(x=datetime, y=temperature) + 
-  geom_point(size=1) +
+  aes(x=datetime, y=impute_temp_9222_0m) + 
+  geom_line(size=0.8, col = "#24445C") +
   scale_x_datetime(name="") +
   scale_y_continuous(name="Temp. (°C)") +
-  ggtitle("Time series observations at 0m of temperature (1992-2022)")
+  ggtitle("Surface temperature time series (1992-2022)")
 
 plot_temp_9222_0m
 plot_ano_temp_9222_0m
@@ -1674,9 +1741,9 @@ plot_ano_sal_9222_0m <- ggplot(data = ano_ST_0m_9222, aes(x = datetime, y = Sali
   Mytheme(size_labs = 8) +
   theme(axis.text.x=element_blank())
 
-plot_sal_9222_0m <- combined_data_surf %>% 
+plot_sal_9222_0m <- Data_SOMLIT_9222_surf %>% 
   ggplot() +
-  aes(x=datetime, y=salinity) + 
+  aes(x=datetime, y=impute_sal_9222_0m) + 
   geom_point(size=1) +
   scale_x_datetime(name="") +
   scale_y_continuous(name="Salinity") +
@@ -1691,11 +1758,11 @@ plot_ano_sal_9222_0m
 
 ```{r calculate monthly means 1992-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
-monthly_means_50m_9222 <- ungroup(combined_data_prof) %>% 
+monthly_means_50m_9222 <- ungroup(Data_SOMLIT_9222_prof) %>% 
   group_by(Month) %>%
   summarise(
-    Salinity_month = mean(salinity, na.rm = TRUE),
-    Temperature_month = mean(temperature, na.rm = TRUE))
+    Salinity_month = mean(impute_sal_9222_50m, na.rm = TRUE),
+    Temperature_month = mean(impute_temp_9222_50m, na.rm = TRUE))
 
 monthly_means_50m_9222
 
@@ -1705,10 +1772,10 @@ monthly_means_50m_9222
 
 ```{r calculate anomalies + regression on salinity and temperature (1992-2022) - 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
-ano_ST_50m_9222 <- left_join(ungroup(combined_data_prof), monthly_means_50m_9222, by = "Month") %>%
+ano_ST_50m_9222 <- left_join(ungroup(Data_SOMLIT_9222_prof), monthly_means_50m_9222, by = "Month") %>%
   mutate(
-    Salinity_ano = salinity - Salinity_month,
-    Temperature_ano = temperature - Temperature_month)
+    Salinity_ano = impute_sal_9222_50m - Salinity_month,
+    Temperature_ano = impute_temp_9222_50m - Temperature_month)
 
 # Regressions and tables of key parameters
 var_list_ST <-
@@ -1841,9 +1908,9 @@ plot_ano_temp_9222_50m <- ggplot(data = ano_ST_50m_9222, aes(x = datetime, y = T
   Mytheme(size_labs = 8) +
   theme(axis.text.x=element_blank())
 
-plot_temp_9222_50m <- combined_data_prof %>% 
+plot_temp_9222_50m <- Data_SOMLIT_9222_prof %>% 
   ggplot() +
-  aes(x=datetime, y=temperature) + 
+  aes(x=datetime, y=impute_temp_9222_50m) + 
   geom_point(size=1) +
   scale_x_datetime(name="") +
   scale_y_continuous(name="Temp. (°C)") +
@@ -1868,9 +1935,9 @@ plot_ano_sal_9222_50m <- ggplot(data = ano_ST_50m_9222, aes(x = datetime, y = Sa
   Mytheme(size_labs = 8) +
   theme(axis.text.x=element_blank())
 
-plot_sal_9222_50m <- combined_data_prof %>% 
+plot_sal_9222_50m <- Data_SOMLIT_9222_prof %>% 
   ggplot() +
-  aes(x=datetime, y=salinity) + 
+  aes(x=datetime, y=impute_sal_9222_50m) + 
   geom_point(size=1) +
   scale_x_datetime(name="") +
   scale_y_continuous(name="Salinity") +
@@ -1880,36 +1947,566 @@ plot_sal_9222_50m
 plot_ano_sal_9222_50m
 
 ```
-
-## **Comparison SOMLIT surface results with EOL results (2013-2022)**  
   
-#### *Data surface : temperature (°C), salinity (psu) and oxygen (mll)*  
+
+## Analysis every 10 years (only temperature)  
+  
+  
+## Trend analysis by residuals on temperature : period Jan.1993 - Dec.2002  
+  
+  
+##### [Table of monthly means for temperature (1993-2002) - 0m data]{style="color:blue"}
+
+```{r calculate monthly means 1993-2002 - 0m, echo=FALSE, warning=FALSE, message=FALSE}
+
+Data_SOMLIT_9302_surf <- Data_SOMLIT_9222_surf %>% 
+  dplyr::filter(datetime >= "1993-01-06" & datetime <= "2002-12-30")
+##
+
+monthly_means_0m_9302 <- Data_SOMLIT_9302_surf %>% 
+  group_by(Month) %>%
+  summarise(Salinity_month = mean(impute_sal_9222_0m),
+            Temperature_month = mean(impute_temp_9222_0m))
+
+monthly_means_0m_9302
+
+```
+
+##### [Table of temperature time series anomaly regression analyses (1993-2002) - 0m data]{style="color:green"}
+
+```{r calculate anomalies + regression on temperature (1993-2002) - 0m, echo=FALSE, warning=FALSE, message=FALSE}
+
+ano_T_0m_9302 <- left_join(ungroup(Data_SOMLIT_9302_surf), monthly_means_0m_9302, by = "Month") %>%
+  mutate(
+    Salinity_ano = impute_sal_9222_0m - Salinity_month,
+    Temperature_ano = impute_temp_9222_0m - Temperature_month)
+
+# Regressions and tables of key parameters
+var_list <-
+  c("salinity",
+    "temperature")
+
+lm.test <- vector("list", length(var_list))
+
+for(i in seq_along(var_list)){
+  lm.test[[i]] <- lm(reformulate(var_list[i], "datetime"), data = ano_T_0m_9302)
+}
+
+#cutoff_date <- "2016-01-01" #to limit regressions on complete years
+
+lms <- lapply(var_list, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
+             data = ano_T_0m_9302))
+})
+
+reg <- NULL
+for (i in 1:length(var_list)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob <-
+    pf(lms[[i]]$fstatistic[1],
+       lms[[i]]$fstatistic[2],
+       lms[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg <-
+    rbind(reg, as.numeric(
+      c(
+        lms[[i]]$coefficients[2, 1],
+        lms[[i]]$coefficients[2, 2],
+        lms[[i]]$coefficients[2, 4],
+        lms[[i]]$coefficients[1, 1],
+        lms[[i]]$coefficients[1, 2],
+        lms[[i]]$coefficients[1, 4],
+        lms[[i]]$fstatistic[1],
+        lms[[i]]$fstatistic[3],
+        lms[[i]]$r.squared,
+        prob
+      )
+    ))
+}
+
+colnames(reg) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+row.names(reg) <- var_list
+reg_ano_T_0m_9302 <- reg
+
+# Regression and table anomalies
+var_list <-
+  c(
+    "Salinity_ano",
+    "Temperature_ano")
+
+lms <- lapply(var_list, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), data = ano_T_0m_9302))
+})
+
+reg <- NULL
+for (i in 1:length(var_list)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob <-
+    pf(lms[[i]]$fstatistic[1],
+       lms[[i]]$fstatistic[2],
+       lms[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg <-
+    rbind(reg, as.numeric(
+      c(
+        lms[[i]]$coefficients[2, 1],
+        lms[[i]]$coefficients[2, 2],
+        lms[[i]]$coefficients[2, 4],
+        lms[[i]]$coefficients[1, 1],
+        lms[[i]]$coefficients[1, 2],
+        lms[[i]]$coefficients[1, 4],
+        lms[[i]]$fstatistic[1],
+        lms[[i]]$fstatistic[3],
+        lms[[i]]$r.squared,
+        prob
+      )
+    ))
+}
+colnames(reg) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+row.names(reg) <- var_list
+reg_ano_T_0m_9302 <- reg
+
+reg_ano_T_0m_9302
+
+```
+
+
+#### Plot of anomalies : Temperature (1993-2002) - 0m
+
+```{r plot anomalies temperature 1993-2002 - 0m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+plot_ano_temp_9302_0m <- ggplot(data = ano_T_0m_9302, aes(x = datetime, y = Temperature_ano), na.rm=TRUE) +
+  scale_x_datetime(date_breaks="2 year", labels = date_format("%Y")) +
+  geom_point(colour="blue", na.rm=TRUE, size=1) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title="Anomalies trend for temperature (1993-2002)",x="", y="Temp. (°C)") +
+  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano_T_0m_9302$Temperature_ano, na.rm=TRUE), 
+           label="", colour="black", size=9, fontface="plain") +
+  coord_fixed() +
+  Mytheme(size_labs = 8) +
+  theme(axis.text.x=element_blank())
+
+plot_temp_9302_0m <- Data_SOMLIT_9302_surf %>% 
+  ggplot() +
+  aes(x=datetime, y=impute_temp_9222_0m) + 
+  geom_point(size=1, col = "#24445C") +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Temp. (°C)") +
+  ggtitle("Surface temperature time series (1993-2002)")
+
+plot_temp_9302_0m
+plot_ano_temp_9302_0m
+
+```
+  
+
+## Trend analysis by residuals on temperature : period Jan.2003 - Dec.2012  
+  
+  
+##### [Table of monthly means for temperature (2003-2012) - 0m data]{style="color:blue"}
+
+```{r calculate monthly means 2003-2012 - 0m, echo=FALSE, warning=FALSE, message=FALSE}
+
+Data_SOMLIT_0312_surf <- Data_SOMLIT_9222_surf %>% 
+  dplyr::filter(datetime >= "2003-01-09" & datetime <= "2012-12-28")
+##
+
+monthly_means_0m_0312 <- Data_SOMLIT_0312_surf %>% 
+  group_by(Month) %>%
+  summarise(Salinity_month = mean(impute_sal_9222_0m),
+            Temperature_month = mean(impute_temp_9222_0m))
+
+monthly_means_0m_0312
+
+```
+
+##### [Table of temperature time series anomaly regression analyses (2003-2012) - 0m data]{style="color:green"}
+
+```{r calculate anomalies + regression on temperature (2003-2012) - 0m, echo=FALSE, warning=FALSE, message=FALSE}
+
+ano_T_0m_0312 <- left_join(ungroup(Data_SOMLIT_0312_surf), monthly_means_0m_0312, by = "Month") %>%
+  mutate(
+    Salinity_ano = impute_sal_9222_0m - Salinity_month,
+    Temperature_ano = impute_temp_9222_0m - Temperature_month)
+
+# Regressions and tables of key parameters
+var_list <-
+  c("salinity",
+    "temperature")
+
+lm.test <- vector("list", length(var_list))
+
+for(i in seq_along(var_list)){
+  lm.test[[i]] <- lm(reformulate(var_list[i], "datetime"), data = ano_T_0m_0312)
+}
+
+#cutoff_date <- "2016-01-01" #to limit regressions on complete years
+
+lms <- lapply(var_list, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
+             data = ano_T_0m_0312))
+})
+
+reg <- NULL
+for (i in 1:length(var_list)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob <-
+    pf(lms[[i]]$fstatistic[1],
+       lms[[i]]$fstatistic[2],
+       lms[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg <-
+    rbind(reg, as.numeric(
+      c(
+        lms[[i]]$coefficients[2, 1],
+        lms[[i]]$coefficients[2, 2],
+        lms[[i]]$coefficients[2, 4],
+        lms[[i]]$coefficients[1, 1],
+        lms[[i]]$coefficients[1, 2],
+        lms[[i]]$coefficients[1, 4],
+        lms[[i]]$fstatistic[1],
+        lms[[i]]$fstatistic[3],
+        lms[[i]]$r.squared,
+        prob
+      )
+    ))
+}
+
+colnames(reg) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+row.names(reg) <- var_list
+reg_ano_T_0m_0312 <- reg
+
+# Regression and table anomalies
+var_list <-
+  c(
+    "Salinity_ano",
+    "Temperature_ano")
+
+lms <- lapply(var_list, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), data = ano_T_0m_0312))
+})
+
+reg <- NULL
+for (i in 1:length(var_list)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob <-
+    pf(lms[[i]]$fstatistic[1],
+       lms[[i]]$fstatistic[2],
+       lms[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg <-
+    rbind(reg, as.numeric(
+      c(
+        lms[[i]]$coefficients[2, 1],
+        lms[[i]]$coefficients[2, 2],
+        lms[[i]]$coefficients[2, 4],
+        lms[[i]]$coefficients[1, 1],
+        lms[[i]]$coefficients[1, 2],
+        lms[[i]]$coefficients[1, 4],
+        lms[[i]]$fstatistic[1],
+        lms[[i]]$fstatistic[3],
+        lms[[i]]$r.squared,
+        prob
+      )
+    ))
+}
+colnames(reg) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+row.names(reg) <- var_list
+reg_ano_T_0m_0312 <- reg
+
+reg_ano_T_0m_0312
+
+```
+
+
+#### Plot of anomalies : Temperature (2003-2012) - 0m
+
+```{r plot anomalies temperature 2003-2012 - 0m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+plot_ano_temp_0312_0m <- ggplot(data = ano_T_0m_0312, aes(x = datetime, y = Temperature_ano), na.rm=TRUE) +
+  scale_x_datetime(date_breaks="2 year", labels = date_format("%Y")) +
+  geom_point(colour="blue", na.rm=TRUE, size=1) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title="Anomalies trend for temperature (2003-2012)",x="", y="Temp. (°C)") +
+  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano_T_0m_0312$Temperature_ano, na.rm=TRUE), 
+           label="", colour="black", size=9, fontface="plain") +
+  coord_fixed() +
+  Mytheme(size_labs = 8) +
+  theme(axis.text.x=element_blank())
+
+plot_temp_0312_0m <- Data_SOMLIT_0312_surf %>% 
+  ggplot() +
+  aes(x=datetime, y=impute_temp_9222_0m) + 
+  geom_line(size=0.8, col = "#0F056B") +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Temp. (°C)") +
+  ggtitle("Surface temperature time series (2003-2012)")
+
+plot_temp_0312_0m
+plot_ano_temp_0312_0m
+
+```
+  
+
+## Trend analysis by residuals on temperature : period Jan.2013 - Dec.2022  
+  
+  
+##### [Table of monthly means for temperature (2013-2022) - 0m data]{style="color:blue"}
+
+```{r calculate monthly means 2013-2022 - 0m, echo=FALSE, warning=FALSE, message=FALSE}
+
+Data_SOMLIT_1322_surf <- Data_SOMLIT_9222_surf %>% 
+  dplyr::filter(datetime >= "2013-01-04" & datetime <= "2022-12-20")
+##
+
+monthly_means_0m_1322 <- Data_SOMLIT_1322_surf %>% 
+  group_by(Month) %>%
+  summarise(Salinity_month = mean(impute_sal_9222_0m),
+            Temperature_month = mean(impute_temp_9222_0m))
+
+monthly_means_0m_1322
+
+```
+
+##### [Table of temperature time series anomaly regression analyses (2003-2012) - 0m data]{style="color:green"}
+
+```{r calculate anomalies + regression on temperature (2003-2012) - 0m, echo=FALSE, warning=FALSE, message=FALSE}
+
+ano_T_0m_1322 <- left_join(ungroup(Data_SOMLIT_1322_surf), monthly_means_0m_1322, by = "Month") %>%
+  mutate(
+    Salinity_ano = impute_sal_9222_0m - Salinity_month,
+    Temperature_ano = impute_temp_9222_0m - Temperature_month)
+
+# Regressions and tables of key parameters
+var_list <-
+  c("salinity",
+    "temperature")
+
+lm.test <- vector("list", length(var_list))
+
+for(i in seq_along(var_list)){
+  lm.test[[i]] <- lm(reformulate(var_list[i], "datetime"), data = ano_T_0m_1322)
+}
+
+#cutoff_date <- "2016-01-01" #to limit regressions on complete years
+
+lms <- lapply(var_list, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
+             data = ano_T_0m_1322))
+})
+
+reg <- NULL
+for (i in 1:length(var_list)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob <-
+    pf(lms[[i]]$fstatistic[1],
+       lms[[i]]$fstatistic[2],
+       lms[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg <-
+    rbind(reg, as.numeric(
+      c(
+        lms[[i]]$coefficients[2, 1],
+        lms[[i]]$coefficients[2, 2],
+        lms[[i]]$coefficients[2, 4],
+        lms[[i]]$coefficients[1, 1],
+        lms[[i]]$coefficients[1, 2],
+        lms[[i]]$coefficients[1, 4],
+        lms[[i]]$fstatistic[1],
+        lms[[i]]$fstatistic[3],
+        lms[[i]]$r.squared,
+        prob
+      )
+    ))
+}
+
+colnames(reg) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+row.names(reg) <- var_list
+reg_ano_T_0m_1322 <- reg
+
+# Regression and table anomalies
+var_list <-
+  c(
+    "Salinity_ano",
+    "Temperature_ano")
+
+lms <- lapply(var_list, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), data = ano_T_0m_1322))
+})
+
+reg <- NULL
+for (i in 1:length(var_list)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob <-
+    pf(lms[[i]]$fstatistic[1],
+       lms[[i]]$fstatistic[2],
+       lms[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg <-
+    rbind(reg, as.numeric(
+      c(
+        lms[[i]]$coefficients[2, 1],
+        lms[[i]]$coefficients[2, 2],
+        lms[[i]]$coefficients[2, 4],
+        lms[[i]]$coefficients[1, 1],
+        lms[[i]]$coefficients[1, 2],
+        lms[[i]]$coefficients[1, 4],
+        lms[[i]]$fstatistic[1],
+        lms[[i]]$fstatistic[3],
+        lms[[i]]$r.squared,
+        prob
+      )
+    ))
+}
+colnames(reg) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+row.names(reg) <- var_list
+reg_ano_T_0m_1322 <- reg
+
+reg_ano_T_0m_1322
+
+```
+
+
+#### Plot of anomalies : Temperature (2013-2022) - 0m
+
+```{r plot anomalies temperature 2013-2022 - 0m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+plot_ano_temp_1322_0m <- ggplot(data = ano_T_0m_1322, aes(x = datetime, y = Temperature_ano), na.rm=TRUE) +
+  scale_x_datetime(date_breaks="2 year", labels = date_format("%Y")) +
+  geom_point(colour="blue", na.rm=TRUE, size=1) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title="Anomalies trend for temperature (2013-2022)",x="", y="Temp. (°C)") +
+  annotate("text", x =as.POSIXct("2016-01-01"), y= min(ano_T_0m_1322$Temperature_ano, na.rm=TRUE), 
+           label="", colour="black", size=9, fontface="plain") +
+  coord_fixed() +
+  Mytheme(size_labs = 8) +
+  theme(axis.text.x=element_blank())
+
+plot_temp_1322_0m <- Data_SOMLIT_1322_surf %>% 
+  ggplot() +
+  aes(x=datetime, y=impute_temp_9222_0m) + 
+  geom_line(size=0.8, col = "#3F2204") +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Temp. (°C)") +
+  ggtitle("Surface temperature time series (2013-2022)")
+
+plot_temp_1322_0m
+plot_ano_temp_1322_0m
+
+```
+
+
+
+
+
+
+
+
+#############################################################################################
+
+
+## **Comparison SOMLIT surface results (weekly) with EOL results (hourly) (2017-2022)**  
+  
+#### *Data surface : temperature (°C) & salinity*  
   
 ##### [Table and plot of monthly means (2013-2022) - EOL temperature & salinity]{style="color:blue"}
 
 
-
-```{r importation Data EOL, echo=FALSE, warning=FALSE, message=FALSE}
+```{r importation Data EOL hourly 17-22, echo=FALSE, warning=FALSE, message=FALSE}
 
 #period : septembre 2013-octobre 2022
-EOL_RAW <- read_csv("../Data/SEANOE_EOL.csv")  
+EOL_hourly_1722 <- read_delim("../Data/EOL_17-22_23perday_hourly.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
+  rename(temperature=temp_eol_c, salinity=sal_eol_psu) %>% 
+  mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d")) 
 
-#tri
-EOL_RAW <- EOL_RAW %>% 
-  rename(temperature = temp_eol_c, salinity = sal_eol_psu, oxygen = oxy_eol_mll) %>% 
-  select(-...1) %>% 
-  mutate(Year.Month = format(datetime, format="%Y-%m"),
-         Year = format(datetime, format="%Y"), 
-         Month = format(datetime, format="%m"))
+
 ```
 
 
 ```{r creation data SOMLIT (2013-2022), echo=FALSE, warning=FALSE, message=FALSE}
 
-SOMLIT_1322 <- data_raw %>% 
-  dplyr::filter(depth==0) %>% 
-  dplyr::filter(sampling_date >= "2013-01-04") %>% 
-  mutate(Month = format(sampling_date, format="%m"))
+SOMLIT_1722 <- data_0722 %>% 
+  dplyr::filter(datetime >= "2017-09-26") %>% 
+  mutate(Month = format(datetime, format="%m"))
 
 
 ```
@@ -1917,14 +2514,13 @@ SOMLIT_1322 <- data_raw %>%
 
 ```{r calcul monthly means - temperature & salinity - EOL, echo=TRUE, warning=FALSE, message=FALSE}
 
-monthly_means <- ungroup(EOL_RAW) %>% 
-  mutate(Month = format(datetime, format="%m")) %>% 
+monthly_means_EOL_1722 <- ungroup(EOL_hourly_1722) %>% 
   group_by(Month) %>%
   summarise(
     Salinity_month = mean(salinity, na.rm = TRUE),
     Temperature_month = mean(temperature, na.rm = TRUE))
 
-monthly_means
+monthly_means_EOL_1722
 
 ```
 
@@ -1932,53 +2528,54 @@ monthly_means
 
 ```{r calcul monthly means - temperature & salinity - SOMLIT - 2013-2022, echo=TRUE, warning=FALSE, message=FALSE}
 
-monthly_means_somlit_1322 <- ungroup(SOMLIT_1322) %>% 
-  mutate(Month = format(sampling_date, format="%m")) %>% 
+monthly_means_somlit_1722 <- ungroup(SOMLIT_1722) %>%
   group_by(Month) %>%
   summarise(
-    Salinity_month = mean(salinity, na.rm = TRUE),
-    Temperature_month = mean(temperature, na.rm = TRUE))
+    Salinity_month = mean(impute_sal, na.rm = TRUE),
+    Temperature_month = mean(impute_temp, na.rm = TRUE))
 
-monthly_means_somlit_1322
+monthly_means_somlit_1722
 
 ```
 
 
 ```{r plot monthly means - temperature & salinity - EOL, echo=TRUE, warning=FALSE, message=FALSE}
 
-EOL_monthly_means <- left_join(ungroup(EOL_RAW), monthly_means, by = "Month")
-
-EOL_monthly_means %>% 
-  ggplot() + 
-  geom_point(aes(x=datetime, y=temperature), size=1, col="lightblue") +
-  geom_point(aes(x=datetime, y=Temperature_month), size=0.8, col="pink") +
-  scale_x_datetime(name="") +
-  scale_y_continuous(name="Temp. (°C)")
+# EOL_monthly_means <- left_join(ungroup(EOL_RAW), monthly_means, by = "Month")
+# 
+# EOL_monthly_means %>% 
+#   ggplot() + 
+#   geom_point(aes(x=datetime, y=temperature), size=1, col="lightblue") +
+#   geom_point(aes(x=datetime, y=Temperature_month), size=0.8, col="pink") +
+#   scale_x_datetime(name="") +
+#   scale_y_continuous(name="Temp. (°C)")
 ```
 
 
 
 ```{r plot monthly means - temperature & salinity - SOMLIT - 2013-2022, echo=TRUE, warning=FALSE, message=FALSE}
 
-SOMLIT_1322_monthly_means <- left_join(ungroup(SOMLIT_1322), monthly_means_somlit_1322, by = "Month")
-
-SOMLIT_1322_monthly_means %>% 
-  ggplot() + 
-  geom_point(aes(x=sampling_date, y=temperature), size=1, col="lightblue") +
-  geom_point(aes(x=sampling_date, y=Temperature_month), size=0.8, col="pink") +
-  scale_x_datetime(name="") +
-  scale_y_continuous(name="Temp. (°C)")
+# SOMLIT_1322_monthly_means <- left_join(ungroup(SOMLIT_1322), monthly_means_somlit_1322, by = "Month")
+# 
+# SOMLIT_1322_monthly_means %>% 
+#   ggplot() + 
+#   geom_point(aes(x=sampling_date, y=temperature), size=1, col="lightblue") +
+#   geom_point(aes(x=sampling_date, y=Temperature_month), size=0.8, col="pink") +
+#   scale_x_datetime(name="") +
+#   scale_y_continuous(name="Temp. (°C)")
 ```
 
 
-##### [Table of time series anomalies regression analyses (2013-2022) - EOL temperature & salinity]{style="color:green"}  
+##### [Table of time series anomalies regression analyses (2017-2022) - EOL temperature & salinity]{style="color:green"}  
   
 
 ```{r regression analysis - temperature & salinity - EOL, echo=FALSE, warning=FALSE, message=FALSE}
 
-anomalies <- left_join(ungroup(EOL_RAW), monthly_means, by = "Month") %>%
+anomalies_EOL_1722 <- left_join(ungroup(EOL_hourly_1722), monthly_means_EOL_1722, by = "Month") %>%
   mutate(Salinity_ano = salinity - Salinity_month,
-         Temperature_ano = temperature - Temperature_month)
+         Temperature_ano = temperature - Temperature_month) %>% 
+  unite(col=datetime_fusion, "datetime", "Hour", sep=" ") %>% 
+  mutate(datetime_fusion = as.POSIXct(datetime_fusion, format = "%Y-%m-%d %H:%M:%S"))
 
 # Regressions and tables of key parameters
 var_list <-
@@ -1988,13 +2585,13 @@ var_list <-
 lm.test <- vector("list", length(var_list))
  
  for(i in seq_along(var_list)){
-     lm.test[[i]] <- lm(reformulate(var_list[i], "datetime"), data = anomalies)
+     lm.test[[i]] <- lm(reformulate(var_list[i], "datetime_fusion"), data = anomalies_EOL_1722)
  }
 
 
 lms <- lapply(var_list, function(x) {
-  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
-             data = anomalies))
+  summary(lm(substitute(i ~ decimal_date(datetime_fusion), list(i = as.name(x))), 
+             data = anomalies_EOL_1722))
 })
 
 reg <- NULL
@@ -2047,8 +2644,8 @@ var_list <-
     "Temperature_ano")
 
 lms <- lapply(var_list, function(x) {
-  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
-             data = anomalies))
+  summary(lm(substitute(i ~ decimal_date(datetime_fusion), list(i = as.name(x))), 
+             data = anomalies_EOL_1722))
 })
 reg <- NULL
 for (i in 1:length(var_list)) {
@@ -2096,13 +2693,13 @@ reg_anomalies
 ```
 
 
-##### [Table of time series anomalies regression analyses (2013-2022) - SOMLIT temperature & salinity]{style="color:green"}  
+##### [Table of time series anomalies regression analyses (2017-2022) - SOMLIT temperature & salinity]{style="color:green"}  
 
 ```{r regression analysis - temperature & salinity - SOMLIT - 2013-2022, echo=FALSE, warning=FALSE, message=FALSE}
 
-anomalies_SOM_1322 <- left_join(ungroup(SOMLIT_1322), monthly_means_somlit_1322, by = "Month") %>% 
-  mutate(Salinity_ano = salinity - Salinity_month,
-         Temperature_ano = temperature - Temperature_month)
+anomalies_SOM_1722 <- left_join(ungroup(SOMLIT_1722), monthly_means_somlit_1722, by = "Month") %>% 
+  mutate(Salinity_ano = impute_sal - Salinity_month,
+         Temperature_ano = impute_temp - Temperature_month)
 
 # Regressions and tables of key parameters
 var_list <-
@@ -2112,13 +2709,13 @@ var_list <-
 lm.test <- vector("list", length(var_list))
  
  for(i in seq_along(var_list)){
-     lm.test[[i]] <- lm(reformulate(var_list[i], "sampling_date"), data = anomalies_SOM_1322)
+     lm.test[[i]] <- lm(reformulate(var_list[i], "datetime"), data = anomalies_SOM_1722)
  }
 
 
 lms <- lapply(var_list, function(x) {
-  summary(lm(substitute(i ~ decimal_date(sampling_date), list(i = as.name(x))), 
-             data = anomalies_SOM_1322))
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
+             data = anomalies_SOM_1722))
 })
 
 reg <- NULL
@@ -2161,8 +2758,8 @@ colnames(reg) <-
     "R2",
     "P value")
 row.names(reg) <- var_list
-reg_ano_SOM_1322 <- reg
-slope_temp <- reg_ano_SOM_1322[2, 1]
+reg_ano_SOM_1722 <- reg
+slope_temp <- reg_ano_SOM_1722[2, 1]
 
 # Regression and table anomalies
 var_list <-
@@ -2171,8 +2768,8 @@ var_list <-
     "Temperature_ano")
 
 lms <- lapply(var_list, function(x) {
-  summary(lm(substitute(i ~ decimal_date(sampling_date), list(i = as.name(x))), 
-             data = anomalies_SOM_1322))
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
+             data = anomalies_SOM_1722))
 })
 reg <- NULL
 for (i in 1:length(var_list)) {
@@ -2214,72 +2811,70 @@ colnames(reg) <-
     "P value")
 
 row.names(reg) <- var_list
-reg_anomalies <- reg
+reg_anomalies_som_1722 <- reg
 
-reg_anomalies
+reg_anomalies_som_1722
 ```
 
 
 
-#### **Plot of anomalies : Temperature (°C) (2013-2022) - EOL**    
+#### **Plot of anomalies : Temperature (°C) (2017-2022) - EOL**    
   
 
 ```{r plot anomalies + trends - temperature - EOL, echo=FALSE, warning=FALSE, message=FALSE}
 
 
-plot_ano_temp <- ggplot(data = anomalies, aes(x = datetime, y = Temperature_ano), na.rm=TRUE) +
-  scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+plot_ano_temp_EOL_1722 <- ggplot(data = anomalies_EOL_1722, aes(x = datetime_fusion, y = Temperature_ano), na.rm=TRUE) +
+  scale_x_datetime(date_breaks="1 year", labels = date_format("%Y")) +
   geom_point(colour="blue", na.rm=TRUE, size=0.65) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
-  labs(title=NULL,x="", y="Temp. (°C)") +
-  annotate("text", x =as.POSIXct("2016-01-01"), y= min(anomalies$Temperature_ano, na.rm=TRUE), 
+  labs(title="Anomalies trend for temperature (2017-2022)",x="", y="Temp. (°C)") +
+  annotate("text", x =as.POSIXct("2016-01-01"), y= min(anomalies_EOL_1722$Temperature_ano, na.rm=TRUE), 
            label="", colour="black", size=9, fontface="plain") +
   coord_fixed() +
-  Mytheme(size_labs = 8) +
-  theme(axis.text.x=element_blank()) + 
-  ggtitle("EOL - Temperature anomalies + trend")
+  Mytheme(size_labs = 5) +
+  theme(axis.text.x=element_blank())
 
-plot_temperature <- EOL_RAW %>% 
+plot_temperature_EOL_1722 <- EOL_hourly_1722 %>% 
   ggplot() +
   aes(x=datetime, y=temperature) + 
   geom_point(size=1) +
   scale_x_datetime(name="") +
   scale_y_continuous(name="Temp. (°C)") +
-  ggtitle("EOL time series observations of temperature (°C) 2013-2022")
+  ggtitle("EOL time series observations of temperature (°C) 2017-2022")
 
-plot_temperature
-plot_ano_temp
+plot_temperature_EOL_1722
+plot_ano_temp_EOL_1722
 ```
 
 
-#### **Plot of anomalies : Salinity (2013-2022) - EOL**  
+#### **Plot of anomalies : Salinity (2017-2022) - EOL**  
   
 
 ```{r plot anomalies + trends - salinity - EOL, echo=FALSE, warning=FALSE, message=FALSE}
 
 
-plot_ano_sal <- ggplot(data = anomalies, aes(x = datetime, y = Salinity_ano), na.rm=TRUE) +
-  scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+plot_ano_sal_EOL_1722 <- ggplot(data = anomalies_EOL_1722, aes(x = datetime_fusion, y = Salinity_ano), na.rm=TRUE) +
+  scale_x_datetime(date_breaks="1 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_point(colour="blue", na.rm=TRUE, size=0.65) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
-  labs(title=NULL,x="", y="Temp. (°C)") +
-  annotate("text", x =as.POSIXct("2016-01-01"), y= min(anomalies$Salinity_ano, na.rm=TRUE), 
+  labs(title="Anomalies trend for salinity (2017-2022)",x="", y="Salinity") +
+  annotate("text", x =as.POSIXct("2016-01-01"), y= min(anomalies_EOL_1722$Salinity_ano, na.rm=TRUE), 
            label="", colour="black", size=9, fontface="plain") +
   coord_fixed() +
   Mytheme(size_labs = 8) +
-  theme(axis.text.x=element_blank()) + 
-  ggtitle("EOL - Salinity anomalies + trend")
+  theme(axis.text.x=element_blank())
 
-plot_salinity <- EOL_RAW %>% 
+plot_salinity_EOL_1722 <- EOL_hourly_1722 %>% 
   ggplot() +
-  aes(x=datetime, y=salinity) + 
+  aes(x=datetime, y=impute_sal) + 
   geom_point(size=1) +
   scale_x_datetime(name="") +
   scale_y_continuous(name="Salinity") +
-  ggtitle("EOL time series observations of salinity  2013-2022")
+  ggtitle("EOL time series observations of salinity  2017-2022")
 
-plot_salinity
-plot_ano_sal
+plot_salinity_EOL_1722
+plot_ano_sal_EOL_1722
 ```
 
 
