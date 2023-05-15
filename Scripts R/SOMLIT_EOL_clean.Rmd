@@ -37,6 +37,8 @@ library("berryFunctions")
 library("hms")
 ```
 
+
+
 ## Importation data carbo chemistry (Point B SOMLIT) : 2007-2022 complete
 
 ```{r importation data pCO2 water, echo=FALSE, warning=FALSE, message=FALSE}
@@ -590,6 +592,264 @@ new_one <- new_one %>%
 
 
 ```
+
+## Creation SOMLIT oxygen (jan.2002 - dec.2022) :  
+  
+→ oxygen in ml/l, convert into µmol/kg
+
+
+```{r SOMLIT oxygen (2002-2022), echo=FALSE, warning=FALSE, message=FALSE}
+
+SOMLIT_oxy <- read_delim("../Data/Somlit_Extraction_hydro_oxy_2002_2022.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
+  mutate(O = case_when(O > 10 ~ NA_real_, TRUE ~ O))
+  
+SOMLIT_oxy <- SOMLIT_oxy %>% 
+  mutate(HEURE = as.character(HEURE),
+         DATE = str_replace_all(DATE, "/", "-")) %>% 
+  unite(col='datetime', c('DATE', 'HEURE'), sep=' ') %>% 
+  mutate(datetime = as.POSIXct(datetime, format="%d-%m-%Y %H:%M:%S"))
+
+SOMLIT_oxy <- SOMLIT_oxy %>% 
+  mutate(T = case_when(T > 30 ~ NA_real_, TRUE ~ T),
+         S = case_when(S > 39 ~ NA_real_, TRUE ~ S),
+         S = case_when(S < 35 ~ NA_real_, TRUE ~ S))
+
+
+#conversion des valeurs ml/l en umol/kg (voire protocole oxygene SOMLIT)
+# *44.66 -> mmol/m3 ou umol/l
+# densite eau de mer = 1030 kg/m3 = 1.030 kg/l
+#ici, utilisation de rho, package seacarb pour calcul de la densité
+#rho/1000 pour avoir en kg/l
+# 44.66/rho = convert_o2
+# ml/l * convert_o2 -> umol/kg
+
+
+#creation des 2 variables
+SW_density_somlit <- rho(S = SOMLIT_oxy$S, T=SOMLIT_oxy$T, P=0)/1000
+convert_o2_somlit <- 44.66/SW_density_somlit
+
+
+SOMLIT_oxy <- SOMLIT_oxy %>% 
+   mutate(oxy_umol_kg = O*convert_o2_somlit,
+          year = format(datetime, format = "%Y"),
+          month = format(datetime, format = "%m"),
+          year.month = format(datetime, format = "%Y-%m"))
+
+#delate rows with depth = 0 :
+SOMLIT_oxy <- SOMLIT_oxy[-c(2051, 2054, 2057, 2060, 2063, 2066, 2069, 2072, 2075, 2078),]
+  
+
+#replace depth of 2 by 1 :
+SOMLIT_oxy <- SOMLIT_oxy %>% 
+  mutate(PROF_NUM = case_when(PROF_NUM == 2 ~ 1, TRUE ~ PROF_NUM))
+ 
+#save :
+#write.table(SOMLIT_oxy, "DATA_SOMLIT_02-22_oxy.csv", sep=";", col.names = TRUE, row.names = FALSE) 
+  
+  
+
+```
+  
+  
+#### *Measure SOMLIT oxygen (2002-2022) every tuesday*  
+  
+→ Fill in the gaps: adding lines  
+  
+
+
+```{r SOMLIT oxygen (2002-2022) - adding lines manually, echo=FALSE, warning=FALSE, message=FALSE}
+
+#mesures non-regulieres, des fois mardi, des fois jeudi
+#number of measure by month by year :
+Nb_by_month_oxy <- summarise(group_by(SOMLIT_oxy, year.month), NB_OBS_M=n()) 
+#must be 8 or 10
+
+SOMLIT_oxy$datetime <- as.character(SOMLIT_oxy$datetime)
+
+#adding lines manually :
+empty_mat = matrix(ncol = 9, nrow = 68)
+empty_rows <- data.frame(empty_mat) %>% 
+  rename(datetime=X1, PROF_NUM=X2, T=X3, S=X4, O=X5, oxy_umol_kg=X6, year=X7, month=X8, year.month=X9)
+
+SOMLIT_oxy <- rbind(empty_rows, SOMLIT_oxy)
+##
+
+#adding missing dates manually :
+SOMLIT_oxy[c(1,2),"datetime"] <- "2002-02-27 09:00:00"
+SOMLIT_oxy[c(1,2),"PROF_NUM"] <- c("1", "50")
+SOMLIT_oxy[c(3,4),"datetime"] <- "2004-10-27 09:00:00"
+SOMLIT_oxy[c(3,4),"PROF_NUM"] <- c("1", "50")
+SOMLIT_oxy[c(5,6),"datetime"] <- "2002-12-26 09:00:00"
+SOMLIT_oxy[c(5,6),"PROF_NUM"] <- c("1", "50")
+SOMLIT_oxy[c(7,8),"datetime"] <- "2007-04-10 09:00:00"
+SOMLIT_oxy[c(7,8),"PROF_NUM"] <- c("1", "50")
+
+SOMLIT_oxy[c(9,10),"datetime"] <- "2007-12-25 09:00:00"
+SOMLIT_oxy[c(9,10),"PROF_NUM"] <- c("1", "50")
+SOMLIT_oxy[c(11,12),"datetime"] <- "2008-08-12 09:00:00"
+SOMLIT_oxy[c(11,12),"PROF_NUM"] <- c("1", "50")
+SOMLIT_oxy[c(13,14),"datetime"] <- "2011-12-27 09:00:00"
+SOMLIT_oxy[c(13,14),"PROF_NUM"] <- c("1", "50")
+SOMLIT_oxy[c(15,16),"datetime"] <- "2012-08-14 09:00:00"
+SOMLIT_oxy[c(15,16),"PROF_NUM"] <- c("1", "50")
+SOMLIT_oxy[c(17,18),"datetime"] <- "2013-08-13 09:00:00"
+SOMLIT_oxy[c(17,18),"PROF_NUM"] <- c("1", "50")
+
+SOMLIT_oxy[c(19,20),"datetime"] <- "2014-08-12 09:00:00"
+SOMLIT_oxy[c(19,20),"PROF_NUM"] <- c("1", "50")
+SOMLIT_oxy[c(21,22),"datetime"] <- "2015-08-18 09:00:00"
+SOMLIT_oxy[c(21,22),"PROF_NUM"] <- c("1", "50")
+SOMLIT_oxy[c(23,24),"datetime"] <- "2016-12-27 09:00:00"
+SOMLIT_oxy[c(23,24),"PROF_NUM"] <- c("1", "50")
+SOMLIT_oxy[c(25,26),"datetime"] <- "2017-02-28 09:00:00"
+SOMLIT_oxy[c(25,26),"PROF_NUM"] <- c("1", "50")
+SOMLIT_oxy[c(27,28),"datetime"] <- "2017-12-26 09:00:00"
+SOMLIT_oxy[c(27,28),"PROF_NUM"] <- c("1", "50")
+
+SOMLIT_oxy[c(29,30),"datetime"] <- "2018-04-10 09:00:00"
+SOMLIT_oxy[c(29,30),"PROF_NUM"] <- c("1", "50")
+SOMLIT_oxy[c(31,32),"datetime"] <- "2018-08-14 09:00:00"
+SOMLIT_oxy[c(31,32),"PROF_NUM"] <- c("1", "50")
+SOMLIT_oxy[c(33,34),"datetime"] <- "2018-12-25 09:00:00"
+SOMLIT_oxy[c(33,34),"PROF_NUM"] <- c("1", "50")
+SOMLIT_oxy[c(35,36),"datetime"] <- "2019-08-13 09:00:00"
+SOMLIT_oxy[c(35,36),"PROF_NUM"] <- c("1", "50")
+SOMLIT_oxy[c(37,38),"datetime"] <- "2019-12-24 09:00:00"
+SOMLIT_oxy[c(37,38),"PROF_NUM"] <- c("1", "50")
+
+SOMLIT_oxy[c(39,40),"datetime"] <- "2019-12-31 09:00:00"
+SOMLIT_oxy[c(39,40),"PROF_NUM"] <- c("1", "50")
+SOMLIT_oxy[c(41,42),"datetime"] <- "2020-03-17 09:00:00"
+SOMLIT_oxy[c(41,42),"PROF_NUM"] <- c("1", "50")
+SOMLIT_oxy[c(43,44),"datetime"] <- "2020-03-24 09:00:00"
+SOMLIT_oxy[c(43,44),"PROF_NUM"] <- c("1", "50")
+SOMLIT_oxy[c(45,46),"datetime"] <- "2020-03-31 09:00:00"
+SOMLIT_oxy[c(45,46),"PROF_NUM"] <- c("1", "50")
+SOMLIT_oxy[c(47,48),"datetime"] <- "2020-04-07 09:00:00"
+SOMLIT_oxy[c(47,48),"PROF_NUM"] <- c("1", "50")
+
+SOMLIT_oxy[c(49,50),"datetime"] <- "2020-04-14 09:00:00"
+SOMLIT_oxy[c(49,50),"PROF_NUM"] <- c("1", "50")
+SOMLIT_oxy[c(51,52),"datetime"] <- "2020-04-28 09:00:00"
+SOMLIT_oxy[c(51,52),"PROF_NUM"] <- c("1", "50")
+SOMLIT_oxy[c(53,54),"datetime"] <- "2011-12-27 09:00:00"
+SOMLIT_oxy[c(53,54),"PROF_NUM"] <- c("1", "50")
+SOMLIT_oxy[c(55,56),"datetime"] <- "2021-11-16 09:00:00"
+SOMLIT_oxy[c(55,56),"PROF_NUM"] <- c("1", "50")
+SOMLIT_oxy[c(57,58),"datetime"] <- "2021-11-30 09:00:00"
+SOMLIT_oxy[c(57,58),"PROF_NUM"] <- c("1", "50")
+
+SOMLIT_oxy[c(59,60),"datetime"] <- "2021-12-28 09:00:00"
+SOMLIT_oxy[c(59,60),"PROF_NUM"] <- c("1", "50")
+SOMLIT_oxy[c(61,62),"datetime"] <- "2022-01-04 09:00:00"
+SOMLIT_oxy[c(61,62),"PROF_NUM"] <- c("1", "50")
+SOMLIT_oxy[c(63,64),"datetime"] <- "2022-10-18 09:00:00"
+SOMLIT_oxy[c(63,64),"PROF_NUM"] <- c("1", "50")
+SOMLIT_oxy[c(65,66),"datetime"] <- "2022-12-27 09:00:00"
+SOMLIT_oxy[c(65,66),"PROF_NUM"] <- c("1", "50")
+SOMLIT_oxy[c(67,68),"datetime"] <- "2006-12-26 09:00:00"
+SOMLIT_oxy[c(67,68),"PROF_NUM"] <- c("1", "50")
+##
+
+SOMLIT_oxy <- SOMLIT_oxy %>% arrange(datetime)
+
+
+#ajout row 2020-08-11 for 50m
+SOMLIT_oxy <- insertRows(SOMLIT_oxy, 1924, new = NA)
+
+SOMLIT_oxy <- SOMLIT_oxy %>% 
+  mutate(datetime = str_replace_na(datetime, replacement = "NA"),
+         PROF_NUM = str_replace_na(PROF_NUM, replacement = "NA")) %>% 
+  mutate(datetime = str_replace(datetime, "NA", "2020-08-11 09:00:00"),
+         PROF_NUM = str_replace(PROF_NUM, "NA", "50"))
+
+#ajout row 2020-08-19 for 50m
+SOMLIT_oxy <- insertRows(SOMLIT_oxy, 1926, new = NA)
+
+SOMLIT_oxy <- SOMLIT_oxy %>% 
+  mutate(datetime = str_replace_na(datetime, replacement = "NA"),
+         PROF_NUM = str_replace_na(PROF_NUM, replacement = "NA")) %>% 
+  mutate(datetime = str_replace(datetime, "NA", "2020-08-19 09:00:00"),
+         PROF_NUM = str_replace(PROF_NUM, "NA", "50"))
+##
+
+#MAJ year, month and year.month :
+SOMLIT_oxy <- SOMLIT_oxy %>% 
+  mutate(datetime = as.POSIXct(datetime),
+         year = format(datetime, format="%Y"),
+         month = format(datetime, format="%m"),
+         year.month = format(datetime, format="%Y-%m"))
+
+SOMLIT_oxy <- SOMLIT_oxy %>% arrange(datetime) 
+
+SOMLIT_oxy <- SOMLIT_oxy[-c(105,106),]
+
+#save :
+#write.table(SOMLIT_oxy, "DATA_SOMLIT_02-22_oxy_CLEAN.csv", sep=";", col.names = TRUE, row.names = FALSE)
+
+```
+  
+→ Linear interpolations    
+  
+
+```{r interpolation SOMLIT_oxy_CLEAN - surface & 50m, echo=FALSE, warning=FALSE, message=FALSE}
+
+#surface :
+SOMLIT_oxy_surf <- SOMLIT_oxy %>% 
+  dplyr::filter(PROF_NUM == 1)
+
+#50m :
+SOMLIT_oxy_prof <- SOMLIT_oxy %>% 
+  dplyr::filter(PROF_NUM == 50)
+##
+
+#interpolation surface :
+T_interpol_surf <- na_interpolation(SOMLIT_oxy_surf$T, option="linear")
+S_interpol_surf <- na_interpolation(SOMLIT_oxy_surf$S, option="linear")
+O_interpol_surf <- na_interpolation(SOMLIT_oxy_surf$O, option="linear")
+
+#interpolation 50m :
+T_interpol_prof <- na_interpolation(SOMLIT_oxy_prof$T, option="linear")
+S_interpol_prof <- na_interpolation(SOMLIT_oxy_prof$S, option="linear")
+O_interpol_prof <- na_interpolation(SOMLIT_oxy_prof$O, option="linear")
+##
+
+
+##umol/kg part
+
+#surface :
+SW_density_somlit_interpol_surf <- rho(S = S_interpol_surf, T=T_interpol_surf, P=0)/1000
+convert_o2_somlit_interpol_surf <- 44.66/SW_density_somlit_interpol_surf
+
+
+#50m
+SW_density_somlit_interpol_prof <- rho(S = S_interpol_prof, T=T_interpol_prof, P=0)/1000
+convert_o2_somlit_interpol_prof <- 44.66/SW_density_somlit_interpol_prof
+##
+
+
+#surface :
+SOMLIT_oxy_interpol_surf <- SOMLIT_oxy_surf %>% 
+  mutate(T = T_interpol_surf,
+         S = S_interpol_surf,
+         O = O_interpol_surf,
+         oxy_umol_kg = O*convert_o2_somlit_interpol_surf)
+
+#50m :
+SOMLIT_oxy_interpol_prof <- SOMLIT_oxy_prof %>% 
+  mutate(T = T_interpol_prof,
+         S = S_interpol_prof,
+         O = O_interpol_prof,
+         oxy_umol_kg = O*convert_o2_somlit_interpol_prof)
+##
+
+
+#save :
+#write.table(SOMLIT_oxy_interpol_surf, "DATA_SOMLIT_02-22_oxy_CLEAN_impute_0m.csv", sep=";", col.names = TRUE, row.names = FALSE)
+#write.table(SOMLIT_oxy_interpol_prof, "DATA_SOMLIT_02-22_oxy_CLEAN_impute_50m.csv", sep=";", col.names = TRUE, row.names = FALSE)
+```
+
 
 
 

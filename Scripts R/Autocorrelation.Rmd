@@ -1,0 +1,438 @@
+---
+title: "Autocorrelation"
+author: "Mégane"
+date: "2023-05-11"
+output: html_document
+---
+
+
+```{r libraries, echo=FALSE, warning=FALSE, message=FALSE}
+library("readr")
+library("viridis")
+library("scales")
+library("lubridate")
+library("gsignal")
+library("FactoMineR")
+library("factoextra")
+library("gplots")
+library("heatwaveR")
+library("dplyr")
+library("imputeTS")
+library("Metrics")
+library("tidyr")
+library("tseries")
+library("forecast")
+library("tsDyn")
+library("tsoutliers")
+library("seacarb")
+library("lmodel2")
+library("lmtest")
+library("ggExtra")
+library("corrplot")
+library("ggcorrplot")
+library("marelac")
+library("kableExtra")
+library("stringr")
+library("berryFunctions")
+library("LakeMetabolizer")
+library("rMR")
+library("caTools")
+library("autostsm")
+library("geoTS")
+library("TSA")
+
+```
+
+
+### Work on surface data at Point B (2007-2022), clean tab + imputed values  
+  
+
+```{r import data somlit, echo=FALSE, warning=FALSE, message=FALSE}
+
+data_somlit_surf <- read_delim("../Data/DATA_SOMLIT_07-22_impute_0m.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+
+```
+
+
+### → **Temperature :**  
+  
+*Plots*  
+  
+```{r creation ts object + plots, echo=FALSE, warning=FALSE, message=FALSE}
+
+#frequency : 365.25/7 = 52.17857
+ts_temp <- ts(data_somlit_surf$impute_temp, start = c(2007,1), end = c(2022,52), freq = 52)
+
+#autoplot :
+autoplot_ts_temp <- autoplot(ts_temp) +
+ggtitle('Sea surface temperature (°C) at Point B - 2007-2022') +
+xlab('') +
+ylab('Temp. (°C')
+
+#creation data frame de ts_temp :
+df_ts_temp <- as.data.frame(autoplot_ts_temp$data) %>% 
+  rename(DATE = x, TEMP = y)
+
+#seasonal plot :
+seasonal_plot_ts_temp <- ggseasonplot(ts_temp, year.labels = F, year.labels.left = F)
+
+#polar plot :
+polar_plot <- ggseasonplot(ts_temp, polar = TRUE)
+
+
+autoplot_ts_temp
+seasonal_plot_ts_temp
+polar_plot
+
+```
+
+*Correlogram*  
+  
+Trend pattern (correlogram 1 : less correlation with increasing lags),  
+Seasonal pattern (correlogram 2 : correlation (highest value at lag 52/53) and anti-correlation (lowest value at lag 26/27) successions),  
+Periodicity = 52 (highest correlation value at 52/53)  
+  
+
+```{r autocorrelation temperature - surface, echo=FALSE, warning=FALSE, message=FALSE}
+
+#correlogram :
+correlogram1 <- acf(ts_temp, type = "cor", lag.max = 600, plot = T)
+
+correlogram2 <- acf(ts_temp, type = "cor", lag.max = 55, plot = T)
+
+
+```
+    
+*Trend and seasonal patterns identification :*  
+  
+Time series = Tt + St + ɛt  
+with Tt : trend
+     St : seasonal pattern
+     ɛt : residual part  
+  
+#### Trend estimation by moving average (manually) :  
+  
+
+```{r moving average manual, echo=FALSE, warning=FALSE, message=FALSE}
+
+autoplot(ts_temp, series="Data") +
+autolayer(ma(ts_temp,26), series="26-MA") +
+autolayer(ma(ts_temp,52), series="52-MA") +
+xlab("Year") + ylab("Temp. (°C)") +
+ggtitle("Sea surface temperature (°C) at Point B - 2007-2022") +
+scale_colour_manual(values=c("Data"="grey50","26-MA"="red","52-MA"="blue"),
+                    breaks=c("Data","26-MA","52-MA"))
+
+
+```
+  
+
+#### Trend estimation by moving average (decompose function) :  
+  
+*Quick overview of the components of the series*   
+*increasing trend more visible*  
+  
+
+```{r decompose function, echo=FALSE, warning=FALSE, message=FALSE}
+
+#type = additive because the seasonal pattern doesn't seem to increase in variation, seasonal pattern looks constant
+ts_temp_decomp <- decompose(ts_temp, type = "additive") #pareil qu'en rajoutant : filter = rep(1/52,52)
+
+autoplot(ts_temp_decomp) +
+  xlab(' ')
+
+
+plot(ts_temp_decomp$x, col="black")
+lines(ts_temp_decomp$seasonal, col="red")
+
+#plot(ts_temp_decomp$figure)
+```
+  
+
+##### test : Remove seasonality :  
+  
+→ measured values - seasonal pattern  
+OR  
+→ trend + remainders  
+  
+*by appling trend on this series, we see the increase*  
+  
+slope : 0.058 ± 0.009  
+Int. : -98.07 ± 18.57  
+  
+
+```{r remove seasonal pattern, echo=FALSE, warning=FALSE, message=FALSE}
+
+#2 ways :
+# 1 : measured values - seasonal pattern
+# 2 : trend + random
+
+ts_temp_less_season <- ts_temp_decomp$x - ts_temp_decomp$seasonal
+
+plot_ts_temp_less_season <- autoplot(ts_temp_less_season) + 
+  xlab("") + ylab("Temp. (°C)") +
+  ggtitle("Sea surface temperature time series (without seasonality)") +
+  geom_smooth(method=lm)
+
+
+#trouver comment récup les data de la regression
+#comme ca :
+
+reg_val_less_season <- as.data.frame(plot_ts_temp_less_season$data)
+
+model_less_season <- lm(formula=y~x, data=reg_val_less_season) #compraison avec kapsenberg, pas deconnant
+summary(model_less_season) #pour voir les erreurs des coef + la significativité
+
+
+#plot with slope value :
+plot_ts_temp_less_season <- autoplot(ts_temp_less_season) + 
+  xlab("") + ylab("Temp. (°C)") +
+  ggtitle("Sea surface temperature time series (without seasonality)") +
+  geom_smooth(method=lm) +
+  annotate(geom="text", x=2015, y=23, label="slope : 0.058 ± 0.009 *", color="black")
+
+plot_ts_temp_less_season
+
+```
+  
+
+##### test : Remove trend + seasonality (=remainders) :  
+  
+*by appling trend on this series, the slope is not significative*  
+  
+slope : 0.0042 ± 0.009  
+Int. : -8.42 ± 18.91  
+NON SIGNIFICATIVE  
+  
+
+```{r remove seasonal pattern + trend, echo=FALSE, warning=FALSE, message=FALSE}
+
+plot_ts_temp_random <- autoplot(ts_temp_decomp$random) + 
+  xlab("") + ylab("Temp. (°C)") +
+  ggtitle("Sea surface temperature residuals (without trend + seasonality)") +
+  geom_smooth(method=lm)
+  
+
+#regression values :
+reg_val_random <- as.data.frame(plot_ts_temp_random$data)
+
+model_random <- lm(formula=y~x, data=reg_val_random)
+summary(model_random)
+
+plot_ts_temp_random <- autoplot(ts_temp_decomp$random) + 
+  xlab("") + ylab("Temp. (°C)") +
+  ggtitle("Sea surface temperature residuals (without trend + seasonality)") +
+  geom_smooth(method=lm) +
+  annotate(geom="text", x=2015, y=3.7, label="slope : 0.0041 ± 0.009   (non-significative)", color="black")
+
+
+plot_ts_temp_random
+```
+  
+  
+
+##### test : Just trend analysis :  
+  
+slope : 0.058 ± 0.0028  
+Int. : -98.56 ± 5.63  
+  
+
+```{r trend on trend, echo=FALSE, warning=FALSE, message=FALSE}
+
+plot_ts_temp_trend <- autoplot(ts_temp_decomp$trend) + 
+  xlab("") + ylab("Temp. (°C)") +
+  ggtitle("Sea surface temperature trend (without seasonality + residuals)") +
+  geom_smooth(method=lm)
+
+#regression values :
+reg_val_trend <- as.data.frame(plot_ts_temp_trend$data)
+
+model_trend <- lm(formula=y~x, data=reg_val_trend)
+summary(model_trend)
+
+plot_ts_temp_trend <- autoplot(ts_temp_decomp$trend) + 
+  xlab("") + ylab("Temp. (°C)") +
+  ggtitle("Sea surface temperature trend (without seasonality + residuals)") +
+  geom_smooth(method=lm) +
+  annotate(geom="text", x=2010, y=19.5, label="slope : 0.058 ± 0.0028 *", color="black")
+
+
+plot_ts_temp_trend
+
+```
+
+
+#### White noise test :  
+  
+If residuals of the time series are assimilated to a white noise = stationary time series  
+Stationary time series = no trend + no seasonality  
+  
+
+```{r white noise, echo=FALSE, warning=FALSE, message=FALSE}
+
+#if there is white noise in the series, then = stationary series
+#stationary series = no trend + no seasonal pattern
+#checking of residuals to detect or not white noise
+
+Box.test(ts_temp_decomp$random, type = "Ljung-Box")
+
+#p-value is very low
+#so we reject that residuals could be associated to a white noise
+
+```
+  
+*significative p-value, so we reject that residuals could be associated to a white noise*  
+  
+  
+################################################################################################
+  
+  
+
+#### Best practices (article of Sutton et al. 2022) :  
+  
+##### Option 1 : remove by susbstraction    
+  
+**Step 1** : assess data gaps ok ✓  
+**Step 2** : remove periodic signal with decompose function ok ✓  
+**Step 3** : assess linear fit (WLS) ok ✓
+
+```{r Best practices, echo=FALSE, warning=FALSE, message=FALSE}
+
+#simple regression : 
+summary(model_less_season)
+##
+
+
+#define weights to use
+weight <- 1 / lm(abs(model_less_season$residuals) ~ model_less_season$fitted.values)$fitted.values^2
+
+#perform weighted least squares regression
+wls_model <- lm(reg_val_less_season$y ~ reg_val_less_season$x, data = reg_val_less_season, weights = weight)
+
+#view summary of model
+summary(wls_model)
+##
+
+
+
+#plot with WLS trend :
+
+model_less_season %>% 
+  ggplot() + 
+  geom_line(aes(x=x, y=y)) + 
+  geom_line(aes(x=x, y=wls_model$fitted.values), col="#C4698F") + 
+  scale_x_discrete(name="") + 
+  scale_y_continuous(name="Temp. (°C)") + 
+  ggtitle("Sea surface temperature time series (without seasonality) + WLS trend") + 
+  annotate(geom="text", x=2015, y=23, label="slope : 0.058 ± 0.009", color="black") #rajouter confidence interval
+
+
+```
+  
+  
+##### Option 2 : harmonic detrending  
+  
+**Step 1** : assess data gaps ok ✓  
+**Step 2** : remove periodic signal with Fourier analysis   
+**Step 3** : assess linear fit (WLS)
+
+
+
+
+```{r Fourier analysis, echo=FALSE, message=FALSE, warning=FALSE}
+
+#methode de  Tsutsumi et al. (2009) : Fourier analysis pour estimer la composante periodique
+#puis la retirer
+
+detect_seasonality <- stsm_detect_seasonality(ts_temp, freq = 365.25/7) #nous donne bien 52 semaine (1 annee) + 26 semaines (1 saison)
+#ou
+detect_season_TSA <- season(ts_temp) #52 seasons
+
+#package "geoTS" :
+
+test_harmonic_geoTS <- haRmonics(ts_temp, method = "harmR", numFreq = 52, delta = 0.1)
+
+plot(test_harmonic_geoTS$fitted)
+
+df_ts_temp %>% 
+  ggplot() + 
+  geom_line(aes(x=DATE, y=TEMP)) + 
+  geom_line(aes(x=DATE, y=test_harmonic_geoTS$fitted))
+##
+
+#autre test Fourier
+
+harmonics <- fourier(ts_temp, K=1, h = NULL)
+
+fit <- auto.arima(ts_temp, xreg = harmonics, seasonal = TRUE)
+##
+
+
+FFT <- fft(df_ts_temp$TEMP)#short-term fourier transform
+tab_fft <- as.data.frame(abs(FFT))
+
+plot(abs(FFT), type="l") #valeurs absolues
+
+##
+
+get.trajectory <- function(X.k,ts,acq.freq) {
+  
+  N   <- length(ts)
+  i   <- complex(real = 0, imaginary = 1)
+  x.n <- rep(0,N)           # create vector to keep the trajectory
+  ks  <- 0:(length(X.k)-1)
+  
+  for(n in 0:(N-1)) {       # compute each time point x_n based on freqs X.k
+    x.n[n+1] <- sum(X.k * exp(i*2*pi*ks*n/N)) / N
+  }
+  
+  x.n * acq.freq 
+}
+
+
+Xk <- FFT
+time     <- 832                            # measuring time interval (seconds)
+acq.freq <- 1                         # data acquisition frequency (Hz)
+ts  <- seq(0,time-1/acq.freq,1/acq.freq) 
+
+plot.harmonic <- function(Xk, i, ts, acq.freq, color="red") {
+  Xk.h <- rep(0,length(Xk))
+  Xk.h[i+1] <- Xk[i+1] # i-th harmonic
+  harmonic.trajectory <- get.trajectory(Xk.h, ts, acq.freq=acq.freq)
+  points(ts, harmonic.trajectory, type="l", col=color)
+}
+
+x.n <- get.trajectory(FFT,ts,acq.freq)
+
+plot(ts,x.n,type="l",ylim=c(-2,4),lwd=2)
+abline(v=0:time,h=-2:4,lty=3); abline(h=0)
+
+plot.harmonic(FFT,1,ts,acq.freq,"red")
+plot.harmonic(FFT,2,ts,acq.freq,"green")
+plot.harmonic(FFT,3,ts,acq.freq,"blue")
+
+
+```
+
+
+
+
+```{r}
+
+#detrended comme youtube
+#puis fft pour la saisonnalité
+#puis on retire la saisonnalité
+
+
+```
+
+
+
+
+
+
+
+
+

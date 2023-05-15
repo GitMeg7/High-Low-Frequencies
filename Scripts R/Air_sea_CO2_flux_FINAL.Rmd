@@ -134,7 +134,7 @@ graph_wind_eol %>%
 
 #### *Data pCO2 water SOMLIT (µatm)*:  
   
-period : jan.2007 - jan.2023 
+period : jan.2007 - dec.2022 
   
 Frequency : Weekly (every tuesday at 09 AM)  
 Unity : µatm  
@@ -145,7 +145,7 @@ Unity : µatm
 #period : jan. 2007 - dec. 2022
 #measurements every tuesday at 09h AM
 
-SOMLIT_pcO2 <- read_delim("../Data/DATA_SOMLIT_07-23_CLEAN.csv", 
+SOMLIT_pcO2 <- read_delim("../Data/DATA_SOMLIT_07-22_CLEAN.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
 
@@ -265,7 +265,7 @@ Somlit_interpol <- Somlit_interpol %>%
 
 #### *Data pCO2 air (µatm)*:  
   
-period : jan.2007 - jan.2023 
+period : jan.2007 - feb.2022 
   
 Frequency : Hourly
 Unity : µatm  
@@ -419,12 +419,12 @@ merge3 <- merge3 %>%
 
 
 #save merge3 :
-#write.table(merge3, "DATA_SOMLIT_07-23_impute_0m.csv", sep=";", col.names = TRUE, row.names = FALSE)
+#write.table(merge3, "DATA_SOMLIT_07-22_impute_0m.csv", sep=";", col.names = TRUE, row.names = FALSE)
 
 ```
 
 
-→ Annual cycle of pCO2 (2007-2021) :  
+→ Annual cycle of pCO2 (2007-2022) :  
   
 
 ```{r annual cycle of pCO2 (2007-2021), echo=FALSE, warning=FALSE, message=FALSE}
@@ -540,7 +540,7 @@ atmos_water_pCO2_plot
 #        units = "in") 
 
 #save merge3 :
-#write.table(merge3, "DATA_SOMLIT_07-23_impute_0m_deltas_pCO2.csv", sep=";", col.names = TRUE, row.names = FALSE)
+#write.table(merge3, "DATA_SOMLIT_07-22_impute_0m_deltas_pCO2.csv", sep=";", col.names = TRUE, row.names = FALSE)
 
 ```
 
@@ -721,7 +721,7 @@ test %>%
 
 
 ## save flux
-#write.table(tab_flux, "DATA_SOMLIT_07-23_impute_0m_deltas_pCO2_and_fluxes_CO2.csv", sep=";", col.names = TRUE, row.names = FALSE)
+#write.table(tab_flux, "DATA_SOMLIT_07-22_impute_0m_deltas_pCO2_and_fluxes_CO2.csv", sep=";", col.names = TRUE, row.names = FALSE)
 
 ```
 

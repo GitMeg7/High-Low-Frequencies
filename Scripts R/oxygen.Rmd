@@ -33,19 +33,1373 @@ library("marelac")
 library("kableExtra")
 library("stringr")
 library("berryFunctions")
+library("LakeMetabolizer")
+library("rMR")
+
+#theme for plots :
+Mytheme <- function(size_labs = 6, face_font="plain", ...) {
+  theme_bw() +
+    theme(axis.text.x = element_text(face=face_font, size=size_labs, color="black"),
+          axis.title.x = element_text(face=face_font, size=size_labs, margin=margin(0,0,0,0,"pt")),
+          axis.text.y = element_text(face=face_font, color="black", size=size_labs),
+          axis.title.y = element_text(face=face_font, size=size_labs),
+          axis.ticks.x = element_line(size=0.1),
+          axis.ticks.y = element_line(size=0.1),
+          axis.ticks.length = unit(1.1, "mm"),
+          panel.grid.major = element_line(size = 0.25, color="black", linetype="dotted"),
+          aspect.ratio = 1 / 3,
+          plot.margin = margin(t = 0, r = 1, b = 0, l = 0, unit = "lines")
+    )
+}
+
 ```
 
 
-```{r data oxygen EOL - somlit, echo=FALSE, warning=FALSE, message=FALSE}
+```{r data oxygen EOL, echo=FALSE, warning=FALSE, message=FALSE}
 
-data_EOL <- read_delim("Data/EOL_raw_complete_1323.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+#oxygen EOL : only from 05-05-2017 - mars.2023
+#frequency : hourly (raw)
+#unity : umol/kg
+data_EOL <- read_delim("../Data/EOL_raw_complete_1323.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
+  filter(datetime >= "2017-05-05 01:00:00")
+
+
+```
+
+## EOL - oxygen time series trend analysis by residuals (substracting climatological monthly means)  
+  
+*Analysis without interpolations*  
+  
+
+```{r trend analysis EOL oxy, echo=FALSE, warning=FALSE, message=FALSE}
+
+data_EOL <- data_EOL %>% 
+  mutate(Month = format(datetime, format = "%m"))
+
+## Monthly means EOL oxygen :
+
+monthly_means_EOL_oxy <- ungroup(data_EOL) %>% 
+  group_by(Month) %>%
+  summarise(oxy_EOL_month = mean(oxy_umol_kg, na.rm = TRUE))
+
+##
+
+## Parameters
+
+anomalies_EOL_oxy <- left_join(ungroup(data_EOL), monthly_means_EOL_oxy, by = "Month") %>%
+  mutate(oxy_EOL_ano = oxy_umol_kg - oxy_EOL_month)
+
+
+
+# Regressions and tables of key parameters
+var_list <- "oxy_umol_kg"
+
+lm.test <- vector("list", length(var_list))
+
+for(i in seq_along(var_list)){
+  lm.test[[i]] <- lm(reformulate(var_list[i], "datetime"), data = anomalies_EOL_oxy)
+}
+
+
+
+lms <- lapply(var_list, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
+             data = anomalies_EOL_oxy))
+})
+
+reg <- NULL
+for (i in 1:length(var_list)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob <-
+    pf(lms[[i]]$fstatistic[1],
+       lms[[i]]$fstatistic[2],
+       lms[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg <-
+    rbind(reg, as.numeric(
+      c(
+        lms[[i]]$coefficients[2, 1],
+        lms[[i]]$coefficients[2, 2],
+        lms[[i]]$coefficients[2, 4],
+        lms[[i]]$coefficients[1, 1],
+        lms[[i]]$coefficients[1, 2],
+        lms[[i]]$coefficients[1, 4],
+        lms[[i]]$fstatistic[1],
+        lms[[i]]$fstatistic[3],
+        lms[[i]]$r.squared,
+        prob
+      )
+    ))
+}
+
+colnames(reg) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+row.names(reg) <- var_list
+reg_ano_EOL_oxy <- reg
+
+# Regression and table anomalies
+var_list <- "oxy_EOL_ano"
+
+lms <- lapply(var_list, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), data = anomalies_EOL_oxy))
+})
+
+reg <- NULL
+for (i in 1:length(var_list)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob <-
+    pf(lms[[i]]$fstatistic[1],
+       lms[[i]]$fstatistic[2],
+       lms[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg <-
+    rbind(reg, as.numeric(
+      c(
+        lms[[i]]$coefficients[2, 1],
+        lms[[i]]$coefficients[2, 2],
+        lms[[i]]$coefficients[2, 4],
+        lms[[i]]$coefficients[1, 1],
+        lms[[i]]$coefficients[1, 2],
+        lms[[i]]$coefficients[1, 4],
+        lms[[i]]$fstatistic[1],
+        lms[[i]]$fstatistic[3],
+        lms[[i]]$r.squared,
+        prob
+      )
+    ))
+}
+colnames(reg) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+row.names(reg) <- var_list
+reg_ano_EOL_oxy <- reg
+
+reg_ano_EOL_oxy #pourquoi p-value = 0
+
+
+## Plot anomalies EOL oxy :
+
+#plot 1 : raw oxygen data
+plot_ano_EOL_oxy_raw <- ggplot(data = anomalies_EOL_oxy, aes(x = datetime, y = oxy_EOL_ano), na.rm=TRUE) +
+  scale_x_datetime(date_breaks="2 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  geom_point(colour="#2C75FF", na.rm=TRUE, size = 0.8) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title="Anomalies trend for EOL oxygen data (2013-2022)",x="", y="Oxygen (mll)") +
+  annotate("text", x =as.POSIXct("2016-01-01"), y= min(anomalies_EOL_oxy$oxy_EOL_ano, na.rm=TRUE), 
+           label="", colour="black", size=9, fontface="plain") +
+  coord_fixed() +
+  Mytheme(size_labs = 8) +
+  theme(axis.text.x=element_blank())
+
+plot_EOL_oxy_raw <- data_EOL %>% 
+  ggplot() +
+  aes(x=datetime, y=oxy_umol_kg) + 
+  geom_line(size=0.8, col = "#22427C", linewidth = 0.5) +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Oxygen (umol/kg)") +
+  ggtitle("EOL oxygen time series in umol/kg (2017-2022)")
+#geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE)
+##
+
+plot_EOL_oxy_raw
+plot_ano_EOL_oxy_raw
+```
+  
+## Point B raw - oxygen time series trend analysis by residuals (substracting climatological monthly means)  
+  
+*Analysis without interpolations* 
+  
+###### → surface data (1m) :  
+
+
+```{r data oxygen SOMLIT, echo=FALSE, warning=FALSE, message=FALSE}
+
+#oxygen SOMLIT : from jan.2002 - dec.2022
+#frequency : weekly
+#unity : umol/kg
+data_somlit_surf_raw <- read_delim("../Data/DATA_SOMLIT_02-22_oxy.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
+  dplyr::filter(PROF_NUM < 3) %>% 
+  mutate(Month = format(datetime, format="%m"))
+
+data_somlit_prof_raw <- read_delim("../Data/DATA_SOMLIT_02-22_oxy.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
+  dplyr::filter(PROF_NUM > 3) %>% 
+  mutate(Month = format(datetime, format="%m"))
+
+```
+
+  
+```{r trend analysis SOMLIT oxy - surface - raw, echo=FALSE, warning=FALSE, message=FALSE}
+
+
+## Monthly means surface :
+
+monthly_means_somlit_oxy_surf <- ungroup(data_somlit_surf_raw) %>% 
+  group_by(Month) %>%
+  summarise(oxy_somlit_month = mean(oxy_umol_kg, na.rm = TRUE))
+
+##
+
+## Parameters
+
+anomalies_somlit_oxy_surf <- left_join(ungroup(data_somlit_surf_raw), monthly_means_somlit_oxy_surf, by = "Month") %>%
+  mutate(oxy_somlit_ano = oxy_umol_kg - oxy_somlit_month)
+
+
+
+# Regressions and tables of key parameters
+var_list <- "oxy_umol_kg"
+
+lm.test <- vector("list", length(var_list))
+
+for(i in seq_along(var_list)){
+  lm.test[[i]] <- lm(reformulate(var_list[i], "datetime"), data = anomalies_somlit_oxy_surf)
+}
+
+
+
+lms <- lapply(var_list, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
+             data = anomalies_somlit_oxy_surf))
+})
+
+reg <- NULL
+for (i in 1:length(var_list)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob <-
+    pf(lms[[i]]$fstatistic[1],
+       lms[[i]]$fstatistic[2],
+       lms[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg <-
+    rbind(reg, as.numeric(
+      c(
+        lms[[i]]$coefficients[2, 1],
+        lms[[i]]$coefficients[2, 2],
+        lms[[i]]$coefficients[2, 4],
+        lms[[i]]$coefficients[1, 1],
+        lms[[i]]$coefficients[1, 2],
+        lms[[i]]$coefficients[1, 4],
+        lms[[i]]$fstatistic[1],
+        lms[[i]]$fstatistic[3],
+        lms[[i]]$r.squared,
+        prob
+      )
+    ))
+}
+
+colnames(reg) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+row.names(reg) <- var_list
+reg_ano_somlit_oxy_surf <- reg
+
+# Regression and table anomalies
+var_list <- "oxy_somlit_ano"
+
+lms <- lapply(var_list, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), data = anomalies_somlit_oxy_surf))
+})
+
+reg <- NULL
+for (i in 1:length(var_list)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob <-
+    pf(lms[[i]]$fstatistic[1],
+       lms[[i]]$fstatistic[2],
+       lms[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg <-
+    rbind(reg, as.numeric(
+      c(
+        lms[[i]]$coefficients[2, 1],
+        lms[[i]]$coefficients[2, 2],
+        lms[[i]]$coefficients[2, 4],
+        lms[[i]]$coefficients[1, 1],
+        lms[[i]]$coefficients[1, 2],
+        lms[[i]]$coefficients[1, 4],
+        lms[[i]]$fstatistic[1],
+        lms[[i]]$fstatistic[3],
+        lms[[i]]$r.squared,
+        prob
+      )
+    ))
+}
+colnames(reg) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+row.names(reg) <- var_list
+reg_ano_somlit_oxy_surf <- reg
+
+reg_ano_somlit_oxy_surf 
+
+
+## Plot anomalies Point B surface :
+
+plot_ano_somlit_oxy_surf <- ggplot(data = anomalies_somlit_oxy_surf, aes(x = datetime, y = oxy_somlit_ano), na.rm=TRUE) +
+  scale_x_datetime(date_breaks="2 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  geom_point(colour="#2C75FF", na.rm=TRUE, size = 0.8) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title="Anomalies trend for oxygen data (surface) at Point B (2002-2022)",x="", y="Oxygen (μmol/kg)") +
+  annotate("text", x =as.POSIXct("2016-01-01"), y= min(anomalies_somlit_oxy_surf$oxy_somlit_ano, na.rm=TRUE), 
+           label="", colour="black", size=9, fontface="plain") +
+  coord_fixed() +
+  Mytheme(size_labs = 8) +
+  theme(axis.text.x=element_blank())
+
+plot_somlit_oxy_surf <- data_somlit_surf_raw %>% 
+  ggplot() +
+  aes(x=datetime, y=oxy_umol_kg) + 
+  geom_line(size=0.8, col = "#22427C", linewidth = 0.5) +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Oxygen (μmol/kg)") +
+  ggtitle("Point B oxygen time series (surface) in μmol/kg (2002-2022)")
+#geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE)
+##
+
+plot_somlit_oxy_surf
+plot_ano_somlit_oxy_surf
+```
+
+  
+  
+###### → 50 m depth data :  
+  
+```{r trend analysis SOMLIT oxy - 50m - raw, echo=FALSE, warning=FALSE, message=FALSE}
+
+
+## Monthly means 50m :
+
+monthly_means_somlit_oxy_prof <- ungroup(data_somlit_prof_raw) %>% 
+  group_by(Month) %>%
+  summarise(oxy_somlit_month = mean(oxy_umol_kg, na.rm = TRUE))
+
+##
+
+## Parameters
+
+anomalies_somlit_oxy_prof <- left_join(ungroup(data_somlit_prof_raw), monthly_means_somlit_oxy_prof, by = "Month") %>%
+  mutate(oxy_somlit_ano = oxy_umol_kg - oxy_somlit_month)
+
+
+
+# Regressions and tables of key parameters
+var_list <- "oxy_umol_kg"
+
+lm.test <- vector("list", length(var_list))
+
+for(i in seq_along(var_list)){
+  lm.test[[i]] <- lm(reformulate(var_list[i], "datetime"), data = anomalies_somlit_oxy_prof)
+}
+
+
+
+lms <- lapply(var_list, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
+             data = anomalies_somlit_oxy_prof))
+})
+
+reg <- NULL
+for (i in 1:length(var_list)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob <-
+    pf(lms[[i]]$fstatistic[1],
+       lms[[i]]$fstatistic[2],
+       lms[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg <-
+    rbind(reg, as.numeric(
+      c(
+        lms[[i]]$coefficients[2, 1],
+        lms[[i]]$coefficients[2, 2],
+        lms[[i]]$coefficients[2, 4],
+        lms[[i]]$coefficients[1, 1],
+        lms[[i]]$coefficients[1, 2],
+        lms[[i]]$coefficients[1, 4],
+        lms[[i]]$fstatistic[1],
+        lms[[i]]$fstatistic[3],
+        lms[[i]]$r.squared,
+        prob
+      )
+    ))
+}
+
+colnames(reg) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+row.names(reg) <- var_list
+reg_ano_somlit_oxy_prof <- reg
+
+# Regression and table anomalies
+var_list <- "oxy_somlit_ano"
+
+lms <- lapply(var_list, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), data = anomalies_somlit_oxy_prof))
+})
+
+reg <- NULL
+for (i in 1:length(var_list)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob <-
+    pf(lms[[i]]$fstatistic[1],
+       lms[[i]]$fstatistic[2],
+       lms[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg <-
+    rbind(reg, as.numeric(
+      c(
+        lms[[i]]$coefficients[2, 1],
+        lms[[i]]$coefficients[2, 2],
+        lms[[i]]$coefficients[2, 4],
+        lms[[i]]$coefficients[1, 1],
+        lms[[i]]$coefficients[1, 2],
+        lms[[i]]$coefficients[1, 4],
+        lms[[i]]$fstatistic[1],
+        lms[[i]]$fstatistic[3],
+        lms[[i]]$r.squared,
+        prob
+      )
+    ))
+}
+colnames(reg) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+row.names(reg) <- var_list
+reg_ano_somlit_oxy_prof <- reg
+
+reg_ano_somlit_oxy_prof 
+
+
+## Plot anomalies Point B 50m :
+
+plot_ano_somlit_oxy_prof <- ggplot(data = anomalies_somlit_oxy_prof, aes(x = datetime, y = oxy_somlit_ano), na.rm=TRUE) +
+  scale_x_datetime(date_breaks="2 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  geom_point(colour="#2C75FF", na.rm=TRUE, size = 0.8) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title="Anomalies trend for oxygen data (50 m) at Point B (2002-2022)",x="", y="Oxygen (μmol/kg)") +
+  annotate("text", x =as.POSIXct("2016-01-01"), y= min(anomalies_somlit_oxy_prof$oxy_somlit_ano, na.rm=TRUE), 
+           label="", colour="black", size=9, fontface="plain") +
+  coord_fixed() +
+  Mytheme(size_labs = 8) +
+  theme(axis.text.x=element_blank())
+
+plot_somlit_oxy_prof <- data_somlit_prof_raw %>% 
+  ggplot() +
+  aes(x=datetime, y=oxy_umol_kg) + 
+  geom_line(size=0.8, col = "#22427C", linewidth = 0.5) +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Oxygen (μmol/kg)") +
+  ggtitle("Point B oxygen time series (50 m) in μmol/kg (2002-2022)")
+#geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE)
+##
+
+plot_somlit_oxy_prof
+plot_ano_somlit_oxy_prof
+```
+
+  
+  
+## Point B clean - oxygen time series trend analysis by residuals (substracting climatological monthly means)  
+  
+*Analysis with interpolations* 
+  
+###### → surface data (1m) :  
+  
+  
+```{r data oxygen SOMLIT - surface, echo=FALSE, warning=FALSE, message=FALSE}
+
+#oxygen somlit surface : jan.2002 - dec.2022
+#frequency : weekly (clean + impute)
+#unity : ml/l and µmol/kg
+
+data_somlit_surf <- read_delim("../Data/DATA_SOMLIT_02-22_oxy_CLEAN_impute_0m.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+
+```
+
+→ Trend analysis by residuals (Bates et al. 2014) :  
+  
+*légère augmentation de l'oxygène dissous en surface (μmol/kg) : *  
+*slope : 0.328 ± 0.065 μmol/kg par année*  
+  
+```{r trend analysis SOMLIT oxy - surface, echo=FALSE, warning=FALSE, message=FALSE}
+
+
+## Monthly means surface :
+
+monthly_means_somlit_surf <- ungroup(data_somlit_surf) %>% 
+  group_by(month) %>%
+  summarise(oxy_somlit_month = mean(oxy_umol_kg, na.rm = TRUE))
+
+##
+
+## Parameters
+
+anomalies_somlit_surf <- left_join(ungroup(data_somlit_surf), monthly_means_somlit_surf, by = "month") %>%
+  mutate(oxy_somlit_ano = oxy_umol_kg - oxy_somlit_month)
+
+
+
+# Regressions and tables of key parameters
+var_list <- "oxy_umol_kg"
+
+lm.test <- vector("list", length(var_list))
+
+for(i in seq_along(var_list)){
+  lm.test[[i]] <- lm(reformulate(var_list[i], "datetime"), data = anomalies_somlit_surf)
+}
+
+
+
+lms <- lapply(var_list, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
+             data = anomalies_somlit_surf))
+})
+
+reg <- NULL
+for (i in 1:length(var_list)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob <-
+    pf(lms[[i]]$fstatistic[1],
+       lms[[i]]$fstatistic[2],
+       lms[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg <-
+    rbind(reg, as.numeric(
+      c(
+        lms[[i]]$coefficients[2, 1],
+        lms[[i]]$coefficients[2, 2],
+        lms[[i]]$coefficients[2, 4],
+        lms[[i]]$coefficients[1, 1],
+        lms[[i]]$coefficients[1, 2],
+        lms[[i]]$coefficients[1, 4],
+        lms[[i]]$fstatistic[1],
+        lms[[i]]$fstatistic[3],
+        lms[[i]]$r.squared,
+        prob
+      )
+    ))
+}
+
+colnames(reg) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+row.names(reg) <- var_list
+reg_ano_somlit_surf <- reg
+
+# Regression and table anomalies
+var_list <- "oxy_somlit_ano"
+
+lms <- lapply(var_list, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), data = anomalies_somlit_surf))
+})
+
+reg <- NULL
+for (i in 1:length(var_list)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob <-
+    pf(lms[[i]]$fstatistic[1],
+       lms[[i]]$fstatistic[2],
+       lms[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg <-
+    rbind(reg, as.numeric(
+      c(
+        lms[[i]]$coefficients[2, 1],
+        lms[[i]]$coefficients[2, 2],
+        lms[[i]]$coefficients[2, 4],
+        lms[[i]]$coefficients[1, 1],
+        lms[[i]]$coefficients[1, 2],
+        lms[[i]]$coefficients[1, 4],
+        lms[[i]]$fstatistic[1],
+        lms[[i]]$fstatistic[3],
+        lms[[i]]$r.squared,
+        prob
+      )
+    ))
+}
+colnames(reg) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+row.names(reg) <- var_list
+reg_ano_somlit_surf <- reg
+
+#reg_ano_somlit_oxy_surf 
+
+
+## Plot anomalies Point B surface :
+
+plot_ano_somlit_surf <- ggplot(data = anomalies_somlit_surf, aes(x = datetime, y = oxy_somlit_ano), na.rm=TRUE) +
+  scale_x_datetime(date_breaks="2 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  geom_point(colour="#2C75FF", na.rm=TRUE, size = 0.8) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title="Anomalies trend for oxygen data (surface) at Point B (2002-2022)",x="", y="Oxygen (μmol/kg)") +
+  annotate("text", x =as.POSIXct("2016-01-01"), y= min(anomalies_somlit_surf$oxy_somlit_ano, na.rm=TRUE), 
+           label="", colour="black", size=9, fontface="plain") +
+  coord_fixed() +
+  Mytheme(size_labs = 8) +
+  theme(axis.text.x=element_blank())
+
+plot_somlit_surf <- data_somlit_surf %>% 
+  ggplot() +
+  aes(x=datetime, y=oxy_umol_kg) + 
+  geom_line(size=0.8, col = "#22427C", linewidth = 0.5) +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Oxygen (μmol/kg)") +
+  ggtitle("Point B oxygen time series (surface) in μmol/kg (2002-2022)")
+#geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE)
+##
+
+plot_somlit_surf
+plot_ano_somlit_surf
+```
+  
+
+###### → 50 m data :  
+  
+  
+```{r data oxygen SOMLIT - 50m, echo=FALSE, warning=FALSE, message=FALSE}
+
+#oxygen somlit 50m : jan.2002 - dec.2022
+#frequency : weekly (clean + impute)
+#unity : ml/l and µmol/kg
+
+data_somlit_prof <- read_delim("../Data/DATA_SOMLIT_02-22_oxy_CLEAN_impute_50m.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+
+```
+
+→ Trend analysis by residuals (Bates et al. 2014) :  
+  
+*légère augmentation de l'oxygène dissous à 50 mètres (μmol/kg) : *  
+*slope : 0.257 ± 0.072 μmol/kg par année*  
+  
+```{r trend analysis SOMLIT oxy - 50m, echo=FALSE, warning=FALSE, message=FALSE}
+
+
+## Monthly means 50m :
+monthly_means_somlit_prof <- ungroup(data_somlit_prof) %>% 
+  group_by(month) %>%
+  summarise(oxy_somlit_month = mean(oxy_umol_kg, na.rm = TRUE))
+
+##
+
+## Parameters
+
+anomalies_somlit_prof <- left_join(ungroup(data_somlit_prof), monthly_means_somlit_prof, by = "month") %>%
+  mutate(oxy_somlit_ano = oxy_umol_kg - oxy_somlit_month)
+
+
+
+# Regressions and tables of key parameters
+var_list <- "oxy_umol_kg"
+
+lm.test <- vector("list", length(var_list))
+
+for(i in seq_along(var_list)){
+  lm.test[[i]] <- lm(reformulate(var_list[i], "datetime"), data = anomalies_somlit_prof)
+}
+
+
+
+lms <- lapply(var_list, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
+             data = anomalies_somlit_prof))
+})
+
+reg <- NULL
+for (i in 1:length(var_list)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob <-
+    pf(lms[[i]]$fstatistic[1],
+       lms[[i]]$fstatistic[2],
+       lms[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg <-
+    rbind(reg, as.numeric(
+      c(
+        lms[[i]]$coefficients[2, 1],
+        lms[[i]]$coefficients[2, 2],
+        lms[[i]]$coefficients[2, 4],
+        lms[[i]]$coefficients[1, 1],
+        lms[[i]]$coefficients[1, 2],
+        lms[[i]]$coefficients[1, 4],
+        lms[[i]]$fstatistic[1],
+        lms[[i]]$fstatistic[3],
+        lms[[i]]$r.squared,
+        prob
+      )
+    ))
+}
+
+colnames(reg) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+row.names(reg) <- var_list
+reg_ano_somlit_prof <- reg
+
+# Regression and table anomalies
+var_list <- "oxy_somlit_ano"
+
+lms <- lapply(var_list, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), data = anomalies_somlit_prof))
+})
+
+reg <- NULL
+for (i in 1:length(var_list)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob <-
+    pf(lms[[i]]$fstatistic[1],
+       lms[[i]]$fstatistic[2],
+       lms[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg <-
+    rbind(reg, as.numeric(
+      c(
+        lms[[i]]$coefficients[2, 1],
+        lms[[i]]$coefficients[2, 2],
+        lms[[i]]$coefficients[2, 4],
+        lms[[i]]$coefficients[1, 1],
+        lms[[i]]$coefficients[1, 2],
+        lms[[i]]$coefficients[1, 4],
+        lms[[i]]$fstatistic[1],
+        lms[[i]]$fstatistic[3],
+        lms[[i]]$r.squared,
+        prob
+      )
+    ))
+}
+colnames(reg) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+row.names(reg) <- var_list
+reg_ano_somlit_prof <- reg
+
+#reg_ano_somlit_oxy_prof 
+
+
+## Plot anomalies Point B 50m :
+
+plot_ano_somlit_prof <- ggplot(data = anomalies_somlit_prof, aes(x = datetime, y = oxy_somlit_ano), na.rm=TRUE) +
+  scale_x_datetime(date_breaks="2 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  geom_point(colour="#2C75FF", na.rm=TRUE, size = 0.8) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title="Anomalies trend for oxygen data (50m) at Point B (2002-2022)",x="", y="Oxygen (μmol/kg)") +
+  annotate("text", x =as.POSIXct("2016-01-01"), y= min(anomalies_somlit_prof$oxy_somlit_ano, na.rm=TRUE), 
+           label="", colour="black", size=9, fontface="plain") +
+  coord_fixed() +
+  Mytheme(size_labs = 8) +
+  theme(axis.text.x=element_blank())
+
+plot_somlit_prof <- data_somlit_prof %>% 
+  ggplot() +
+  aes(x=datetime, y=oxy_umol_kg) + 
+  geom_line(size=0.8, col = "#22427C", linewidth = 0.5) +
+  scale_x_datetime(name="") +
+  scale_y_continuous(name="Oxygen (μmol/kg)") +
+  ggtitle("Point B oxygen time series (50m) in μmol/kg (2002-2022)")
+#geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE)
+##
+
+plot_somlit_prof
+plot_ano_somlit_prof
+```
+  
+  
+## Point B clean - AOU calculation (Apparent Oxygen Utilisation) :  
+  
+AOU  = [O~2~ saturation] in µmol/kg  - [O~2~ observed] in µmol/kg  
+Unity : µmol/kg  
+  
+###### → surface data (1m) :  
+  
+
+```{r AOU calculation - SOMLIT surface, echo=FALSE, warning=FALSE, message=FALSE}
+
+#calcul T1 :
+T1 <- (data_somlit_surf$T + 273.15) / 100
+
+#calcul OSAT (ml/kg) :
+OSAT = -177.7888 + 255.5907/T1 + 146.4813*log(T1) - 22.2040*T1
+OSAT = OSAT + data_somlit_surf$S * (-0.037362 + T1 * (0.016504 - 0.0020564 * T1))
+OSAT = exp(OSAT)
+
+#convert from ml/kg to umol/kg :
+OSAT = (OSAT * 1000)/ 22.392
+
+#calculate AOU in umol/kg
+AOU = OSAT - data_somlit_surf$oxy_umol_kg
+
+data_somlit_surf <- data_somlit_surf %>% 
+  mutate(AOU = AOU)
+
+```
+
+
+
+```{r test, echo=FALSE, warning=FALSE, message=FALSE}
+
+# #oxygen at saturation calculation :
+# #unity : mg/l
+# 
+# #mean of barometric pressure at sea surface = 1013.25 millibars
+# #use of Weiss model because of seawater and not lake ?
+# #result in mg/L of oxygen
+# 
+# #surface :
+# o2_sat <- o2.at.sat.base(temp=data_somlit_surf$oxy_umol_kg, baro=1013.25, altitude=0,
+#                               salinity=data_somlit_surf$S, model="garcia-benson")
+# 
+# data_somlit_surf <- data_somlit_surf %>% 
+#   mutate(O2_sat = o2_sat)
+# ##
+# 
+# #convert in same unity (mg/l) :
+# #O2 in ml/l * 44,66 = umol/l
+# #* 10^-6 = mol/l
+# #* masse molaire (g/mol) = g/l
+# #* * 10^3 = mg/l
+# 
+# o2_measured <- (((data_somlit_surf$O * 44.66)*10^(-6))*32)*10^3
+# 
+# data_somlit_surf <- data_somlit_surf %>% 
+#   mutate(O_mg_l = o2_measured)
+# ##
+# 
+# 
+# #AOU calculation : 
+# AOU <- o2_sat - o2_measured
+# 
+# data_somlit_surf <- data_somlit_surf %>% 
+#   mutate(AOU = AOU) #pourquoi que des valeurs négatives ?
+
+
+```
+  
+
+→ AOU (surface) annual cycle :  
+  
+
+```{r AOU surface + annual cycle, echo=FALSE, warning=FALSE, message=FALSE}
+
+plot_AOU_surf <- data_somlit_surf %>% 
+  ggplot() + 
+  aes(x=datetime, y=AOU) + 
+  geom_line(col = "#01796F") + 
+  ggtitle("AOU in µmol/kg at sea surface - Point B (2002-2022)") +
+  scale_x_datetime(name="") + 
+  scale_y_continuous(name="AOU (µmol/kg)")
+##
+
+plot_AOU_surf_annual_cycle <- data_somlit_surf %>% 
+  ggplot() +
+  geom_line(aes(x = as.Date(yday(datetime), "1970-01-01"), y = AOU, 
+                group = factor(year(datetime)), 
+                color = factor(year(datetime))), linewidth = 0.6) +
+  scale_colour_viridis_d(option="mako", direction=-1) +
+  ggtitle("Annual cycle of AOU (surface) - Point B (2002-2022)") +
+  scale_x_date(date_breaks="months", date_labels="%b", name = "") +
+  labs(x="Months",colour="") +
+  theme_bw() +
+  scale_y_continuous(name = "Oxygen (µmol/kg)") 
+##
+
+plot_AOU_surf
+plot_AOU_surf_annual_cycle
+
+
+```
+  
+  
+→ AOU (surface) minima and maxima evolution (2002-2022) :  
+  
+
+```{r AOU minima and maxima - surface, echo=FALSE, warning=FALSE, message=FALSE}
+
+AOU_minima_maxima_surf <- data_somlit_surf %>% 
+  group_by(year) %>% 
+  mutate(AOU_min = min(AOU, na.rm = TRUE),
+         AOU_max = max(AOU, na.rm = TRUE))
+##
+
+AOU_minima_surf_long <- AOU_minima_maxima_surf %>% 
+  rename(`AOU minima` = AOU_min, `AOU maxima` = AOU_max) %>% 
+  pivot_longer(cols = c(`AOU minima`, `AOU maxima`), names_to = "Legend", values_to = "value")
+
+#plot
+plot_AOU_minima_surf <- AOU_minima_surf_long %>% 
+  ggplot() +
+  ggtitle("AOU minima and maxima evolution - Point B (2002-2022)") +
+  geom_point(aes(x=year, y=value, color= Legend), size=1) +
+  geom_line(aes(x=year, y=value, color= Legend), size=0.7) +
+  scale_y_continuous(name="AOU (µmol/kg)") + 
+  scale_x_discrete(name="", limits = c(2002 :2022)) + 
+  scale_colour_discrete(type=c("#CC5500", "#6D071A"))
+
+plot_AOU_minima_surf
+
+```
+  
+  
+
+###### Trend analysis by residuals - AOU - surface (Bates et al. 2014) :  
+  
+*diminution de l'AOU (µmol/kg) : *  
+*slope : -0.47 ± 0.065 µmol/kg par année* 
+
+```{r trend analysis AOU - surface, echo=FALSE, warning=FALSE, message=FALSE}
+
+## Monthly means AOU surface :
+monthly_means_AOU_surf <- ungroup(data_somlit_surf) %>% 
+  group_by(month) %>%
+  summarise(AOU_month = mean(AOU, na.rm = TRUE))
+
+##
+
+## Parameters
+
+anomalies_AOU_surf <- left_join(ungroup(data_somlit_surf), monthly_means_AOU_surf, by = "month") %>%
+  mutate(AOU_ano = AOU - AOU_month)
+
+
+
+# Regressions and tables of key parameters
+var_list <- "AOU"
+
+lm.test <- vector("list", length(var_list))
+
+for(i in seq_along(var_list)){
+  lm.test[[i]] <- lm(reformulate(var_list[i], "datetime"), data = anomalies_AOU_surf)
+}
+
+
+
+lms <- lapply(var_list, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
+             data = anomalies_AOU_surf))
+})
+
+reg <- NULL
+for (i in 1:length(var_list)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob <-
+    pf(lms[[i]]$fstatistic[1],
+       lms[[i]]$fstatistic[2],
+       lms[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg <-
+    rbind(reg, as.numeric(
+      c(
+        lms[[i]]$coefficients[2, 1],
+        lms[[i]]$coefficients[2, 2],
+        lms[[i]]$coefficients[2, 4],
+        lms[[i]]$coefficients[1, 1],
+        lms[[i]]$coefficients[1, 2],
+        lms[[i]]$coefficients[1, 4],
+        lms[[i]]$fstatistic[1],
+        lms[[i]]$fstatistic[3],
+        lms[[i]]$r.squared,
+        prob
+      )
+    ))
+}
+
+colnames(reg) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+row.names(reg) <- var_list
+reg_ano_AOU_surf <- reg
+
+# Regression and table anomalies
+var_list <- "AOU_ano"
+
+lms <- lapply(var_list, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), data = anomalies_AOU_surf))
+})
+
+reg <- NULL
+for (i in 1:length(var_list)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob <-
+    pf(lms[[i]]$fstatistic[1],
+       lms[[i]]$fstatistic[2],
+       lms[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg <-
+    rbind(reg, as.numeric(
+      c(
+        lms[[i]]$coefficients[2, 1],
+        lms[[i]]$coefficients[2, 2],
+        lms[[i]]$coefficients[2, 4],
+        lms[[i]]$coefficients[1, 1],
+        lms[[i]]$coefficients[1, 2],
+        lms[[i]]$coefficients[1, 4],
+        lms[[i]]$fstatistic[1],
+        lms[[i]]$fstatistic[3],
+        lms[[i]]$r.squared,
+        prob
+      )
+    ))
+}
+colnames(reg) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+row.names(reg) <- var_list
+reg_ano_AOU_surf <- reg
+
+#reg_ano_AOU_surf 
+
+
+#plot anomalies AOU surface :
+plot_ano_AOU_surf <- ggplot(data = anomalies_AOU_surf, aes(x = datetime, y = AOU_ano), na.rm=TRUE) +
+  scale_x_datetime(date_breaks="2 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  geom_point(colour="#2C75FF", na.rm=TRUE, size = 0.8) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title="Anomalies trend for AOU data (surface) at Point B (2002-2022)",x="", y="Oxygen (mg/L)") +
+  annotate("text", x =as.POSIXct("2016-01-01"), y= min(anomalies_AOU_surf$AOU_ano, na.rm=TRUE), 
+           label="", colour="black", size=9, fontface="plain") +
+  coord_fixed() +
+  Mytheme(size_labs = 8) +
+  theme(axis.text.x=element_blank())
+
+
+
+plot_AOU_surf
+plot_ano_AOU_surf
+
+```
+  
+  
+
+###### Trend analysis by moving average (decompose function) :  
+  
+*Quick overview of the components of the series*   
+  
+
+```{r decompose function - AOU surface, echo=FALSE, warning=FALSE, message=FALSE}
+
+#AOU time-series :
+AOU_ts <- ts(data_somlit_surf$AOU, start = c(2002,2), end = c(2022,52), freq = 52)
+
+#type = additive because the seasonal pattern doesn't seem to increase in variation, seasonal pattern looks constant
+AOU_ts_decomp <- decompose(AOU_ts, type = "additive") #pareil qu'en rajoutant : filter = rep(1/52,52)
+
+autoplot(AOU_ts_decomp) +
+  xlab('')
+
+
+# plot(AOU_ts_decomp$x, col="black")
+# lines(AOU_ts_decomp$seasonal, col="red")
+
+#plot(AOU_ts_decomp$figure)
+```
+  
+  
+
+→ Remove seasonality :  
+  
+measured values - seasonal pattern  
+OR  
+trend + remainders  
+  
+*applying trend on the outputed series*  
+  
+slope : -0.43251 ± 0.068  
+Int. : 862.87 ± 136.68  
+  
+
+```{r remove seasonal pattern - AOU surface, echo=FALSE, warning=FALSE, message=FALSE}
+
+#2 ways :
+# 1 : measured values - seasonal pattern
+# 2 : trend + random
+
+AOU_ts_less_season <- AOU_ts_decomp$x - AOU_ts_decomp$seasonal
+
+plot_AOU_ts_less_season <- autoplot(AOU_ts_less_season) + 
+  xlab("") + ylab("AOU (µmol/kg)") +
+  ggtitle("AOU surface time series (without seasonality)") +
+  geom_smooth(method=lm)
+
+#regression AOU surface values :
+reg_val_AOU_less_season <- as.data.frame(plot_AOU_ts_less_season$data)
+
+model_AOU_less_season <- lm(formula=y~x, data=reg_val_AOU_less_season)
+#summary(model_AOU_less_season) #pour voir les erreurs des coef + la significativité
+
+
+#plot with slope value :
+plot_AOU_ts_less_season <- autoplot(AOU_ts_less_season) + 
+  xlab("") + ylab("AOU (µmol/kg)") +
+  ggtitle("AOU surface time series (without seasonality)") +
+  geom_smooth(method=lm) +
+  annotate(geom="text", x=2013, y=57, label="slope : -0.43251 ± 0.068 *", color="black")
+
+plot_AOU_ts_less_season
+
+```
+  
+  
+→ Trend on remainders :  
+  
+measured values - (seasonal pattern + trend)  
+  
+*applying trend on the remainders*  
+  
+slope : -0.03130 ± 0.058  
+Int. : 62.91 ± 116.20 *non-significative*  
+  
+
+```{r remove seasonal pattern + trend - AOU surface, echo=FALSE, warning=FALSE, message=FALSE}
+
+plot_AOU_ts_random <- autoplot(AOU_ts_decomp$random) + 
+  xlab("") + ylab("AOU (µmol/kg)") +
+  ggtitle("AOU surface residuals (without trend + seasonality)") +
+  geom_smooth(method=lm)
+  
+
+#regression values :
+reg_val_AOU_random <- as.data.frame(plot_AOU_ts_random$data)
+
+model_AOU_random <- lm(formula=y~x, data=reg_val_AOU_random)
+#summary(model_AOU_random) #non-significative
+
+plot_AOU_ts_random <- autoplot(AOU_ts_decomp$random) + 
+  xlab("") + ylab("AOU (µmol/kg)") +
+  ggtitle("AOU surface residuals (without trend + seasonality)") +
+  geom_smooth(method=lm) +
+  annotate(geom="text", x=2008, y=57, label="slope : -0.03130 ± 0.058   (non-significative)", color="black")
+
+
+plot_AOU_ts_random
+```
+  
+→ Trend analysis :    
+  
+measured values - (seasonality + remainders)  
+  
+*applying trend on the trend*  
+  
+slope : -0.51244 ± 0.038  
+Int. : 1023.45 ± 77.37  
+  
+
+```{r trend on trend - AOU surface, echo=FALSE, warning=FALSE, message=FALSE}
+
+plot_AOU_ts_trend <- autoplot(AOU_ts_decomp$trend) + 
+  xlab("") + ylab("AOU (µmol/kg)") +
+  ggtitle("AOU surface trend (without seasonality + residuals)") +
+  geom_smooth(method=lm)
+  
+
+#regression values :
+reg_val_AOU_trend <- as.data.frame(plot_AOU_ts_trend$data)
+
+model_AOU_trend <- lm(formula=y~x, data=reg_val_AOU_trend)
+summary(model_AOU_trend) #non-significative
+
+plot_AOU_ts_trend <- autoplot(AOU_ts_decomp$trend) + 
+  xlab("") + ylab("AOU (µmol/kg)") +
+  ggtitle("AOU surface trend (without seasonality + residuals)") +
+  geom_smooth(method=lm) +
+  annotate(geom="text", x=2015, y=30, label="slope : -0.51244 ± 0.038 *", color="black")
+
+
+plot_AOU_ts_trend
+```
+
+
+
+
+
+
+
+
+
+AOU  = [O~2~ saturation] in µmol/kg  - [O~2~ observed] in µmol/kg  
+Unity : µmol/kg  
+  
+###### → 50 m data :  
+  
+
+```{r faire pareil pour 50m, echo=FALSE, warning=FALSE, message=FALSE}
+
+```
+
+
+
+
+
+
+
+```{r notes}
+
+###AOU :
+#faire analyse par saison ? (différencier trend été de trend hiver)
+
+
+###correction oxygen EOL :
+#graph montrant uniquement la relation entre les data corrigées EOL + data Point B (oxygen)
+#voir avec Samir la correction data, revoir le script, faire avec liste rotation des capteurs (mail Laurent)
+#voir janvier 2018 fin 2022 entre EOL et data somlit, faire la relation linéaire
+
+
+
+###comparaison flux CO2 Point B avec flux CO2 large (dyfamed) :
+#merlivat 2018 (seanoe data pco2) dyfamed flux co2 large
+#recup AT/CT pour comparer les 2 periodes
+#faire avec data pco2 atmos + vents de azur + pco2 data recup sur seanoe (carioca = large) + laurent envoie les 2 dernieres années (2020-2021)
+
+
+###comparaison tendances temperature EOL vs autres bouées :
+#coriolis cotier : autres series temp autres sites, au moins temperature (solemio, sète, sola, poeme)
+#comparer les series + tendances sur une mm periode
+
+###Laurent
+#ASTI san sebastien glyder
 
 
 ```
 
 
 
-```{r}
 
-```
+
+
 

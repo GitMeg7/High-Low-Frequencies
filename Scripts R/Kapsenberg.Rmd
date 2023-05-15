@@ -704,12 +704,12 @@ plot_ano_pCO2_0715_50m
 ```{r import data 2007-2022 at 0m and 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
 #data surface
-data_0722 <- read_delim("../Data/DATA_SOMLIT_07-23_impute_0m.csv", 
+data_0722 <- read_delim("../Data/DATA_SOMLIT_07-22_impute_0m.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
     mutate(Month = as.numeric(Month))
 
 #data 50m
- # data_0722_50m <- read_delim("../Data/DATA_SOMLIT_07-23_CLEAN.csv", 
+ # data_0722_50m <- read_delim("../Data/DATA_SOMLIT_07-22_CLEAN.csv", 
  #     delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
  #   dplyr::filter(depth == 50) %>% 
  #   mutate(Month = as.numeric(Month),
@@ -720,9 +720,9 @@ data_0722 <- read_delim("../Data/DATA_SOMLIT_07-23_impute_0m.csv",
  #          impute_pCO2_w = na_interpolation(pCO2, option="linear"))
  # 
  # #save :
- # write.table(data_0722_50m, "DATA_SOMLIT_07-23_impute_50m.csv", sep=";", col.names = TRUE, row.names = FALSE)
+ # write.table(data_0722_50m, "DATA_SOMLIT_07-22_impute_50m.csv", sep=";", col.names = TRUE, row.names = FALSE)
 
-data_0722_50m <- read_delim("../Data/DATA_SOMLIT_07-23_impute_50m.csv", 
+data_0722_50m <- read_delim("../Data/DATA_SOMLIT_07-22_impute_50m.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
     mutate(Month = as.numeric(Month))
 
