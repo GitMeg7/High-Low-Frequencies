@@ -65,7 +65,7 @@ EOL_RAW <- read_delim("../Data/EOL_raw_complete_1323.csv",
 
 #tri
 EOL_RAW <- EOL_RAW %>% 
-  rename(temperature = temp_eol_c, salinity = sal_eol_psu, oxygen = oxy_eol_mll) %>% 
+  rename(temperature = temp_eol_c, salinity = sal_eol_psu, oxygen = oxy_umol_kg) %>% 
   mutate(Year.Month = format(datetime, format="%Y-%m"),
          Year = format(datetime, format="%Y"),
          Year.Month.Day = format(datetime, format="%Y-%m-%d"),
@@ -84,7 +84,7 @@ EOL_RAW %>%
   geom_point(aes(x=datetime, y=temperature), size=0.6, col="#960018") + 
   geom_point(aes(x=datetime, y=salinity), size=0.6, col="#18391E") +
   geom_point(aes(x=datetime, y=oxygen), size=0.6, col="#357AB7") +
-  scale_x_date(name="") + 
+  scale_x_datetime(name="") + 
   scale_y_continuous(name="Temp. (°C)") + 
   ggtitle("High frequency surface data (2013-2022) - EOL buoy")
 
@@ -93,7 +93,7 @@ EOL_RAW %>%
 ```{r importation data SOMLIT clean, echo=FALSE, message=FALSE, warning=FALSE}
 
 #period : jan. 2007 - dec. 2022
-SOMLIT <- read_delim("../Data/DATA_SOMLIT_07-23_CLEAN.csv", 
+SOMLIT <- read_delim("../Data/DATA_SOMLIT_07-22_CLEAN.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
 #selection data surface 1m 
@@ -126,7 +126,7 @@ merge_EOL_SOMLIT_long %>%
   ggtitle("HF (EOL) vs LF (Point B) surface temperature (2013-2022)") +
   geom_line(aes(x=datetime, y=value, color= Legend), size=1) +
   scale_y_continuous(name="Temp.(°C)") + 
-  scale_x_date(name="") + 
+  scale_x_datetime(name="") + 
   scale_colour_discrete(type=c("#AE642D","#24445C"))
 
 
@@ -212,7 +212,7 @@ EOL_monthly_means %>%
   ggtitle("Temperature observations (blue) and monthly means calculated (brown)") +
   geom_point(aes(x=datetime, y=temperature), size=1, col="#357AB7") +
   geom_line(aes(x=datetime, y=Temperature_month), size=0.8, col="#856D4D") +
-  scale_x_date(name="") +
+  scale_x_datetime(name="") +
   scale_y_continuous(name="Temp. (°C)")
 ```
 
@@ -345,11 +345,11 @@ reg_anomalies_raw
 
 
 plot_ano_temp_EOL_raw <- ggplot(data = anomalies, aes(x = datetime, y = Temperature_ano), na.rm=TRUE) +
-  scale_x_date(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  scale_x_datetime(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_point(colour="blue", na.rm=TRUE, size=0.65) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
   labs(title=NULL,x="", y="Temp. (°C)") +
-  annotate("text", x =as.Date("2016-01-01"), y= min(anomalies$Temperature_ano, na.rm=TRUE), 
+  annotate("text", x =as.POSIXct("2016-01-01"), y= min(anomalies$Temperature_ano, na.rm=TRUE), 
            label="", colour="black", size=9, fontface="plain") +
   coord_fixed() +
   Mytheme(size_labs = 8) +
@@ -360,7 +360,7 @@ plot_temp_EOL_raw <- EOL_RAW %>%
   ggplot() +
   aes(x=datetime, y=temperature) + 
   geom_line(size=0.7, col = "#030303",) +
-  scale_x_date(name="") +
+  scale_x_datetime(name="") +
   scale_y_continuous(name="Temp. (°C)") +
   ggtitle("EOL temperature time series (°C) 2013-2022")
 
@@ -1132,90 +1132,8 @@ rownames(summary_table) <- c("Salinity_anomalies", "Temperature_anomalies")
 
 summary_table
 ```
-
-
-
-###############################################################################
-## Trend analysis with Fourrier power spectral density
-
-```{r Fast Fourier Transform essai }
-
-fft <- fft(EOL_RAW$temperature)
-plot(abs(fft), type='l')
-
-```
-
-###############################################################################
-
-## Trend analysis with autocorrelation
-
-```{r autocorrelation - temperature EOL, echo=FALSE, warning=FALSE, message=FALSE}
-
-acf(EOL_RAW$temperature, lag.max=365, type="correlation", plot=FALSE)
-#each value is positively associated to the previous one
-#more the lag increase, weaker is the association
-
-#acf plot :
-acf(EOL_RAW$temperature, lag.max=600, type="correlation", plot=TRUE)
-
-#a refaire avec cours SAMIR
-
-```
-
-## Heatwaves :  
   
-
-```{r Heatwaves Robert, echo=FALSE, warning=FALSE, message=FALSE}
-
-#a revoir
-
-
-#creation
-Exc_temp <- EOL_RAW %>% 
-  mutate(t = as.Date(datetime)) %>% 
-  rename(temp = temperature)
-
-Exc_25 <- exceedance(Exc_temp, threshold = 25, maxPadLength = 6)
-
-DF_exceedance_25 <- Exc_25$exceedance
-
-####
-
-#visualising exceedances
-exc_25_thresh <- Exc_25$threshold
-
-ggplot(data = exc_25_thresh, aes(x = t)) +
-  geom_flame(aes(y = temp, y2 = thresh, fill = "all"), show.legend = F) +
-  geom_line(aes(y = temp, colour = "temp")) +
-  geom_line(aes(y = thresh, colour = "thresh"), linewidth = 1.0) +
-  scale_colour_manual(name = "Line Colour",
-                      values = c("temp" = "black", "thresh" =  "forestgreen")) +
-  scale_fill_manual(name = "Event Colour", values = c("all" = "salmon")) +
-  guides(colour = guide_legend(override.aes = list(fill = NA))) +
-  scale_x_date(date_labels = "%Y", breaks="1 year") +
-  labs(y = "Temp. (°C)", x = NULL, title="Consecutive days > 25°C (2013-2022)")
-
-####
-
-
-#visualising exceedances since 2018
-exc_25_thresh_2017 <- Exc_25$threshold %>% slice(4899:47268)
-
-ggplot(data = exc_25_thresh_2017, aes(x = t)) +
-  geom_flame(aes(y = temp, y2 = thresh, fill = "all"), show.legend = F) +
-  geom_line(aes(y = temp, colour = "temp")) +
-  geom_line(aes(y = thresh, colour = "thresh"), size = 1.0) +
-  scale_colour_manual(name = "Line Colour",
-                      values = c("temp" = "black", "thresh" =  "forestgreen")) +
-  scale_fill_manual(name = "Event Colour", values = c("all" = "salmon")) +
-  guides(colour = guide_legend(override.aes = list(fill = NA))) +
-  scale_x_date(date_labels = "%Y", breaks="1 year") +
-  labs(y = expression(paste("Temperature [", degree, "C]")), x = NULL)
-
-#record annee 2022 
-
-```
-
+  
 ## Comparison between EOL and Azur buoy - SST data 2013-2022  
   
 
@@ -1370,7 +1288,8 @@ pelagic_coast_plot
 
 ```
   
-### Scatterplot costal (EOL) vs pelagic (Azur) SST :  
+  
+## Scatterplot costal (EOL) vs pelagic (Azur) SST :  
 
 *Slope : 0.9993014*  
 *Intercept : 0.7620216*  
@@ -1399,6 +1318,181 @@ ggsave(filename = "pelagic_coast_scatter_plot.jpg", # Nommez le fichier dans leq
 
 summary(reg_pelagic_coast)
 ```
+  
+  
+## Wind speed data (m/s)  
+  
+→ Comparison between wind EOL modelisation and wind data of St-Jean-Cap-Ferrat station :  
+  
+*model EOL : Jan.2009 - Dec.2022*  
+*data Cap-Ferrat : Dec.2020 - Jan.2022*  
+  
+Frequency : hourly  
+Unity : m/s  
+  
+
+```{r wind speed data EOL, echo=FALSE, warning=FALSE, message=FALSE}
+
+#importation data wind speed (model) of EOL buoy (fin 2011-2022) :
+Wind_EOL <- read_csv("../Data/model_wind_speed_EOL.csv") %>% arrange(date)
+
+#delete december 2008 :
+Wind_EOL <- Wind_EOL %>% 
+  dplyr::filter(date >= "2009-01-01 01:00:00")
+
+#summary(Wind_EOL)
+
+#############
+#importation data wind speed Cap-Ferrat
+
+#Wind_CapF <- ld$h 
+#save Wind_CapF :
+#write.table(Wind_CapF, "DATA_CAP_FERRAT_12-20_01-22.csv", sep=";", col.names = TRUE, row.names = FALSE)
+
+Wind_CapF <- read_delim("../Data/DATA_CAP_FERRAT_12-20_01-22.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+
+```
+  
+##### **Histogram of wind speed distribution : model vs Cap-Ferrat**  
+  
+
+```{r Histogram of wind speed distribution, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6, fig.height=4, fig.align='center', fig.show='hold'}
+
+#plot EOL
+ Wind_EOL %>% 
+   ggplot(aes(x=speed_ms)) +
+   geom_histogram(fill="#69b3a2", color="#e9ecef", alpha=0.8) +
+   ggtitle("Wind speed distribution (EOL buoy)") + 
+   scale_y_continuous(name="Distribution") +
+   scale_x_continuous(name="", breaks = c(0, 5, 10, 15, 20))
+
+
+#plot Cap-Ferrat
+ Wind_CapF %>% 
+   ggplot(aes(x=speed_ms)) +
+   geom_histogram(fill="#ED7F10", color="#e9ecef", alpha=0.8) +
+   ggtitle("Wind speed distribution (Cap-Ferrat)") + 
+   scale_y_continuous(name="Distribution") +
+   scale_x_continuous(name="", breaks = c(0, 5, 10, 15, 20))
+##
+
+```
+  
+  
+```{r model + Cap-Ferrat lines, echo=FALSE, warning=FALSE, message=FALSE}
+
+winds <- left_join(Wind_EOL, Wind_CapF, by = c("date" = "datetime"))
+
+winds_for_plot <- winds[c(103501:113310),]
+
+EOL_Cap_plot_long <- winds_for_plot %>% 
+  rename(EOL = speed_ms.x, `Cap-Ferrat` = speed_ms.y) %>% 
+  pivot_longer(cols = c("EOL", `Cap-Ferrat`), names_to = "Legend", values_to = "value")
+
+#plot
+EOL_Cap_plot <- EOL_Cap_plot_long %>% 
+  ggplot() +
+  ggtitle("EOL and Cap-Ferrat winds (m/s) : Dec.2020 - Jan.2022") +
+  geom_line(aes(x=date, y=value, color= Legend), size=0.7) +
+  scale_y_continuous(name="Wind speed (m/s)") + 
+  scale_x_datetime(name="") + 
+  scale_colour_discrete(type=c("#69b3a2", "#CC5500"))
+
+EOL_Cap_plot
+
+```
+  
+  
+##### Scatterplot EOL vs Cap-Ferrat (wind speed m/s 10m) :  
+  
+*Slope : 0.87 ± 0.01*  
+*Intercept : 1.41 ± 0.037*  
+  
+
+```{r  scatterplot EOL vs Cap-Ferrat - wind, echo=FALSE, warning=FALSE, message=FALSE}
+
+#scatter plot : 
+EOL_Cap_scatter_plot <- winds %>% 
+  ggplot() +
+  aes(x=speed_ms.y, y=speed_ms.x) +
+  geom_point(size = 0.7) +
+  stat_smooth(method="lm", formula = y ~ x) +
+  scale_x_continuous(name="Cap-Ferrat winds (m/s)") +
+  scale_y_continuous(name="EOL winds (m/s)") + 
+  annotate(geom="text", x=10, y=20, label="slope : 0.87 ± 0.01 *", color="black")
+
+#regression values :
+# reg_EOL_Cap <- lm(data = winds, speed_ms.x ~ speed_ms.y)
+# slope_EOL_Cap <- reg_EOL_Cap$coefficients[[2]]
+# intercept_EOL_Cap <- reg_EOL_Cap$coefficients[[1]]
+
+#summary(reg_EOL_Cap)
+
+EOL_Cap_scatter_plot
+
+```
+
+
+
+
+## Heatwaves :  
+  
+
+```{r Heatwaves Robert, echo=FALSE, warning=FALSE, message=FALSE}
+
+#a revoir
+
+
+#creation
+Exc_temp <- EOL_RAW %>% 
+  mutate(t = as.Date(datetime)) %>% 
+  rename(temp = temperature)
+
+Exc_25 <- exceedance(Exc_temp, threshold = 25, maxPadLength = 6)
+
+DF_exceedance_25 <- Exc_25$exceedance
+
+####
+
+#visualising exceedances
+exc_25_thresh <- Exc_25$threshold
+
+ggplot(data = exc_25_thresh, aes(x = t)) +
+  geom_flame(aes(y = temp, y2 = thresh, fill = "all"), show.legend = F) +
+  geom_line(aes(y = temp, colour = "temp")) +
+  geom_line(aes(y = thresh, colour = "thresh"), linewidth = 1.0) +
+  scale_colour_manual(name = "Line Colour",
+                      values = c("temp" = "black", "thresh" =  "forestgreen")) +
+  scale_fill_manual(name = "Event Colour", values = c("all" = "salmon")) +
+  guides(colour = guide_legend(override.aes = list(fill = NA))) +
+  scale_x_date(date_labels = "%Y", breaks="1 year") +
+  labs(y = "Temp. (°C)", x = NULL, title="Consecutive days > 25°C (2013-2022)")
+
+####
+
+
+#visualising exceedances since 2018
+exc_25_thresh_2017 <- Exc_25$threshold %>% slice(4899:47268)
+
+ggplot(data = exc_25_thresh_2017, aes(x = t)) +
+  geom_flame(aes(y = temp, y2 = thresh, fill = "all"), show.legend = F) +
+  geom_line(aes(y = temp, colour = "temp")) +
+  geom_line(aes(y = thresh, colour = "thresh"), size = 1.0) +
+  scale_colour_manual(name = "Line Colour",
+                      values = c("temp" = "black", "thresh" =  "forestgreen")) +
+  scale_fill_manual(name = "Event Colour", values = c("all" = "salmon")) +
+  guides(colour = guide_legend(override.aes = list(fill = NA))) +
+  scale_x_date(date_labels = "%Y", breaks="1 year") +
+  labs(y = expression(paste("Temperature [", degree, "C]")), x = NULL)
+
+#record annee 2022 
+
+```
+  
+  
+
 
 
 

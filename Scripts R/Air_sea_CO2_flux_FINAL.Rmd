@@ -39,7 +39,7 @@ library("berryFunctions")
 #### *Data wind speed 10m (m/s)*:  
   
 → Azur buoy (model) - 2009-2022  
-→ EOL buoy (model) - 2011-2022  
+→ EOL buoy (model) - 2009-2022  
   
 Frequency : Hourly  
 Unity : m/s
