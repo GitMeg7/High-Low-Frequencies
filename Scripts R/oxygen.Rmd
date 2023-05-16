@@ -993,6 +993,11 @@ data_somlit_surf <- data_somlit_surf %>%
 
 → AOU (surface) annual cycle :  
   
+*plus faibles valeurs en été*  
+  
+*scatter plot : quand T augmente, AOU diminue*  
+*histogramme des moyennes AOU : 2009 moy = 21.8*  
+  
 
 ```{r AOU surface + annual cycle, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -1020,6 +1025,38 @@ plot_AOU_surf_annual_cycle <- data_somlit_surf %>%
 
 plot_AOU_surf
 plot_AOU_surf_annual_cycle
+##
+
+#scatter plot AOU vs T
+data_somlit_surf %>% 
+  ggplot() +
+  aes(x=T, y=AOU) + 
+  geom_point() + 
+  scale_x_continuous(name="Temp. (°C)") + 
+  scale_y_continuous(name="AOU (µmol/kg)") +
+  ggtitle("AOU according to temperature : Point B (2002-2022)") +
+  geom_smooth(method=lm) + 
+  annotate(geom="text", x=22, y=60, label="slope : -1.64 ± 0.09 *", color="black")
+
+#summary(lm(data_somlit_surf$AOU ~ data_somlit_surf$T))
+##
+
+#histogram AOU by year :
+
+data_somlit_surf <- data_somlit_surf %>% 
+  group_by(year) %>% 
+  mutate(mean_AOU = mean(AOU, na.rm = T))
+  
+data_somlit_surf %>% 
+  ggplot() +
+  aes(x=year, y=mean_AOU) +
+  geom_bar(stat = "identity", width=0.9, fill="#303030") +
+  scale_x_discrete(name="", limits=c("2002" : "2022")) + 
+  scale_y_continuous(name="AOU (µmol/kg)") +
+  ggtitle("Mean of CO2 fluxes per year (2002-2022)")
+
+#echelle pas bonne je sais pas pourquoi
+
 
 
 ```
