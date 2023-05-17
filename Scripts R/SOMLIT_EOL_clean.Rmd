@@ -854,7 +854,7 @@ SOMLIT_oxy_interpol_prof <- SOMLIT_oxy_prof %>%
 
 
   
-### Raw data EOL (seanoe) : sept.2013 - october.2022   
+## Importation data EOL (seanoe) : sept.2013 - october.2022   
   
 Frequency : hourly  
   
@@ -996,7 +996,7 @@ data_EOL_complete <- data_EOL_complete %>% arrange(datetime) #probleme avec les 
 
 
 
-#### **Number of measurements EOL**  
+### **Number of measurements EOL**  
   
 - per year :  
   
@@ -1059,6 +1059,8 @@ Nb_by_month %>%
 - per day :  
   
 *Data every hour since oct. 2017*  
+  
+
 ```{r Number of measurements EOL - per day, echo=FALSE, warning=FALSE, message=FALSE}
 
 #number of measure/month :
@@ -1081,41 +1083,68 @@ Nb_by_day %>%
   ggtitle("Evolution of number of observations per day- EOL (sept.2013 - march.2023)")
 
 ```
-
-*A partir de 2017 :*
-*Faire d'abord 1 data/jour à 09h, tous les jours (EOL 1)*
-
-*Faire ensuite 2 data/jour : 09h et 16h ? tous les jours (EOL 2)*
-
-*Faire toutes les heures, tous les jours (EOL 3)*  
   
   
+**3 folders :**  
   
-
-### *Measure EOL : one per day (at 8 or 9 or 10AM)*  faire plus loin
+- 1 data/jour à 09h (EOL 1)  
+- 2 data/jour : 09h et 16h (EOL 2)  
+- hourly data (EOL 3)  
+  
+  
+### *Measure EOL : one per day (at 8 or 9 or 10AM)*  
   
 
 ```{r Measure EOL : one per day (morning), echo=FALSE, warning=FALSE, message=FALSE}
 
+GG <- read_delim("../Data/EOL_raw_complete_1323.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
 EOL_test1 <- data_EOL_complete %>% 
-  filter(Year >= 2017) %>% 
   filter(Hour == "08:00:00" | Hour == "09:00:00" | Hour == "10:00:00") %>% 
   group_by(datetime) %>% 
-  mutate(NB_OBS_DAY = n())
+  mutate(NB_OBS_DAY = n(),
+         datetime = as.POSIXct(datetime, format="%Y-%m-%d"))
+##
+
+#length(unique(EOL_test1$datetime)) #2628 different dates
+
 
 EOL_test1 <- EOL_test1 %>% mutate(cond = case_when(NB_OBS_DAY > 1 ~ "TRUE", TRUE ~ "FALSE"))
 
-tab1 <- EOL_test1 %>% filter(cond=="FALSE")
-tab2 <- EOL_test1 %>% filter(cond=="TRUE") %>% filter(Hour == "08:00:00")
+#tab of days with more than 1 observation : mean of observations
+tab1 <- EOL_test1 %>% filter(cond=="TRUE") %>% 
+  group_by(datetime) %>% 
+  mutate(temp_eol_c = mean(temp_eol_c, na.rm = TRUE),
+         sal_eol_psu = mean(sal_eol_psu, na.rm = TRUE),
+         oxy_umol_kg = mean(oxy_umol_kg, na.rm = TRUE)) %>% 
+  dplyr::select(-Hour)
 
-#tableau clean
+tab1 <- distinct(tab1) %>% 
+  mutate(Hour = "09:00:00")
+
+#tab of days of 1 observation :
+tab2 <- EOL_test1 %>% filter(cond=="FALSE")
+
+
+#tableau clean : 2628 obs
+#period : sept.2013 - mar.2023
+
 EOL_1 <- full_join(tab1, tab2) %>% 
   group_by(datetime) %>% 
   mutate(NB_OBS_DAY = n()) %>% 
-  select(datetime, Hour, temp_eol_c, sal_eol_psu, oxy_umol_kg, Year, Month, Year.Month, Year.Month.Day, dMonth, NB_OBS_DAY)
+  select(-cond)
+
+EOL_1 <- EOL_1 %>% arrange(datetime)
+##
+
+#bcp de data manquantes
+#aout + septembre 2017
+#été 2016....
+ 
 
 #save :
-#write.table(EOL_1, "EOL_17-22_1perday_morning.csv", sep=";", col.names = TRUE, row.names = FALSE)
+#write.table(EOL_1, "EOL_13-23_1perday_morning.csv", sep=";", col.names = TRUE, row.names = FALSE)
 
 
 ```
@@ -1126,25 +1155,92 @@ EOL_1 <- full_join(tab1, tab2) %>%
 
 ```{r Measure EOL : 2 per day (morning & afternoon), echo=FALSE, warning=FALSE, message=FALSE}
 
-EOL_test2 <- data_EOL_complete %>% 
-  filter(Year >= 2017) %>% 
-  filter(Hour == "08:00:00" | Hour == "09:00:00" | Hour == "10:00:00" | Hour == "16:00:00")
-  
+EOL_test2 <- data_EOL_complete %>%
+  filter(Hour == "08:00:00" | Hour == "09:00:00" | Hour == "10:00:00" | Hour == "15:00:00" | Hour == "16:00:00" | Hour == "17:00:00") %>% 
+  group_by(datetime) %>% 
+  mutate(NB_OBS_DAY = n(),
+         datetime = as.POSIXct(datetime, format="%Y-%m-%d"))
+##
 
-EOL_test2 <- EOL_test2 %>% group_by(datetime) %>% filter(Hour == "08:00:00" | Hour == "16:00:00") %>%
-  mutate(NB_OBS_DAY = n())
-
-EOL_test2 <- EOL_test2 %>% mutate(cond = case_when(NB_OBS_DAY > 1 ~ "TRUE", TRUE ~ "FALSE"))
-EOL_test2 <- EOL_test2 %>% filter(cond=="TRUE")
+EOL_test2 <- EOL_test2 %>% mutate(cond = case_when(NB_OBS_DAY > 2 ~ "TRUE", TRUE ~ "FALSE"))
 
 
-#tableau clean
-EOL_2 <- EOL_test2 %>%
-  select(datetime, Hour, temp_eol_c, sal_eol_psu, oxy_umol_kg, Year, Month, Year.Month, Year.Month.Day, dMonth, NB_OBS_DAY)
+#tab of days of more than 2 observations :
+tab1_2 <- EOL_test2 %>% filter(cond=="TRUE") 
+
+
+tab1_2_morning <- tab1_2 %>% dplyr::filter(Hour == "08:00:00" | Hour == "09:00:00" | Hour == "10:00:00") %>% 
+  group_by(datetime) %>% 
+  mutate(temp_eol_c = mean(temp_eol_c, na.rm = TRUE),
+         sal_eol_psu = mean(sal_eol_psu, na.rm = TRUE),
+         oxy_umol_kg = mean(oxy_umol_kg, na.rm = TRUE)) %>% 
+  dplyr::select(-c(Hour, NB_OBS_DAY))
+
+tab1_2_morning <- distinct(tab1_2_morning) %>% 
+  mutate(Hour = "09:00:00")
+
+
+tab1_2_afternoon <- tab1_2 %>% dplyr::filter(Hour == "15:00:00" | Hour == "16:00:00" | Hour == "17:00:00") %>% 
+  group_by(datetime) %>% 
+  mutate(temp_eol_c = mean(temp_eol_c, na.rm = TRUE),
+         sal_eol_psu = mean(sal_eol_psu, na.rm = TRUE),
+         oxy_umol_kg = mean(oxy_umol_kg, na.rm = TRUE)) %>% 
+  dplyr::select(-c(Hour, NB_OBS_DAY))
+
+tab1_2_afternoon <- distinct(tab1_2_afternoon) %>% 
+  mutate(Hour = "16:00:00")
+
+#merge :
+tab1_2 <- full_join(tab1_2_morning, tab1_2_afternoon)
+
+#tab of days of less than 2 observations :
+tab2_2 <- EOL_test2 %>% filter(cond=="FALSE") 
+
+tab2_2_morning <- tab2_2 %>% dplyr::filter(Hour == "08:00:00" | Hour == "09:00:00" | Hour == "10:00:00") %>% 
+  group_by(datetime) %>% 
+  mutate(temp_eol_c = mean(temp_eol_c, na.rm = TRUE),
+         sal_eol_psu = mean(sal_eol_psu, na.rm = TRUE),
+         oxy_umol_kg = mean(oxy_umol_kg, na.rm = TRUE)) %>% 
+  dplyr::select(-c(Hour, NB_OBS_DAY))
+
+tab2_2_morning <- distinct(tab2_2_morning) %>% 
+  mutate(Hour = "09:00:00")
+
+tab2_2_afternoon <- tab2_2 %>% dplyr::filter(Hour == "15:00:00" | Hour == "16:00:00" | Hour == "17:00:00") %>% 
+  group_by(datetime) %>% 
+  mutate(temp_eol_c = mean(temp_eol_c, na.rm = TRUE),
+         sal_eol_psu = mean(sal_eol_psu, na.rm = TRUE),
+         oxy_umol_kg = mean(oxy_umol_kg, na.rm = TRUE)) %>% 
+  dplyr::select(-c(Hour, NB_OBS_DAY))
+
+tab2_2_afternoon <- distinct(tab2_2_afternoon) %>% 
+  mutate(Hour = "09:00:00")
+
+#merge :
+tab2_2 <- full_join(tab2_2_morning, tab2_2_afternoon)
+
+##
+
+
+#tableau clean : 4756 obs
+#period : sept.2013 - mar.2023
+
+EOL_2 <- full_join(tab1_2, tab2_2) %>% 
+  group_by(datetime) %>% 
+  mutate(NB_OBS_DAY = n()) %>% 
+  select(-cond)
+
+EOL_2 <- EOL_2 %>% arrange(datetime)
+
+#bcp de data manquantes
+#fevrier-mars 2014
+#sept 2015
+#été 2016...
+
 
 
 #save :
-#write.table(EOL_2, "EOL_17-22_2perday_morning_afternoon.csv", sep=";", col.names = TRUE, row.names = FALSE)
+#write.table(EOL_2, "EOL_13-23_2perday_morning_afternoon.csv", sep=";", col.names = TRUE, row.names = FALSE)
 
 
 ```
