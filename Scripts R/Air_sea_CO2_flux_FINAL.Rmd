@@ -724,6 +724,27 @@ test %>%
 #write.table(tab_flux, "DATA_SOMLIT_07-22_impute_0m_deltas_pCO2_and_fluxes_CO2.csv", sep=";", col.names = TRUE, row.names = FALSE)
 
 ```
+  
+  
+## Relationship between wind speed and CO~2~ fluxes  
+  
+the higher the wind speed, the higher the CO2 flux variations  
+  
+
+```{r relationship winds vs fluxes, echo=FALSE, warning=FALSE, message=FALSE}
+
+#scatter-plot :
+tab_flux %>% 
+  ggplot() +
+  aes(x=speed_ms, y=Flux_CO2_2014) +
+  geom_point(size=0.7) +
+  scale_x_continuous(name="Wind speed (m/s)", n.breaks=6) +
+  scale_y_continuous(name="CO2 fluxes (mol of C/m²/h)", labels = label_scientific()) +
+  ggtitle("CO2 fluxes according to wind speed")
+
+#test de variance ?
+
+```
 
 
 

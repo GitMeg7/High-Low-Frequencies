@@ -2,7 +2,7 @@
 #### DELTA PCO2 BIO
 
 ## Import data :
-data_pco2 <- read_delim("Data/DATA_SOMLIT_07-23_impute_0m_deltas_pCO2.csv", 
+data_pco2 <- read_delim("Data/DATA_SOMLIT_07-22_impute_0m_deltas_pCO2.csv", 
                         delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
 #theme for plots :
@@ -94,7 +94,6 @@ colnames(reg) <-
     "P value")
 row.names(reg) <- var_list
 reg_ano <- reg
-slope <- reg_ano[2, 1]
 
 # Regression and table anomalies
 var_list <- "bio_pco2_ano"
@@ -143,7 +142,6 @@ colnames(reg) <-
     "P value")
 row.names(reg) <- var_list
 reg_ano <- reg
-slope <- reg_ano[2, 1]
 
 reg_ano
 
@@ -176,7 +174,7 @@ plot_delta_bio <- data_pco2 %>%
 #####CO2 FLUXES
 
 ## Import data :
-data_fluxes <- read_delim("Data/DATA_SOMLIT_07-23_impute_0m_deltas_pCO2_and_fluxes_CO2.csv", 
+data_fluxes <- read_delim("Data/DATA_SOMLIT_07-22_impute_0m_deltas_pCO2_and_fluxes_CO2.csv", 
                           delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
 #theme for plots :
@@ -396,11 +394,10 @@ plot_flux_HO <- data_fluxes %>%
 #oxygen a EOL
 #tendance des minima, maxima et donnees brutes moyennes
 
-EOL <- read_delim("Data/EOL_17-22_23perday_hourly.csv", 
+EOL <- read_delim("Data/EOL_18-23_hourly.csv", 
                   delim = ";", escape_double = FALSE, trim_ws = TRUE)
-#BUG : pas de data apres 10/2022
-#BUG : a partir du 2022-10-31, mauvaise translation des virgules
-#BUG : pas les heures
+#BUG : trou de 15 jours entre 2022-15-10 et 2022-11-04
+
 
 test <- read_delim("Data/EOL_raw_complete_1323.csv", 
                    delim = ";", escape_double = FALSE, trim_ws = TRUE)
@@ -410,9 +407,9 @@ test <- read_delim("Data/EOL_raw_complete_1323.csv",
 
 EOL_oxy <- EOL %>% 
   group_by(Year) %>% 
-  mutate(mean_oxy = mean(oxy_eol_mll, na.rm = TRUE),
-         min_oxy = min(oxy_eol_mll, na.rm = TRUE),
-         max_oxy = max(oxy_eol_mll, na.rm = TRUE))
+  mutate(mean_oxy = mean(oxy_umol_kg, na.rm = TRUE),
+         min_oxy = min(oxy_umol_kg, na.rm = TRUE),
+         max_oxy = max(oxy_umol_kg, na.rm = TRUE))
 ##
 
 
@@ -420,19 +417,19 @@ EOL_oxy <- EOL %>%
 
 monthly_means_EOL_oxy <- ungroup(EOL_oxy) %>% 
   group_by(Month) %>%
-  summarise(oxy_raw_month = mean(oxy_eol_mll, na.rm = TRUE))
+  summarise(oxy_raw_month = mean(oxy_umol_kg, na.rm = TRUE))
 
 ##
 
 ## Parameters
 
 anomalies_EOL_oxy <- left_join(ungroup(EOL_oxy), monthly_means_EOL_oxy, by = "Month") %>%
-  mutate(oxy_raw_ano = oxy_eol_mll - oxy_raw_month)
+  mutate(oxy_raw_ano = oxy_umol_kg - oxy_raw_month)
 
 
 
 # Regressions and tables of key parameters
-var_list <- "oxy_eol_mll"
+var_list <- "oxy_umol_kg"
 
 lm.test <- vector("list", length(var_list))
 
@@ -547,21 +544,16 @@ plot_ano_EOL_oxy_raw <- ggplot(data = anomalies_EOL_oxy, aes(x = datetime, y = o
   scale_x_date(date_breaks="2 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_point(colour="#2C75FF", na.rm=TRUE, size = 0.8) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
-  labs(title="Anomalies trend for raw oxygen data (2017-2022)",x="", y="Oxygen (mll)") +
-  annotate("text", x =as.Date("2016-01-01"), y= min(anomalies_EOL_oxy$oxy_raw_ano, na.rm=TRUE), 
-           label="", colour="black", size=9, fontface="plain") +
-  coord_fixed() +
-  Mytheme(size_labs = 8) +
-  theme(axis.text.x=element_blank())
+  labs(title="Anomalies trend for raw oxygen data (2018-2022)",x="", y="Oxygen (umol/kg)") 
 
 plot_EOL_oxy_raw <- EOL_oxy %>% 
   ggplot() +
-  aes(x=datetime, y=oxy_eol_mll) + 
+  aes(x=datetime, y=oxy_umol_kg) + 
   geom_line(size=0.8, col = "#22427C", linewidth = 0.5) +
   scale_x_date(name="") +
   scale_y_continuous(name="Oxygen (mll)") +
-  ggtitle("EOL oxygen time series in mll (2017-2022)") +
-  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE)
+  ggtitle("EOL oxygen time series in umol/kg (2018-2022)")
+#  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE)
 ##
 
 #Oxygen : minima, maxima, mean
