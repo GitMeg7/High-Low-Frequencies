@@ -61,12 +61,12 @@ Mytheme <- function(size_labs = 6, face_font="plain", ...) {
 #frequency : hourly (raw)
 #unity : umol/kg
 data_EOL <- read_delim("../Data/EOL_raw_complete_1323.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
-  filter(datetime >= "2017-05-05 01:00:00")
+  dplyr::filter(datetime >= "2018-01-01 00:00:00" & datetime <= "2022-11-22 05:00:00")
 
 
 ```
 
-## EOL - oxygen time series trend analysis by residuals (substracting climatological monthly means)  
+## EOL - oxygen time series trend analysis by residuals (substracting climatological monthly means) - jan.2018 - nov.2022
   
 *Analysis without interpolations*  
   
@@ -207,20 +207,16 @@ plot_ano_EOL_oxy_raw <- ggplot(data = anomalies_EOL_oxy, aes(x = datetime, y = o
   scale_x_datetime(date_breaks="2 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_point(colour="#2C75FF", na.rm=TRUE, size = 0.8) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
-  labs(title="Anomalies trend for EOL oxygen data (2013-2022)",x="", y="Oxygen (mll)") +
-  annotate("text", x =as.POSIXct("2016-01-01"), y= min(anomalies_EOL_oxy$oxy_EOL_ano, na.rm=TRUE), 
-           label="", colour="black", size=9, fontface="plain") +
-  coord_fixed() +
-  Mytheme(size_labs = 8) +
-  theme(axis.text.x=element_blank())
+  labs(title="Anomalies trend for EOL oxygen data (2018-2022)",x="", y="Oxygen (µmol/kg)") +
+  annotate(geom="text", x=as.POSIXct("2020-04-22 04:00:00"), y=50, label="slope : -1.21 ± 0.027 *", color="black")
 
 plot_EOL_oxy_raw <- data_EOL %>% 
   ggplot() +
   aes(x=datetime, y=oxy_umol_kg) + 
   geom_line(size=0.8, col = "#22427C", linewidth = 0.5) +
   scale_x_datetime(name="") +
-  scale_y_continuous(name="Oxygen (umol/kg)") +
-  ggtitle("EOL oxygen time series in umol/kg (2017-2022)")
+  scale_y_continuous(name="Oxygen (µmol/kg)") +
+  ggtitle("EOL oxygen time series in µmol/kg (2018-2022)")
 #geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE)
 ##
 
@@ -387,11 +383,8 @@ plot_ano_somlit_oxy_surf <- ggplot(data = anomalies_somlit_oxy_surf, aes(x = dat
   geom_point(colour="#2C75FF", na.rm=TRUE, size = 0.8) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
   labs(title="Anomalies trend for oxygen data (surface) at Point B (2002-2022)",x="", y="Oxygen (μmol/kg)") +
-  annotate("text", x =as.POSIXct("2016-01-01"), y= min(anomalies_somlit_oxy_surf$oxy_somlit_ano, na.rm=TRUE), 
-           label="", colour="black", size=9, fontface="plain") +
-  coord_fixed() +
-  Mytheme(size_labs = 8) +
-  theme(axis.text.x=element_blank())
+  annotate(geom="text", x=as.POSIXct("2020-04-22 04:00:00"), y=50, label="slope : 0.37 ± 0.067 *", color="black")
+
 
 plot_somlit_oxy_surf <- data_somlit_surf_raw %>% 
   ggplot() +
@@ -545,11 +538,7 @@ plot_ano_somlit_oxy_prof <- ggplot(data = anomalies_somlit_oxy_prof, aes(x = dat
   geom_point(colour="#2C75FF", na.rm=TRUE, size = 0.8) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
   labs(title="Anomalies trend for oxygen data (50 m) at Point B (2002-2022)",x="", y="Oxygen (μmol/kg)") +
-  annotate("text", x =as.POSIXct("2016-01-01"), y= min(anomalies_somlit_oxy_prof$oxy_somlit_ano, na.rm=TRUE), 
-           label="", colour="black", size=9, fontface="plain") +
-  coord_fixed() +
-  Mytheme(size_labs = 8) +
-  theme(axis.text.x=element_blank())
+  annotate(geom="text", x=as.POSIXct("2020-04-22 04:00:00"), y=50, label="slope : 0.30 ± 0.078 *", color="black")
 
 plot_somlit_oxy_prof <- data_somlit_prof_raw %>% 
   ggplot() +
@@ -571,7 +560,7 @@ plot_ano_somlit_oxy_prof
   
 *Analysis with interpolations* 
   
-###### → surface data (1m) :  
+###### → surface data (1m) : same results as raw  
   
   
 ```{r data oxygen SOMLIT - surface, echo=FALSE, warning=FALSE, message=FALSE}
@@ -589,7 +578,7 @@ data_somlit_surf <- read_delim("../Data/DATA_SOMLIT_02-22_oxy_CLEAN_impute_0m.cs
 → Trend analysis by residuals (Bates et al. 2014) :  
   
 *légère augmentation de l'oxygène dissous en surface (μmol/kg) : *  
-*slope : 0.328 ± 0.065 μmol/kg par année*  
+*slope : 0.37 ± 0.067 μmol/kg par année*  
   
 ```{r trend analysis SOMLIT oxy - surface, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -715,7 +704,7 @@ colnames(reg) <-
 row.names(reg) <- var_list
 reg_ano_somlit_surf <- reg
 
-#reg_ano_somlit_oxy_surf 
+reg_ano_somlit_oxy_surf 
 
 
 ## Plot anomalies Point B surface :
@@ -725,11 +714,8 @@ plot_ano_somlit_surf <- ggplot(data = anomalies_somlit_surf, aes(x = datetime, y
   geom_point(colour="#2C75FF", na.rm=TRUE, size = 0.8) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
   labs(title="Anomalies trend for oxygen data (surface) at Point B (2002-2022)",x="", y="Oxygen (μmol/kg)") +
-  annotate("text", x =as.POSIXct("2016-01-01"), y= min(anomalies_somlit_surf$oxy_somlit_ano, na.rm=TRUE), 
-           label="", colour="black", size=9, fontface="plain") +
-  coord_fixed() +
-  Mytheme(size_labs = 8) +
-  theme(axis.text.x=element_blank())
+  annotate(geom="text", x=as.POSIXct("2020-04-22 04:00:00"), y=50, label="slope : 0.37 ± 0.067 *", color="black")
+
 
 plot_somlit_surf <- data_somlit_surf %>% 
   ggplot() +
@@ -746,7 +732,7 @@ plot_ano_somlit_surf
 ```
   
 
-###### → 50 m data :  
+###### → 50 m data : same results as raw data  
   
   
 ```{r data oxygen SOMLIT - 50m, echo=FALSE, warning=FALSE, message=FALSE}
@@ -764,7 +750,7 @@ data_somlit_prof <- read_delim("../Data/DATA_SOMLIT_02-22_oxy_CLEAN_impute_50m.c
 → Trend analysis by residuals (Bates et al. 2014) :  
   
 *légère augmentation de l'oxygène dissous à 50 mètres (μmol/kg) : *  
-*slope : 0.257 ± 0.072 μmol/kg par année*  
+*slope : 0.30 ± 0.078 μmol/kg par année*  
   
 ```{r trend analysis SOMLIT oxy - 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -889,7 +875,7 @@ colnames(reg) <-
 row.names(reg) <- var_list
 reg_ano_somlit_prof <- reg
 
-#reg_ano_somlit_oxy_prof 
+reg_ano_somlit_oxy_prof 
 
 
 ## Plot anomalies Point B 50m :
@@ -899,11 +885,8 @@ plot_ano_somlit_prof <- ggplot(data = anomalies_somlit_prof, aes(x = datetime, y
   geom_point(colour="#2C75FF", na.rm=TRUE, size = 0.8) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
   labs(title="Anomalies trend for oxygen data (50m) at Point B (2002-2022)",x="", y="Oxygen (μmol/kg)") +
-  annotate("text", x =as.POSIXct("2016-01-01"), y= min(anomalies_somlit_prof$oxy_somlit_ano, na.rm=TRUE), 
-           label="", colour="black", size=9, fontface="plain") +
-  coord_fixed() +
-  Mytheme(size_labs = 8) +
-  theme(axis.text.x=element_blank())
+  annotate(geom="text", x=as.POSIXct("2020-04-22 04:00:00"), y=50, label="slope : 0.30 ± 0.078 *", color="black")
+
 
 plot_somlit_prof <- data_somlit_prof %>% 
   ggplot() +
@@ -920,6 +903,257 @@ plot_ano_somlit_prof
 ```
   
   
+## EOL : AOU calculation (Apparent Oxygen Utilisation) :  
+  
+Period : jan.2018 - nov.2022  
+  
+AOU  = [O~2~ saturation] in µmol/kg  - [O~2~ observed] in µmol/kg  
+Unity : µmol/kg  
+  
+
+```{r EOL : AOU, echo=FALSE, warning=FALSE, message=FALSE}
+
+#calcul T1 :
+T1 <- (data_EOL$temp_eol_c + 273.15) / 100
+
+#calcul OSAT (ml/kg) :
+OSAT = -177.7888 + 255.5907/T1 + 146.4813*log(T1) - 22.2040*T1
+OSAT = OSAT + data_EOL$sal_eol_psu * (-0.037362 + T1 * (0.016504 - 0.0020564 * T1))
+OSAT = exp(OSAT)
+
+#convert from ml/kg to umol/kg :
+OSAT = (OSAT * 1000)/ 22.392
+
+#calculate AOU in umol/kg
+AOU_EOL = OSAT - data_EOL$oxy_umol_kg
+
+data_EOL <- data_EOL %>% 
+  mutate(AOU = AOU_EOL)
+
+```
+  
+
+→ AOU (EOL) annual cycle :  
+  
+*plus faibles valeurs en été*  
+  
+*scatter plot : Temp. influence significativement AOU : quand T augmente, AOU diminue*  
+  
+  
+
+```{r AOU EOL + annual cycle, echo=FALSE, warning=FALSE, message=FALSE}
+
+plot_AOU_EOL <- data_EOL %>% 
+  ggplot() + 
+  aes(x=datetime, y=AOU) + 
+  geom_line(col = "#01796F") + 
+  ggtitle("AOU in µmol/kg at sea surface - EOL (2018-2022)") +
+  scale_x_datetime(name="") + 
+  scale_y_continuous(name="AOU (µmol/kg)")
+##
+
+plot_AOU_EOL_annual_cycle <- data_EOL %>% 
+  ggplot() +
+  geom_line(aes(x = as.Date(yday(datetime), "1970-01-01"), y = AOU, 
+                group = factor(year(datetime)), 
+                color = factor(year(datetime))), linewidth = 0.6) +
+  scale_colour_viridis_d(option="mako", direction=-1) +
+  ggtitle("Annual cycle of AOU (surface) - EOL (2018-2022)") +
+  scale_x_date(date_breaks="months", date_labels="%b", name = "") +
+  labs(x="Months",colour="") +
+  theme_bw() +
+  scale_y_continuous(name = "AOU (µmol/kg)") 
+##
+
+plot_AOU_EOL
+plot_AOU_EOL_annual_cycle
+##
+
+#scatter plot AOU vs T
+data_EOL %>% 
+  ggplot() +
+  aes(x=temp_eol_c, y=AOU) + 
+  geom_point() + 
+  scale_x_continuous(name="Temp. (°C)") + 
+  scale_y_continuous(name="AOU (µmol/kg)") +
+  ggtitle("AOU according to temperature : EOL (2018-2022)") +
+  geom_smooth(method=lm) + 
+  annotate(geom="text", x=22, y=60, label="slope : -0.46 ± 0.009 *", color="black")
+
+#summary(lm(data_EOL$AOU ~ data_EOL$temp_eol_c))
+##
+
+#histogram AOU by year :
+
+data_EOL <- data_EOL %>% 
+  mutate(Year = format(datetime, format="%Y"),
+         month = format(datetime, format="%m")) %>% 
+  group_by(Year) %>% 
+  mutate(mean_AOU = mean(AOU, na.rm = T))
+  
+data_EOL %>% 
+  ggplot() +
+  aes(x=Year, y=mean_AOU) +
+  geom_bar(stat = "identity", width=0.9, fill="#303030") +
+  scale_x_discrete(name="", limits=c("2018" : "2022")) + 
+  scale_y_continuous(name="AOU (µmol/kg)") +
+  ggtitle("Mean of AOU per year (2018-2022)")
+
+#echelle pas bonne je sais pas pourquoi
+
+
+
+```
+  
+  
+  
+
+###### Trend analysis by residuals - AOU - EOL (Bates et al. 2014) :  
+  
+*augmentation de l'AOU (µmol/kg) : *  
+*slope : 1.34 ± 0.023 µmol/kg par année* 
+
+```{r trend analysis AOU - EOL, echo=FALSE, warning=FALSE, message=FALSE}
+
+## Monthly means AOU EOL :
+monthly_means_AOU_EOL <- ungroup(data_EOL) %>% 
+  mutate(month = format(datetime, format="%m")) %>% 
+  group_by(month) %>%
+  summarise(AOU_month = mean(AOU, na.rm = TRUE))
+
+##
+
+## Parameters
+
+anomalies_AOU_EOL <- left_join(ungroup(data_EOL), monthly_means_AOU_EOL, by = "month") %>%
+  mutate(AOU_ano = AOU - AOU_month)
+
+
+
+# Regressions and tables of key parameters
+var_list <- "AOU"
+
+lm.test <- vector("list", length(var_list))
+
+for(i in seq_along(var_list)){
+  lm.test[[i]] <- lm(reformulate(var_list[i], "datetime"), data = anomalies_AOU_EOL)
+}
+
+
+
+lms <- lapply(var_list, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
+             data = anomalies_AOU_EOL))
+})
+
+reg <- NULL
+for (i in 1:length(var_list)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob <-
+    pf(lms[[i]]$fstatistic[1],
+       lms[[i]]$fstatistic[2],
+       lms[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg <-
+    rbind(reg, as.numeric(
+      c(
+        lms[[i]]$coefficients[2, 1],
+        lms[[i]]$coefficients[2, 2],
+        lms[[i]]$coefficients[2, 4],
+        lms[[i]]$coefficients[1, 1],
+        lms[[i]]$coefficients[1, 2],
+        lms[[i]]$coefficients[1, 4],
+        lms[[i]]$fstatistic[1],
+        lms[[i]]$fstatistic[3],
+        lms[[i]]$r.squared,
+        prob
+      )
+    ))
+}
+
+colnames(reg) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+row.names(reg) <- var_list
+reg_ano_AOU_EOL <- reg
+
+# Regression and table anomalies
+var_list <- "AOU_ano"
+
+lms <- lapply(var_list, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), data = anomalies_AOU_EOL))
+})
+
+reg <- NULL
+for (i in 1:length(var_list)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob <-
+    pf(lms[[i]]$fstatistic[1],
+       lms[[i]]$fstatistic[2],
+       lms[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg <-
+    rbind(reg, as.numeric(
+      c(
+        lms[[i]]$coefficients[2, 1],
+        lms[[i]]$coefficients[2, 2],
+        lms[[i]]$coefficients[2, 4],
+        lms[[i]]$coefficients[1, 1],
+        lms[[i]]$coefficients[1, 2],
+        lms[[i]]$coefficients[1, 4],
+        lms[[i]]$fstatistic[1],
+        lms[[i]]$fstatistic[3],
+        lms[[i]]$r.squared,
+        prob
+      )
+    ))
+}
+colnames(reg) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+row.names(reg) <- var_list
+reg_ano_AOU_EOL <- reg
+
+reg_ano_AOU_EOL 
+
+
+#plot anomalies AOU surface :
+plot_ano_AOU_EOL <- ggplot(data = anomalies_AOU_EOL, aes(x = datetime, y = AOU_ano), na.rm=TRUE) +
+  scale_x_datetime(date_breaks="1 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  geom_point(colour="#2C75FF", na.rm=TRUE, size = 0.8) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title="Anomalies trend for AOU at EOL (2018-2022)",x="", y="AOU (µmol/kg)") +
+  annotate(geom="text", x=as.POSIXct("2020-04-22 04:00:00"), y=50, label="slope : 1.34 ± 0.023 *", color="black")
+
+
+
+plot_AOU_EOL
+plot_ano_AOU_EOL
+
+```
+
 ## Point B clean - AOU calculation (Apparent Oxygen Utilisation) :  
   
 AOU  = [O~2~ saturation] in µmol/kg  - [O~2~ observed] in µmol/kg  
@@ -1571,7 +1805,7 @@ plot_AOU_ts_prof_less_season
 ```
 
 
-```{r faire pareil pour 50m, echo=FALSE, warning=FALSE, message=FALSE}
+```{r notes 1, echo=FALSE, warning=FALSE, message=FALSE}
 
 #faire comparaison temp pot, prend en compte la salinity, voit l'effet de la solubilité, il doit etre hyper dépendant des processus de solubilité et donc de TS en surface
 #comme article
@@ -1580,7 +1814,6 @@ plot_AOU_ts_prof_less_season
 
 #interpreter les donnees d'AOU
 
-#pour EOL : identifier les periode de manque, justifier que ces périodes ne bougent pas bcp pour interpoler ?
 
 #temperature impactent o2. significatif, temp potentiel
 #solubilité CO2 plus elevee que celle de l'o2
@@ -1589,11 +1822,7 @@ plot_AOU_ts_prof_less_season
 
 
 
-
-
-
-
-```{r notes}
+```{r notes 2, echo=FALSE, warning=FALSE, message=FALSE}
 
 #faire daily variations des paramètres
 

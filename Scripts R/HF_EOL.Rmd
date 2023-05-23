@@ -465,7 +465,8 @@ EOL_daily <- EOL_daily %>%
          Month = format(datetime, format="%m"),
          Year.Month = format(datetime, format="%Y-%m"))
 
-
+#save :
+#write.table(EOL_daily, "EOL_13-23_1perday_morning_FILL.csv", sep=";", col.names = TRUE, row.names = FALSE)
 
 ```
   
