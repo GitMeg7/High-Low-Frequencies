@@ -786,6 +786,46 @@ monthly_means_0m_0722 <- ungroup(data_0722) %>%
 
 monthly_means_0m_0722
 
+
+
+
+## TEST TDT : 
+test_tdt <- data_0722 %>% 
+  group_by(Year.Month) %>% 
+  mutate(monthly = mean(impute_temp)) %>% 
+  group_by(Month) %>% 
+  mutate(Temperature_month = mean(impute_temp))
+  
+annual = mean(monthly_means_0m_0722$Temperature_month)
+
+test_monthly_means <- monthly_means_0m_0722 %>% 
+  mutate(adj = Temperature_month - annual)
+
+test_tdt <- test_tdt %>% 
+  mutate(adj = Temperature_month - annual, 
+         new = monthly - adj)
+
+rm(test_tdt)
+
+
+
+test_monthly_means %>% 
+  ggplot() + 
+  geom_histogram(aes(x=Month, y=adj), stat = "identity") 
+  #geom_point(aes(x=Month, y=new), col = "red")
+
+test_tdt %>% 
+  ggplot() + 
+  geom_line(aes(x=datetime, y=impute_temp), col="grey") +
+  geom_point(aes(x=datetime, y=monthly), col="darkblue") + 
+  geom_point(aes(x=datetime, y=new), col="red") + 
+  geom_smooth(method=lm, aes(x=datetime, y=new), col="red")
+
+
+SD <- sd(test_tdt$new)
+
+
+
 ```
   
   

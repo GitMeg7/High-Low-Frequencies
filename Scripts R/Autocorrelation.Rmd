@@ -160,6 +160,7 @@ autoplot(ts_temp_decomp) +
 
 
 #plot(ts_temp_decomp$figure)
+
 ```
   
 
@@ -206,6 +207,7 @@ plot_ts_temp_less_season <- autoplot(ts_temp_less_season) +
   annotate(geom="text", x=2015, y=23, label="slope : 0.058 ± 0.009 *", color="black")
 
 plot_ts_temp_less_season
+
 
 ```
   

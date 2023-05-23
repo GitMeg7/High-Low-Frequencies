@@ -1,0 +1,150 @@
+---
+title: "TDT"
+author: "Mégane"
+date: "2023-05-22"
+output: html_document
+---
+
+```{r libraries, echo=FALSE, warning=FALSE, message=FALSE}
+library("readr")
+library("viridis")
+library("scales")
+library("lubridate")
+library("gsignal")
+library("FactoMineR")
+library("factoextra")
+library("gplots")
+library("heatwaveR")
+library("dplyr")
+library("imputeTS")
+library("Metrics")
+library("tidyr")
+library("tseries")
+library("forecast")
+library("tsDyn")
+library("tsoutliers")
+library("seacarb")
+library("lmodel2")
+library("lmtest")
+library("ggExtra")
+library("corrplot")
+library("ggcorrplot")
+library("marelac")
+library("kableExtra")
+library("stringr")
+library("berryFunctions")
+library("LakeMetabolizer")
+library("rMR")
+
+```
+
+
+## Calculation of trend detection time (TDT) : Sutton et al. (2022)  
+  
+  
+  
+
+```{r importation data somlit - surface, echo=FALSE, warning=FALSE, message=FALSE}
+
+data_somlit_surf <- read_delim("../Data/DATA_SOMLIT_07-22_impute_0m.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+## creation ts object :
+#frequency : 365.25/7 = 52.17857
+ts_temp <- ts(data_somlit_surf$impute_temp, start = c(2007,1), end = c(2022,52), freq = 52)
+
+
+## decompose function :
+#type = additive because the seasonal pattern doesn't seem to increase in variation, seasonal pattern looks constant
+ts_temp_decomp <- decompose(ts_temp, type = "additive")
+
+autoplot(ts_temp_decomp) +
+  xlab(' ')
+
+```
+  
+  
+
+```{r remove seasonality, echo=FALSE, warning=FALSE, message=FALSE}
+
+ts_temp_less_season <- ts_temp_decomp$x - ts_temp_decomp$seasonal
+
+#regression values : 
+reg_val_less_season <- as.data.frame(plot_ts_temp_less_season$data)
+
+#simple regression :
+model_less_season <- lm(formula=y~x, data=reg_val_less_season)
+
+#summary(model_less_season) # slope : 0.058022
+
+#WLS regression :
+
+#define weights to use
+weight <- 1 / lm(abs(model_less_season$residuals) ~ model_less_season$fitted.values)$fitted.values^2
+
+#perform weighted least squares regression
+wls_model <- lm(reg_val_less_season$y ~ reg_val_less_season$x, data = reg_val_less_season, weights = weight)
+
+#view summary of model
+#summary(wls_model) # slope : 0.057757
+##
+
+```
+
+
+```{r calcul TDT parameters, echo=FALSE, warning=FALSE, message=FALSE}
+
+## σN calculation : 
+sd(ts_temp_decomp$random[27:806]) # 1.134308
+
+## Φ calculation (lag 1) :
+acf(ts_temp_decomp$random[27:806], type = "cor", plot = F) # 0.674
+
+## ω0 :
+# 0.057757
+
+```
+
+
+```{r TDT calculation, echo=FALSE, warning=FALSE, message=FALSE}
+
+#test on temperature at Point B (2007-2022)
+
+#formulae :
+
+#Fac1 = (3.3 * σN)/|ω0|
+#Fac2 = √[(1+Φ)/(1-Φ)]
+#TDT = (Fac1 * Fac2)^(2/3)
+
+#with :
+
+# σN :  sd(noise) → decompose function
+# ω0 : WLS slope
+# Φ : autocorr(noise) at lag 1
+
+
+Fac1 <- (3.3 * 1.134308)/abs(0.057757)
+
+Fac2 <- sqrt((1 + 0.674)/(1 - 0.674))
+
+TDT <- (Fac1 * Fac2)^(2/3) # 27.84 years
+
+
+#uncertainty of TDT :
+
+#192 months on 2007-2022 period
+
+B <- (4/(3*sqrt(192))) * Fac2
+
+uTDT_neg <- TDT * exp(-B)
+uTDT <- TDT * exp(B)
+
+#interval of years : (18.39 years to 28.44 years) or 23 ± 5 years
+```
+
+
+
+
+
+
+
