@@ -113,7 +113,7 @@ Wind_EOL_9AM <- Wind_EOL %>%
   dplyr::filter(Hour == "09:00:00") %>% 
   mutate(datetime = format(date, format="%Y-%m-%d"),
          datetime = as.POSIXct(datetime)) %>% 
-  select(datetime, speed_ms)
+  dplyr::select(datetime, speed_ms)
 ##
 
 graph_wind_eol <- Wind_EOL_9AM %>% 
@@ -296,7 +296,7 @@ pCO2_CORSE <- pCO2_CORSE %>%
   mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>%
   rename(CO2_CORSE = co2) %>% 
   mutate(CO2_CORSE = case_when(CO2_CORSE == -999.990 ~ NA_real_ , TRUE ~ CO2_CORSE)) %>% 
-  select(datetime, CO2_CORSE)
+  dplyr::select(datetime, CO2_CORSE)
 
 # 1534 NA
 ###########################
@@ -318,7 +318,7 @@ pCO2_PLATEAU_ROSA <- pCO2_PLATEAU_ROSA %>%
   mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>%
   rename(CO2_PR = co2) %>% 
   mutate(CO2_PR = case_when(CO2_PR == -999.990 ~ NA_real_ , TRUE ~ CO2_PR)) %>% 
-  select(datetime, CO2_PR)
+  dplyr::select(datetime, CO2_PR)
 
 # 1262 NA
 ###########################
@@ -339,7 +339,7 @@ pCO2_LAMPEDUSA <- pCO2_LAMPEDUSA %>%
   mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>%
   rename(CO2_LAMP = co2) %>% 
   mutate(CO2_LAMP = case_when(CO2_LAMP == -999.990 ~ NA_real_ , TRUE ~ CO2_LAMP)) %>% 
-  select(datetime, CO2_LAMP)
+  dplyr::select(datetime, CO2_LAMP)
 
 #merge pCO2 air CORSE, Plateau Rosa & Lampedusa with Somlit_pCO2 :
 merge2 <- left_join(merge1, pCO2_CORSE, by="datetime") #514 NA
@@ -726,25 +726,54 @@ test %>%
 ```
   
   
-## Relationship between wind speed and CO~2~ fluxes  
+## Comparison with DE CARLO results (jan.2007 - oct.2011)  
   
-the higher the wind speed, the higher the CO2 flux variations  
+  
+Point B : 2009-2011, so comparison for 2009-2011 period  
   
 
-```{r relationship winds vs fluxes, echo=FALSE, warning=FALSE, message=FALSE}
+```{r Comparison with DE CARLO results, echo=FALSE, warning=FALSE, message=FALSE}
 
-#scatter-plot :
-tab_flux %>% 
-  ggplot() +
-  aes(x=speed_ms, y=Flux_CO2_2014) +
-  geom_point(size=0.7) +
-  scale_x_continuous(name="Wind speed (m/s)", n.breaks=6) +
-  scale_y_continuous(name="CO2 fluxes (mol of C/m²/h)", labels = label_scientific()) +
-  ggtitle("CO2 fluxes according to wind speed")
+#select 2007-2011 on tab-flux :
+de_carlo <- tab_flux %>% 
+  dplyr::filter(datetime >= "2009-01-06" & datetime <= "2011-10-04")
 
-#test de variance ?
+de_carlo %>% 
+   ggplot() + 
+   aes(x=datetime, y=Flux_CO2_2014) + 
+   geom_line(col="#967C5C") +
+   scale_x_datetime(name="") +
+   scale_y_continuous(name="Flux (mol of C/m²/y)") +
+   ggtitle("2009-2011 : CO2 fluxes ocean-atmosphere (Wanninkhof 2014)")
+
+de_carlo <- de_carlo %>% 
+  mutate(average_flux_h = mean(Flux_CO2_2014, na.rm=T),
+         max_flux_h = max(Flux_CO2_2014, na.rm=T),
+         min_flux_h = min(Flux_CO2_2014, na.rm=T))
+
+
 
 ```
-
-
+  
+  
+  
+De Carlo (2007-2011) :  
+- average hourly flux : -2.19e-05  
+- annualized flux (by year) : 1.91e-01  
+- maximum hourly flux (winter) : -4.57e-04  
+- minimum hourly flux (summer): 4.29e-04  
+  
+  
+De Carlo (01/06/2009 - 10/04/2011) :  
+- average hourly flux : -2.77e-05  
+- annualized flux (by year) : 2.42e-01  
+- maximum hourly flux (winter) : -4.57e-04  
+- minimum hourly flux (summer): 4.29e-04  
+   
+Point B (01/06/2009 - 10/04/2011) :  
+- average hourly flux : -1.65e-06  
+- annualized flux (by year) : 1.45e-02
+- maximum hourly flux (winter) : -3.23e-04  
+- minimum hourly flux (summer) : 5.70e-04  
+  
 
