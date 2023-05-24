@@ -42,6 +42,9 @@ library("rMR")
 ## Calculation of trend detection time (TDT) : Sutton et al. (2022)  
   
   
+#### Temperature :  
+  
+###### Point B : 2007-2022  
   
 
 ```{r importation data somlit - surface, echo=FALSE, warning=FALSE, message=FALSE}
@@ -68,6 +71,12 @@ autoplot(ts_temp_decomp) +
 ```{r remove seasonality, echo=FALSE, warning=FALSE, message=FALSE}
 
 ts_temp_less_season <- ts_temp_decomp$x - ts_temp_decomp$seasonal
+
+
+plot_ts_temp_less_season <- autoplot(ts_temp_less_season) + 
+  xlab("") + ylab("Temp. (°C)") +
+  ggtitle("Sea surface temperature time series (without seasonality)") +
+  geom_smooth(method=lm)
 
 #regression values : 
 reg_val_less_season <- as.data.frame(plot_ts_temp_less_season$data)
@@ -98,7 +107,7 @@ wls_model <- lm(reg_val_less_season$y ~ reg_val_less_season$x, data = reg_val_le
 sd(ts_temp_decomp$random[27:806]) # 1.134308
 
 ## Φ calculation (lag 1) :
-acf(ts_temp_decomp$random[27:806], type = "cor", plot = F) # 0.674
+acf(ts_temp_decomp$random[27:806], lag.max = 60, type = "cor", plot = F) # 0.674
 
 ## ω0 :
 # 0.057757
@@ -140,6 +149,52 @@ uTDT_neg <- TDT * exp(-B)
 uTDT <- TDT * exp(B)
 
 #interval of years : (18.39 years to 28.44 years) or 23 ± 5 years
+```
+  
+  
+###### EOL : 2014-2022  
+  
+
+```{r}
+
+EOL_daily <- read_delim("../Data/EOL_13-23_1perday_morning.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
+  rename(temperature=temp_eol_c, salinity=sal_eol_psu) %>% 
+  mutate(datetime = as.POSIXct(datetime)) %>% 
+  dplyr::filter(datetime >= "2014-01-07 01:00:00" & datetime <= "2022-12-31 01:00:00")
+
+LM <- lm(EOL_daily$temperature ~ EOL_daily$datetime)
+
+RES <- residuals(LM)
+
+sd(RES)
+
+acf(EOL_daily$temperature, type = "correlation", plot=T)
+
+
+#TDT :
+Fac1 <- (3.3 * 4.486381)/abs(0.050323128)
+
+Fac2 <- sqrt((1 + 0.994)/(1 - 0.994))
+
+TDT <- (Fac1 * Fac2)^(2/3) # 306.39 years
+
+
+#uncertainty of TDT :
+
+#192 months on 2007-2022 period
+
+B <- (4/(3*sqrt(192))) * Fac2
+
+uTDT_neg <- TDT * exp(-B)
+uTDT <- TDT * exp(B)
+
+#interval of years : (18.39 years to 28.44 years) or 23 ± 5 years
+
+
+
+
+
 ```
 
 

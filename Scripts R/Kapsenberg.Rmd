@@ -805,7 +805,6 @@ test_tdt <- test_tdt %>%
   mutate(adj = Temperature_month - annual, 
          new = monthly - adj)
 
-rm(test_tdt)
 
 
 
@@ -978,7 +977,7 @@ plot_ano_temp2 <- ggplot(data = ano_0m_0722, aes(x = datetime, y = Temperature_a
   geom_point(colour="blue", na.rm=TRUE, size=1) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
   labs(title="Anomalies trend for temperature (2007-2022)",x="", y="Temp. (°C)")
-  
+
 
 plot_temp_0722 <- data_0722 %>% 
   ggplot() +

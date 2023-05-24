@@ -184,6 +184,7 @@ intercept_EOL_SOM_T <- reg_EOL_SOM_T$coefficients[[1]]
   
   
 #### Part 1 : Trend analysis by residuals : raw dataset (jan. 2014 - dec.2022)  
+*By autocorrelation + decompose function : not possible because of gaps*  
   
   
 ###### [Table and plot of monthly means (2014-2022) - EOL temperature & salinity]{style="color:blue"}  
@@ -1411,7 +1412,7 @@ Wind_CapF <- read_delim("../Data/DATA_CAP_FERRAT_12-20_01-22.csv",
  Wind_EOL %>% 
    ggplot(aes(x=speed_ms)) +
    geom_histogram(fill="#69b3a2", color="#e9ecef", alpha=0.8) +
-   ggtitle("Wind speed distribution (EOL buoy)") + 
+   ggtitle("Wind speed distribution - EOL buoy (2009-2022)") + 
    scale_y_continuous(name="Distribution") +
    scale_x_continuous(name="", breaks = c(0, 5, 10, 15, 20))
 
@@ -1420,7 +1421,7 @@ Wind_CapF <- read_delim("../Data/DATA_CAP_FERRAT_12-20_01-22.csv",
  Wind_CapF %>% 
    ggplot(aes(x=speed_ms)) +
    geom_histogram(fill="#ED7F10", color="#e9ecef", alpha=0.8) +
-   ggtitle("Wind speed distribution (Cap-Ferrat)") + 
+   ggtitle("Wind speed distribution - Cap-Ferrat (dec. 2020 - jan.2022)") + 
    scale_y_continuous(name="Distribution") +
    scale_x_continuous(name="", breaks = c(0, 5, 10, 15, 20))
 ##
@@ -1428,6 +1429,10 @@ Wind_CapF <- read_delim("../Data/DATA_CAP_FERRAT_12-20_01-22.csv",
 ```
   
   
+##### **Visualisation of EOL and Cap-Ferrat wind speeds (per hour) :**  
+  
+  
+
 ```{r model + Cap-Ferrat lines, echo=FALSE, warning=FALSE, message=FALSE}
 
 winds <- left_join(Wind_EOL, Wind_CapF, by = c("date" = "datetime"))
@@ -1452,6 +1457,57 @@ EOL_Cap_plot
 ```
   
   
+##### **Visualisation of EOL and Cap-Ferrat wind speeds (means per day) :**  
+  
+  
+
+```{r model + Cap-Ferrat lines - means per day, echo=FALSE, warning=FALSE, message=FALSE}
+
+Wind_EOL <- Wind_EOL %>% 
+  mutate(date_2 = format(date, format="%Y-%m-%d")) %>% 
+  group_by(date_2) %>% 
+  mutate(mean_w = mean(speed_ms, na.rm=T))
+
+wind_EOL_mean <- data.frame(date = Wind_EOL$date_2, mean_w = Wind_EOL$mean_w)
+wind_EOL_mean <- distinct(wind_EOL_mean)
+
+##
+
+Wind_CapF <- Wind_CapF %>% 
+  mutate(date_2 = format(datetime, format="%Y-%m-%d")) %>% 
+  group_by(date_2) %>% 
+  mutate(mean_w = mean(speed_ms, na.rm=T))
+
+Wind_CapF_mean <- data.frame(date = Wind_CapF$date_2, mean_w = Wind_CapF$mean_w)
+Wind_CapF_mean <- distinct(Wind_CapF_mean)
+
+##
+
+winds_mean <- left_join(wind_EOL_mean, Wind_CapF_mean, by = "date")
+
+winds_mean_for_plot <- winds_mean[c(4324:4733),]
+
+winds_mean_plot_long <- winds_mean_for_plot %>% 
+  rename(EOL = mean_w.x, `Cap-Ferrat` = mean_w.y) %>% 
+  pivot_longer(cols = c("EOL", `Cap-Ferrat`), names_to = "Legend", values_to = "value") %>% 
+  mutate(date = as.POSIXct(date))
+
+#plot
+winds_mean_plot <- winds_mean_plot_long %>% 
+  ggplot() +
+  ggtitle("EOL and Cap-Ferrat winds (means per day) : Dec.2020 - Jan.2022") +
+  geom_line(aes(x=date, y=value, color= Legend), size=0.7) +
+  scale_y_continuous(name="Wind speed (m/s)") + 
+  scale_x_datetime(name="") + 
+  scale_colour_discrete(type=c("#69b3a2", "#CC5500"))
+
+winds_mean_plot
+
+```
+
+
+
+
 ##### Scatterplot EOL vs Cap-Ferrat (wind speed m/s 10m) :  
   
 *Slope : 0.87 ± 0.01*  
