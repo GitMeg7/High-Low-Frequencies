@@ -512,6 +512,10 @@ new_one <- new_one %>%
          fCO2insitu, pCO2insitu, HCO3, CO3, OmegaAragonite, OmegaCalcite, Nta, Ndic, pH18, Year.Month, Year, Month)
 
 
+#save :
+#write.table(ph_part_result, "DATA_SOMLIT_07-22_CLEAN.csv", sep=";", col.names = TRUE, row.names = FALSE)
+
+
 ```
   
   
@@ -520,79 +524,53 @@ new_one <- new_one %>%
 
 ```{r pH calcultations, echo=FALSE, warning=FALSE, message=FALSE}
 
-###############################################################
 #part pH :
 #pH calc (fonction carb with ta & dic)
 #flag15 = alk & dic
 
-new_one$depth <- as.numeric(new_one$depth)
+ph_part <- read_delim("../Data/DATA_SOMLIT_07-22_CLEAN.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-new_one_drop_na <- new_one %>% 
+ph_part_na <- ph_part %>% 
   tidyr::drop_na(salinity, temperature, ta, dic)
 
-carb <- seacarb::carb(flag=15, var1=new_one_drop_na$ta*1e-6, var2=new_one_drop_na$dic*1e-6,
-             S=new_one_drop_na$salinity, T=new_one_drop_na$temperature, P=new_one_drop_na$depth/10,
-             Pt=1e-6*new_one_drop_na$Pt, Sit=1e-6*new_one_drop_na$Sit, 
+carb <- seacarb::carb(flag=15, var1=ph_part_na$ta*1e-6, var2=ph_part_na$dic*1e-6,
+             S=ph_part_na$salinity, T=ph_part_na$temperature, P=ph_part_na$depth/10,
+             Pt=1e-6*ph_part_na$Pt, Sit=1e-6*ph_part_na$Sit, 
              k1k2 = "l", kf = "pf", pHscale = "T", b="l10")
 
-pH_meg <- data.frame(sampling_date=new_one_drop_na$sampling_date, depth=carb$P*10 ,pH_calc_meg=carb$pH)
+ph_calc <- data.frame(sampling_date=ph_part_na$sampling_date, depth=carb$P*10 ,pH_calc_new=carb$pH)
 
-new_one_drop_na <- new_one_drop_na %>% select("sampling_date")
+ph_part_result <- left_join(ph_part, ph_calc, by=c("sampling_date", "depth"))
 
-carb_date <- cbind(new_one_drop_na, carb) %>% mutate(depth=P*10)
-  
-new_one <- left_join(new_one, carb_date, by=c("sampling_date","depth"))
+ph_part_result <- ph_part_result %>% 
+  mutate(pH_calc = pH_calc_new) %>% 
+  dplyr::select(-pH_calc_new)
+
 ##
 
-#pH18 calculation (fonction pHinsi) :
+#pH18 calculation from pH_calc (fonction pHinsi) :
 #pH normalized (without temperature effect)
 
-new_one_drop_na_2 <- new_one %>% 
-  tidyr::drop_na(salinity, temperature, ta, pH)
+ph_part_na <- ph_part_result %>% 
+  tidyr::drop_na(salinity, temperature, Pt, Sit, ta, pH_calc)
 
-pHat18 <- seacarb::pHinsi(pH=new_one_drop_na_2$pH, ALK=new_one_drop_na_2$ta*1e-6, Tinsi=18,
-                            Tlab=new_one_drop_na_2$temperature, S=new_one_drop_na_2$salinity,
-                            Pt=1e-6*new_one_drop_na_2$Pt, Sit=1e-6*new_one_drop_na_2$Sit,
+pHat18 <- seacarb::pHinsi(pH=ph_part_na$pH_calc, ALK=ph_part_na$ta*1e-6, Tinsi=18,
+                            Tlab=ph_part_na$temperature, S=ph_part_na$salinity,
+                            Pt=1e-6*ph_part_na$Pt, Sit=1e-6*ph_part_na$Sit,
                             k1k2 = "l", kf = "pf", pHscale = "T")
 
-pH_18_meg <- data.frame(sampling_date=carb_date$sampling_date, depth=carb_date$P*10 ,pH_18=pHat18)
+pH_18 <- data.frame(sampling_date=ph_part_na$sampling_date, depth=ph_part_na$P*10 ,pH_18_new=pHat18)
 
-new_one <- left_join(new_one, pH_18_meg, by=c("sampling_date","depth"))
+ph_part_result <- left_join(ph_part_result, pH_18, by=c("sampling_date","depth"))
 
-#sorting data :
-
-new_one <- new_one %>% 
-  mutate(temperature = case_when(temperature == NA_real_ ~ T, TRUE ~ temperature),
-         salinity = case_when(salinity == NA_real_ ~ S, TRUE ~ salinity),
-         ta = case_when(ta == NA_real_ ~ ALK, TRUE ~ ta),
-         dic = case_when(dic == NA_real_ ~ DIC, TRUE ~ dic),
-         Patm = case_when(Patm.x == NA_real_ ~ Patm.y, TRUE ~ Patm.x),
-         P = case_when(P.x == NA_real_ ~ P.y, TRUE ~ P.x),
-         pH_calc = case_when(pH_calc == NA_real_ ~ pH, TRUE ~ pH_calc),
-         CO2 = case_when(CO2.x == NA_real_ ~ CO2.y, TRUE ~ CO2.x),
-         fCO2 = case_when(fCO2.x == NA_real_ ~ fCO2.y, TRUE ~ fCO2.x),
-         pCO2 = case_when(pCO2.x == NA_real_ ~ pCO2.y, TRUE ~ pCO2.x),
-         fCO2pot = case_when(fCO2pot.x == NA_real_ ~ fCO2pot.y, TRUE ~ fCO2pot.x),
-         pCO2pot = case_when(pCO2pot.x == NA_real_ ~ pCO2pot.y, TRUE ~ pCO2pot.x),
-         fCO2insitu = case_when(fCO2insitu.x == NA_real_ ~ fCO2insitu.y, TRUE ~ fCO2insitu.x),
-         pCO2insitu = case_when(pCO2insitu.x == NA_real_ ~ pCO2insitu.y, TRUE ~ pCO2insitu.x),
-         HCO3 = case_when(HCO3.x == NA_real_ ~ HCO3.y, TRUE ~ HCO3.x),
-         CO3 = case_when(CO3.x == NA_real_ ~ CO3.y, TRUE ~ CO3.x),
-         OmegaAragonite = case_when(OmegaAragonite.x == NA_real_ ~ OmegaAragonite.y, TRUE ~ OmegaAragonite.x),
-         OmegaCalcite = case_when(OmegaCalcite.x == NA_real_ ~ OmegaCalcite.y, TRUE ~ OmegaCalcite.x),
-         pH_18 = case_when(pH18 == NA_real_ ~ pH_18, TRUE ~ pH18))
-
-
-new_one <- new_one %>% 
-  select(c("sampling_date", "depth", "temperature", "salinity", "ta", "dic", "NO2", "NO3", "Chla", "pH_s_somlit_temp_25",
-           "pH_s_somlit_temp_insi", "diff_pH", "pH_insi", "Pt", "Sit", "quarter", "monthd", "week", "Patm", "P", "pH_calc",
-           "CO2", "fCO2", "pCO2", "fCO2pot", "pCO2pot", "fCO2insitu", "pCO2insitu", "HCO3", "CO3", "OmegaAragonite", "OmegaCalcite",
-           "pH_18", "Nta", "Ndic", "Year.Month", "Year", "Month"))
-
+ph_part_result <- ph_part_result %>% 
+  mutate(pH_18 = pH_18_new) %>% 
+  dplyr::select(-pH_18_new)
 
 
 #save :
-#write.table(new_one, "DATA_SOMLIT_07-23_CLEAN.csv", sep=";", col.names = TRUE, row.names = FALSE)
+#write.table(ph_part_result, "DATA_SOMLIT_07-22_CLEAN.csv", sep=";", col.names = TRUE, row.names = FALSE)
 
 
 ```
@@ -796,7 +774,7 @@ SOMLIT_oxy <- SOMLIT_oxy[-c(105,106),]
 
 ```
   
-→ Linear interpolations    
+#### Interpolations    
   
 
 ```{r interpolation SOMLIT_oxy_CLEAN - surface & 50m, echo=FALSE, warning=FALSE, message=FALSE}
@@ -811,14 +789,14 @@ SOMLIT_oxy_prof <- SOMLIT_oxy %>%
 ##
 
 #interpolation surface :
-T_interpol_surf <- na_interpolation(SOMLIT_oxy_surf$T, option="linear")
-S_interpol_surf <- na_interpolation(SOMLIT_oxy_surf$S, option="linear")
-O_interpol_surf <- na_interpolation(SOMLIT_oxy_surf$O, option="linear")
+T_interpol_surf <- na_seadec(SOMLIT_oxy_surf$T, algorithm = "interpolation", find_frequency = T)
+S_interpol_surf <- na_seadec(SOMLIT_oxy_surf$S, algorithm = "interpolation", find_frequency = T)
+O_interpol_surf <- na_seadec(SOMLIT_oxy_surf$O, algorithm = "interpolation", find_frequency = T)
 
 #interpolation 50m :
-T_interpol_prof <- na_interpolation(SOMLIT_oxy_prof$T, option="linear")
-S_interpol_prof <- na_interpolation(SOMLIT_oxy_prof$S, option="linear")
-O_interpol_prof <- na_interpolation(SOMLIT_oxy_prof$O, option="linear")
+T_interpol_prof <- na_seadec(SOMLIT_oxy_prof$T, algorithm = "interpolation", find_frequency = T)
+S_interpol_prof <- na_seadec(SOMLIT_oxy_prof$S, algorithm = "interpolation", find_frequency = T)
+O_interpol_prof <- na_seadec(SOMLIT_oxy_prof$O, algorithm = "interpolation", find_frequency = T)
 ##
 
 
@@ -873,8 +851,21 @@ Frequency : hourly
 #oxygen in mll/l
 
 data_EOL_raw <- read_csv("../Data/SEANOE_EOL.csv", 
-    col_types = cols(...1 = col_skip()))
+    col_types = cols(...1 = col_skip())) 
 
+test <- data_EOL_raw[c(31968:40297),]
+
+test %>% 
+  ggplot() + 
+  aes(x=datetime, y=oxy_eol_mll) +
+  geom_point()
+
+test2 <- data_EOL_raw[c(23730:31967),]
+
+test2 %>% 
+  ggplot() + 
+  aes(x=datetime, y=oxy_eol_mll) +
+  geom_point()
 
 #conversion des valeurs ml/l en umol/kg (voire protocole oxygene SOMLIT)
 # *44.66 -> mmol/m3 ou umol/l

@@ -40,6 +40,7 @@ library("caTools")
 library("autostsm")
 library("geoTS")
 library("TSA")
+library("cowplot")
 
 #theme for plots :
 Mytheme <- function(size_labs = 6, face_font="plain", ...) {
@@ -359,7 +360,7 @@ model_less_season %>%
 ## Import data DELTA PCO2 BIO :
 data_pco2 <- read_delim("../Data/DATA_SOMLIT_07-22_impute_0m_deltas_pCO2.csv", 
                         delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
-  dplyr::filter(datetime <= "2022-09-28")
+  dplyr::filter(datetime <= "2021-12-28")
 
 ## Monthly means
 
@@ -489,29 +490,38 @@ reg_ano
   
   
 
-```{r pCO2 bio - bates plots, echo=FALSE, warning=FALSE, message=FALSE}
+```{r pCO2 bio - bates plots, echo=FALSE, warning=FALSE, message=FALSE, fig.width=12,fig.height=4}
 
 ## Plot anomalies :
 
 plot_ano_pCO2bio <- ggplot(data = anomalies, aes(x = datetime, y = bio_pco2_ano), na.rm=TRUE) +
-  scale_x_date(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
-  geom_point(colour="#370028", na.rm=TRUE, size = 0.8) + 
-  geom_hline(yintercept = 0, linetype = "dotted") +
+  scale_x_date(date_breaks="2 year", date_minor_breaks="1 years", date_labels = "%Y") +
+  geom_point(colour="#22427C", na.rm=TRUE, size = 0.7) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
-  labs(title="Anomalies + trend for delta_pCO2 bio (2007-sept.2022)",x="", y="delta (µatm)") +
-  annotate(geom="text", x=as.Date("2010-03-02"), y=100, label="slope : 3.61 ± 0.14 *", color="black")
+  labs(title="",x="", y="ΔpCO2 (bio)  (µatm)") +
+  annotate(geom="text", x=as.Date("2010-03-02"), y=80, label="slope : 3.56 ± 0.15 *", color="black")
 
 plot_delta_bio <- data_pco2 %>% 
   ggplot() +
   aes(x=datetime, y=delta_pCO2_bio) + 
-  geom_line(size=0.8, col = "#568203", linewidth = 0.5) +
-  geom_hline(yintercept = 0, linetype = "dotted") +
-  scale_x_date(name="") +
-  scale_y_continuous(name="delta (µatm)") +
-  ggtitle("Surface delta pCO2 bio variations (2007-sept.2022)")
+  geom_line(size=0.8, col = "#096A09", linewidth = 0.5) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  scale_x_date(name="", date_breaks="2 year", date_minor_breaks="1 years", date_labels = "%Y") +
+  scale_y_continuous(name="ΔpCO2 (bio)  (µatm)")
+#  ggtitle("Surface delta pCO2 bio variations (2007-sept.2022)")
 
-plot_delta_bio
-plot_ano_pCO2bio
+
+
+plot_grid_delta_bio <- plot_grid(plot_delta_bio, plot_ano_pCO2bio, align='vh', ncol=2)
+
+plot_grid_delta_bio
+
+ # ggsave(filename = "delta_bio_07-21.jpg", # Nommez le fichier dans lequel vous voulez enregistrer, ajoutez l'extension du format de fichier que vous voulez utiliser (ex. pdf).
+ #         plot = plot_grid_delta_bio, # Fournir le nom de l'objet plot dans R
+ #         height = 4, # Fournir les dimensions voulues
+ #         width = 12, 
+ #         units = "in") 
+
 
 ```
   
@@ -591,10 +601,10 @@ plot_ts_pco2_bio_less_season
 ```{r CO2 fluxes - bates regression, echo=FALSE, warning=FALSE, message=FALSE}
 
 ## Import data :
-#filter values until 2021, because no pCO2 air data for 2022
+#filter values from 2009 until 2021, because no pCO2 air data for 2022 and no wind data before 2009
 data_fluxes <- read_delim("../Data/DATA_SOMLIT_07-22_impute_0m_deltas_pCO2_and_fluxes_CO2.csv", 
                           delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
-  dplyr::filter(datetime <= "2021-12-28")
+  dplyr::filter(datetime >= "2009-01-06" & datetime <= "2021-12-28")
   
 
 
@@ -737,20 +747,20 @@ Increase of CO2 fluxes (more and more sources)
 
 #plot Flux of Wan 2014 :
 plot_ano_flux_wan_14 <- ggplot(data = anomalies_fluxes, aes(x = datetime, y = flux_W14_ano), na.rm=TRUE) +
-  scale_x_date(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  scale_x_date(date_breaks="2 year", date_minor_breaks="1 years", date_labels = "%Y") +
   scale_y_continuous(labels = label_scientific()) +
-  geom_point(colour="#18391E", na.rm=TRUE, size = 0.8) + 
+  geom_point(colour="#22427C", na.rm=TRUE, size = 0.7) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
-  labs(title="Anomalies trend for Fluxes Wan 2014 (2009-2021)",x="", y="Flux (mol of C/m²/h)") +
-  annotate(geom="text", x=as.Date("2012-03-20"), y=0.0010, label="slope : 4.81e-06 ± 1.17e-06 *", color="black")
+  labs(title="",x="", y="CO2 flux (mol of C/m²/h)") +
+  annotate(geom="text", x=as.Date("2012-03-20"), y=0.0010, label="slope : 4.72e-06 ± 1.17e-06 *", color="black")
 
 plot_flux_wan_14 <- data_fluxes %>% 
   ggplot() +
   aes(x=datetime, y=Flux_CO2_2014) + 
-  geom_line(size=0.8, col = "#18391E", linewidth = 0.5) +
+  geom_line(size=0.8, col = "#303030", linewidth = 0.5) +
   scale_x_date(name="") +
-  scale_y_continuous(name="Flux (mol of C/m²/h)", labels = label_scientific()) +
-  ggtitle("CO2 flux air-ocean (2009-2021)")
+  scale_y_continuous(name="CO2 fluxes (mol of C/m²/h)", labels = label_scientific()) +
+  ggtitle("")
 
 plot_flux_wan_14
 plot_ano_flux_wan_14
@@ -905,28 +915,11 @@ plot_ts_sal_less_season
 #creation ts object : pH calculated
 
 #NA : creation de impute pH_calc
-#bcp de NA car pH_calc basé sur Pt & Sit
-
-
-#replace pH_calc NAs by pH_insi :
-
-data_somlit_surf$pH_calc[is.na(data_somlit_surf$pH_calc)] <- "NA"
-data_somlit_surf$pH_insi <- as.character(data_somlit_surf$pH_insi)
-
-data_somlit_surf <- data_somlit_surf %>%
-  mutate(pH_calc = case_when(pH_calc == "NA" ~ pH_insi, TRUE ~ pH_calc),
-         pH_insi = as.numeric(pH_insi),
-         pH_calc = as.numeric(pH_calc))
-
-data_somlit_surf_pH <- data_somlit_surf %>%
-  dplyr::filter(datetime <= "2022-09-28") %>% 
-  mutate(pH_calc = na_interpolation(pH_calc))
-
 
 
 #frequency : 365.25/7 = 52.17857
 #arret data pH_calc au 2022-09-28 :
-ts_pH <- ts(data_somlit_surf_pH$pH_calc, start = c(2007,1), end = c(2022,39), freq = 52)
+ts_pH <- ts(data_somlit_surf$impute_pH, start = c(2007,1), end = c(2022,39), freq = 52)
 
 #seasonal plot :
 #seasonal_plot_ts_pH <- ggseasonplot(ts_pH, year.labels = F, year.labels.left = F, col=terrain.colors(16))
@@ -966,77 +959,9 @@ plot_ts_pH_less_season <- autoplot(ts_pH_less_season) +
   xlab("") + ylab("pH calculated") +
   ggtitle("pH time series (without seasonality)") +
   geom_smooth(method=lm) +
-  annotate(geom="text", x=2017, y=8.13, label="slope : -0.0036 ± 0.00015 *", color="black")
+  annotate(geom="text", x=2017, y=8.13, label="slope : -0.004 ± 0.00015 *", color="black")
 
 plot_ts_pH_less_season
-
-```
-  
-  
-###### pH normalized 18°C :  
-  
-Trend : decrease but increase at the end ?  
-  
-
-```{r pH_18 - point b - autocorr, echo=FALSE, warning=FALSE, message=FALSE}
-
-#creation ts object : pH_18
-
-#NA : creation de impute pH_18
-#bcp de NA car pH_calc basé sur Pt & Sit
-
-#arret data pH_18 : 2021-10-19:
-data_somlit_surf_pH_18 <- data_somlit_surf %>%
-  dplyr::filter(datetime <= "2021-10-19") %>% 
-  mutate(pH_18 = na_interpolation(pH_18))
-
-
-
-#frequency : 365.25/7 = 52.17857
-#arret data pH_calc au 2022-09-28 :
-ts_pH_18 <- ts(data_somlit_surf_pH_18$pH_18, start = c(2007,1), end = c(2022,39), freq = 52)
-
-#seasonal plot :
-#seasonal_plot_ts_pH_18 <- ggseasonplot(ts_pH_18, year.labels = F, year.labels.left = F, col=terrain.colors(16))
-
-#seasonal_plot_ts_pH_18
-
-#correlograms :
-# correlogram1 <- acf(ts_pH_18, type = "cor", lag.max = 600, plot = T)
-# correlogram2 <- acf(ts_pH_18, type = "cor", lag.max = 55, plot = T)
-
-
-#type = additive because the seasonal pattern doesn't seem to increase in variation according to time
-ts_pH_18_decomp <- decompose(ts_pH_18, type = "additive") 
-
-autoplot(ts_pH_18_decomp) +
-  xlab(' ')
-##
-
-#remove seasonality :
-
-ts_pH_18_less_season <- ts_pH_18_decomp$x - ts_pH_18_decomp$seasonal
-
-plot_ts_pH_18_less_season <- autoplot(ts_pH_18_less_season) + 
-  xlab("") + ylab("pH 18") +
-  ggtitle("pH(18) time series (without seasonality)") +
-  geom_smooth(method=lm)
-
-#regression values :
-reg_val_ts_pH_18_less_season <- as.data.frame(plot_ts_pH_18_less_season$data)
-
-model_ts_pH_18_less_season <- lm(formula=y~x, data=reg_val_ts_pH_18_less_season)
-summary(model_ts_pH_18_less_season) #pour voir les erreurs des coef + la significativité
-
-
-#plot with slope value :
-plot_ts_pH_18_less_season <- autoplot(ts_pH_18_less_season) + 
-  xlab("") + ylab("pH 18") +
-  ggtitle("pH(18) time series (without seasonality)") +
-  geom_smooth(method=lm) +
-  annotate(geom="text", x=2015, y=8.13, label="slope : -0.0021 ± 0.00014 *", color="black")
-
-plot_ts_pH_18_less_season
 
 ```
   
@@ -1050,7 +975,7 @@ plot_ts_pH_18_less_season
 
 #creation ts object : alcalinity
 #frequency : 365.25/7 = 52.17857
-ts_ta <- ts(data_somlit_surf$impute_ta, start = c(2007,1), end = c(2022,52), freq = 52)
+ts_ta <- ts(data_somlit_surf$impute_ta, start = c(2007,1), end = c(2022,39), freq = 52)
 
 #seasonal plot :
 #seasonal_plot_ts_ta <- ggseasonplot(ts_ta, year.labels = F, year.labels.left = F, col=terrain.colors(16))
@@ -1090,7 +1015,7 @@ plot_ts_ta_less_season <- autoplot(ts_ta_less_season) +
   xlab("") + ylab("AT (µmol/kg)") +
   ggtitle("Total alcalinity time series (without seasonality)") +
   geom_smooth(method=lm) +
-  annotate(geom="text", x=2010, y=2580, label="slope : 5.470e-01 ± 9.617e-02 *", color="black")
+  annotate(geom="text", x=2010, y=2580, label="slope : 5.59e-01 ± 9.65e-02 *", color="black")
 
 plot_ts_ta_less_season
 
@@ -1106,7 +1031,7 @@ plot_ts_ta_less_season
 
 #creation ts object : dic
 #frequency : 365.25/7 = 52.17857
-ts_dic <- ts(data_somlit_surf$impute_dic, start = c(2007,1), end = c(2022,52), freq = 52)
+ts_dic <- ts(data_somlit_surf$impute_dic, start = c(2007,1), end = c(2022,39), freq = 52)
 
 #seasonal plot :
 #seasonal_plot_ts_dic <- ggseasonplot(ts_dic, year.labels = F, year.labels.left = F, col=terrain.colors(16))
@@ -1146,7 +1071,7 @@ plot_ts_dic_less_season <- autoplot(ts_dic_less_season) +
   xlab("") + ylab("Total carbon (µmol/kg)") +
   ggtitle("DIC time series (without seasonality)") +
   geom_smooth(method=lm) +
-  annotate(geom="text", x=2010, y=2300, label="slope : 2.35 ± 0.15 *", color="black")
+  annotate(geom="text", x=2010, y=2300, label="slope : 2.37 ± 0.15 *", color="black")
 
 plot_ts_dic_less_season
 
@@ -1162,7 +1087,7 @@ plot_ts_dic_less_season
 
 #creation ts object : pco2 water
 #frequency : 365.25/7 = 52.17857
-ts_pco2w <- ts(data_somlit_surf$impute_pCO2_w, start = c(2007,1), end = c(2022,52), freq = 52)
+ts_pco2w <- ts(data_somlit_surf$impute_pCO2_w, start = c(2007,1), end = c(2022,39), freq = 52)
 
 #seasonal plot :
 #seasonal_plot_ts_pco2w <- ggseasonplot(ts_pco2w, year.labels = F, year.labels.left = F, col=terrain.colors(16))
@@ -1202,15 +1127,13 @@ plot_ts_pco2w_less_season <- autoplot(ts_pco2w_less_season) +
   xlab("") + ylab("pCO2 (µatm)") +
   ggtitle("Seawater pCO2 time series (without seasonality)") +
   geom_smooth(method=lm) +
-  annotate(geom="text", x=2010, y=590, label="slope : 5.212 ± 4.56-01 *", color="black")
+  annotate(geom="text", x=2010, y=590, label="slope : 5.18 ± 4.58-01 *", color="black")
 
 plot_ts_pco2w_less_season
 
 ```
   
   
-
-
 
 
 

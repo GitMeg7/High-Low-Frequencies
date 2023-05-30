@@ -939,6 +939,7 @@ data_EOL <- data_EOL %>%
   
 *scatter plot : Temp. influence significativement AOU : quand T augmente, AOU diminue*  
   
+Shifts : 2020 and 2021  
   
 
 ```{r AOU EOL + annual cycle, echo=FALSE, warning=FALSE, message=FALSE}

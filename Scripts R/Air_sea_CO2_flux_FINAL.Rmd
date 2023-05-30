@@ -129,6 +129,8 @@ graph_wind_eol %>%
   scale_y_continuous(name="Speed (m/s)") +
   scale_x_discrete(name="") #relier les points par une ligne en pointillés ?
 
+
+
 ```
   
 
@@ -145,37 +147,77 @@ Unity : µatm
 #period : jan. 2007 - dec. 2022
 #measurements every tuesday at 09h AM
 
-SOMLIT_pcO2 <- read_delim("../Data/DATA_SOMLIT_07-22_CLEAN.csv", 
+SOMLIT_pcO2_raw <- read_delim("../Data/DATA_SOMLIT_07-22_CLEAN.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
 
 #surface data :
-SOMLIT_pcO2 <- SOMLIT_pcO2 %>% 
+SOMLIT_pcO2 <- SOMLIT_pcO2_raw %>% 
   dplyr::filter(depth==0) %>% 
   rename(pCO2_w = pCO2, datetime = sampling_date) %>%
   mutate(salinity = case_when(salinity < 35 ~ NA_real_ , TRUE ~ salinity))
 ##
-SOMLIT_pcO2 <- distinct(SOMLIT_pcO2)
+SOMLIT_pcO2 <- distinct(SOMLIT_pcO2) 
 
-#creation tab somlit without last rows to do interpolations correctly for pCO2, ta & dic (CT) :
+SOMLIT_pcO2 <- SOMLIT_pcO2 %>% 
+  mutate(datetime = as.character(datetime), 
+         datetime = as.POSIXct(datetime))
+
+
+#creation tab somlit without last rows to do interpolations correctly for pCO2, pH, ta & dic (CT) :
 Somlit_interpol <- SOMLIT_pcO2[c(1:821),]
 ##
+
 
 
 #merge wind speed & SOMLIT :
 merge1 <- left_join(SOMLIT_pcO2, Wind_EOL_9AM, by="datetime")
 
 
+#50m data :
+SOMLIT_50 <- SOMLIT_pcO2_raw %>% 
+  dplyr::filter(depth==50) %>% 
+  rename(pCO2_w = pCO2, datetime = sampling_date) %>%
+  mutate(salinity = case_when(salinity < 35 ~ NA_real_ , TRUE ~ salinity))
+##
+SOMLIT_50 <- distinct(SOMLIT_50)
+
+#creation tab somlit without last rows to do interpolations correctly for pCO2, pH, ta & dic (CT) :
+Somlit_interpol_50 <- SOMLIT_50[c(1:821),]
+##
+
+
+SOMLIT_50 <- SOMLIT_50 %>% 
+  mutate(impute_temp = na_seadec(temperature, algorithm = "interpolation", find_frequency = T),
+         impute_sal = na_seadec(salinity, algorithm = "interpolation", find_frequency = T))
+  
+Somlit_interpol_50 <- Somlit_interpol_50 %>% 
+  mutate(impute_pco2_w = na_seadec(pCO2_w, algorithm = "interpolation", find_frequency = T),
+         impute_ta = na_seadec(ta, algorithm = "interpolation", find_frequency = T),
+         impute_dic = na_seadec(dic, algorithm = "interpolation", find_frequency = T),
+         impute_pH = na_seadec(pH_calc, algorithm = "interpolation", find_frequency = T),
+         impute_pH_18 = na_seadec(pH_18, algorithm = "interpolation", find_frequency = T))
+
+
+SOMLIT_50 <- left_join(SOMLIT_50, Somlit_interpol_50)
+
+
+#save :
+#write.table(SOMLIT_50, "DATA_SOMLIT_07-22_impute_50m.csv", sep=";", col.names = TRUE, row.names = FALSE)
+
+
+
 ```
 
   
-→ Linear interpolation temperature & salinity :  
+→ Interpolation temperature & salinity :  
   
 
 ```{r interpolation temp & salinity, echo=FALSE, warning=FALSE, message=FALSE}
 
-impute_temp <- na_interpolation(SOMLIT_pcO2$temperature, option="linear")
-impute_sal <- na_interpolation(SOMLIT_pcO2$salinity, option="linear")
+impute_temp <- na_seadec(SOMLIT_pcO2$temperature, algorithm = "interpolation", find_frequency = F)
+impute_sal <- na_seadec(SOMLIT_pcO2$salinity, algorithm = "interpolation", find_frequency = F)
+
 
 ggplot_na_imputations(SOMLIT_pcO2$temperature, impute_temp, x_axis_labels = SOMLIT_pcO2$datetime, xlab = "", ylab="Temp. (°C)", title="Point B - Temperature time series (°C) - period 2007-2022")
 ggplot_na_imputations(SOMLIT_pcO2$salinity, impute_sal, x_axis_labels = SOMLIT_pcO2$datetime, xlab = "", ylab="Salinity", title="Point B - Salinity time series - period 2007-2022")
@@ -213,13 +255,14 @@ merge1 <- merge1 %>%
 
 ```
 
-→ Linear interpolation pCO2 water :  
+→ Interpolation pCO2 water :  
   
 
 ```{r interpolation pCO2_w, echo=FALSE, warning=FALSE, message=FALSE}
 
 #interpolation pCO2_w :
-impute_pCO2_w <- na_interpolation(Somlit_interpol$pCO2_w, option="linear")
+impute_pCO2_w <- na_seadec(Somlit_interpol$pCO2_w, algorithm = "interpolation", find_frequency = F)
+
 
 ggplot_na_imputations(Somlit_interpol$pCO2_w, impute_pCO2_w, x_axis_labels = Somlit_interpol$datetime,
                       xlab = "", ylab="pCO2 (µatm)", 
@@ -234,12 +277,12 @@ Somlit_interpol <- Somlit_interpol %>%
 
 ```
 
-→ Linear interpolation AT & CT : 
+→ Interpolation AT & CT : 
 
 ```{r interpolation AT & CT, echo=FALSE, warning=FALSE, message=FALSE}
 
 #interpolation alcalinity
-impute_ta <- na_interpolation(Somlit_interpol$ta, option="linear")
+impute_ta <- na_seadec(Somlit_interpol$ta, algorithm = "interpolation", find_frequency = T)
 
 ggplot_na_imputations(Somlit_interpol$ta, impute_ta, x_axis_labels = Somlit_interpol$datetime, xlab = "", 
                       ylab="AT (µmol/kg)", 
@@ -247,7 +290,7 @@ ggplot_na_imputations(Somlit_interpol$ta, impute_ta, x_axis_labels = Somlit_inte
 
 
 #interpolation CT (dic)
-impute_dic <- na_interpolation(Somlit_interpol$dic, option="linear")
+impute_dic <- na_seadec(Somlit_interpol$dic, algorithm = "interpolation", find_frequency = T)
 
 ggplot_na_imputations(Somlit_interpol$dic, impute_dic, x_axis_labels = Somlit_interpol$datetime, xlab = "", 
                       ylab="AT (µmol/kg)", 
@@ -261,6 +304,35 @@ Somlit_interpol <- Somlit_interpol %>%
 
 
 ```
+  
+→ Interpolation pH & pH(18) :  
+  
+
+```{r interpolation pH, echo=FALSE, warning=FALSE, message=FALSE}
+
+#interpolation pH
+impute_pH <- na_seadec(Somlit_interpol$pH_calc, algorithm = "interpolation", find_frequency = F)
+
+ggplot_na_imputations(Somlit_interpol$pH_calc, impute_pH, x_axis_labels = Somlit_interpol$datetime, xlab = "", 
+                      ylab="pH calc", 
+                      title="Point B - pH calculated - period 2007-2022")
+##
+
+#interpolation pH(18)
+impute_pH_18 <- na_seadec(Somlit_interpol$pH_18, algorithm = "interpolation", find_frequency = T)
+
+ggplot_na_imputations(Somlit_interpol$pH_18, impute_pH_18, x_axis_labels = Somlit_interpol$datetime, xlab = "", 
+                      ylab="pH (18)", 
+                      title="Point B - pH (18) - period 2007-2022")
+##
+
+#merge of impute ta & CT : 
+Somlit_interpol <- Somlit_interpol %>% 
+  mutate(impute_pH = impute_pH,
+         impute_pH_18 = impute_pH_18)
+
+```
+
 
 
 #### *Data pCO2 air (µatm)*:  
@@ -341,6 +413,8 @@ pCO2_LAMPEDUSA <- pCO2_LAMPEDUSA %>%
   mutate(CO2_LAMP = case_when(CO2_LAMP == -999.990 ~ NA_real_ , TRUE ~ CO2_LAMP)) %>% 
   dplyr::select(datetime, CO2_LAMP)
 
+
+
 #merge pCO2 air CORSE, Plateau Rosa & Lampedusa with Somlit_pCO2 :
 merge2 <- left_join(merge1, pCO2_CORSE, by="datetime") #514 NA
 
@@ -348,7 +422,8 @@ merge3 <- left_join(merge2, pCO2_PLATEAU_ROSA, by="datetime") #231 NA
 
 merge3 <- left_join(merge3, pCO2_LAMPEDUSA, by="datetime") #281 NA
 
-#join Somlit_interpol a merge3 :
+
+#join Somlit_interpol x2 to merge3 :
 merge3 <- left_join(merge3, Somlit_interpol)
 
 ```
@@ -387,25 +462,25 @@ merge3 <- merge3 %>%
 
 
 #creation merge3 without last rows (=pCO2_atmos NAs)
-merge3_interpol <- merge3[c(1:790),]
-##
-
-
-#linear interpolation pCO2 atmos :
-impute_pCO2_atmos <- na_interpolation(merge3_interpol$pCO2_atmos, option="linear")
-
-ggplot_na_imputations(merge3_interpol$pCO2_atmos, impute_pCO2_atmos, x_axis_labels = merge3_interpol$datetime, 
-                      xlab = "", ylab="pCO2 (µatm)", 
-                      title="Atmospheric pCO2 (µatm) time series interpolation - period 2007-2022")
-##
-
-
-#merge of impute pCO2_atmos at merge3 : 
-merge3_interpol <- merge3_interpol %>% 
-  mutate(impute_pCO2_atmos = impute_pCO2_atmos)
-
-#join merge3_interpol a merge3 :
-merge3 <- left_join(merge3, merge3_interpol)
+ merge3_interpol <- merge3[c(1:790),]
+ ##
+ 
+ 
+ #linear interpolation pCO2 atmos :
+ impute_pCO2_atmos <- na_interpolation(merge3_interpol$pCO2_atmos, option="linear")
+ 
+ ggplot_na_imputations(merge3_interpol$pCO2_atmos, impute_pCO2_atmos, x_axis_labels = merge3_interpol$datetime, 
+                       xlab = "", ylab="pCO2 (µatm)", 
+                       title="Atmospheric pCO2 (µatm) time series interpolation - period 2007-2022")
+ ##
+ 
+ 
+ #merge of impute pCO2_atmos at merge3 : 
+ merge3_interpol <- merge3_interpol %>% 
+   mutate(impute_pCO2_atmos = impute_pCO2_atmos)
+ 
+ #join merge3_interpol a merge3 :
+ merge3 <- left_join(merge3, merge3_interpol)
 
 
 ```
@@ -427,29 +502,29 @@ merge3 <- merge3 %>%
 → Annual cycle of pCO2 (2007-2022) :  
   
 
-```{r annual cycle of pCO2 (2007-2021), echo=FALSE, warning=FALSE, message=FALSE}
+```{r annual cycle of pCO2 (2007-2021), echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=5}
 
-annual_cycle_pco2Plot <- merge3 %>% 
+annual_cycle_pco2Plot <- merge3[c(1:782),] %>% 
   ggplot() +
   geom_line(aes(x= as.Date(yday(datetime), "1970-01-01"), y=impute_pCO2_w, 
                 group = factor(year(datetime)), 
                 color = factor(year(datetime))), linewidth = 0.6) +
   scale_colour_viridis_d(option="mako", direction=-1) +
-  ggtitle("Annual cycle of sea pCO2 (2007-2022)") +
+  ggtitle("") +
   scale_x_date(date_breaks="months", date_labels="%b", name = "") +
   labs(x="Months",colour="") +
   theme_bw() +
-  scale_y_continuous(name = "Sea pCO2 (µatm)") 
+  scale_y_continuous(name = "pCO2 océanique (µatm)") 
 
 annual_cycle_pco2Plot
 ##
 
 #save
-# ggsave(filename = "annual_cycle_pco2Plot.jpg", # Nommez le fichier dans lequel vous voulez enregistrer, ajoutez l'extension du format de fichier que vous voulez utiliser (ex. pdf).
-#        plot = annual_cycle_pco2Plot, # Fournir le nom de l'objet plot dans R
-#        height = 7, # Fournir les dimensions voulues
-#        width = 9, 
-#        units = "in") 
+ # ggsave(filename = "annual_cycle_pco2Plot.jpg", # Nommez le fichier dans lequel vous voulez enregistrer, ajoutez l'extension du format de fichier que vous voulez utiliser (ex. pdf).
+ #        plot = annual_cycle_pco2Plot, # Fournir le nom de l'objet plot dans R
+ #        height = 5, # Fournir les dimensions voulues
+ #        width = 8, 
+ #        units = "in") 
 ```
   
 
@@ -466,7 +541,7 @@ annual_cycle_pco2Plot
 -   delta pCO~2~(bio) : biological effects = pCO~2~ water - TpCO~2~  
   
 
-```{r NpCO2 & TpCO2 calculations, echo=FALSE, warning=FALSE, message=FALSE}
+```{r NpCO2 & TpCO2 calculations, echo=FALSE, warning=FALSE, message=FALSE, fig.width=10,fig.height=6}
 
 #formula NpCO2 : pCO2w obs * e(0.0423*Tmean-Tobs)
 #formula TpCO2 : pCO2mean * exp[0.0423(Tobs - Tmean)]
@@ -486,13 +561,13 @@ merge3 <- merge3 %>%
 ##
 
 #plot deltas :
-pCO2bio_pCO2T_plot_long <- merge3 %>% 
+pCO2bio_pCO2T_plot_long <- merge3[c(1:782),] %>% 
   rename(`DpCO2 (T)` = delta_pCO2_T, `DpCO2 (bio)` = delta_pCO2_bio) %>%
   pivot_longer(cols = c(`DpCO2 (T)`, `DpCO2 (bio)`), names_to = "Legend", values_to = "value")
 
 pCO2bio_pCO2T_plot <- pCO2bio_pCO2T_plot_long %>% 
   ggplot() +
-  ggtitle("Temperature and biological effects on pCO2 variations (2007-2022)") +
+  ggtitle("") +
   geom_line(aes(x=datetime, y=value, color= Legend), size=0.5) +
   scale_y_continuous(name="ΔpCO2") + 
   scale_x_datetime(name="") + 
@@ -502,11 +577,11 @@ pCO2bio_pCO2T_plot
 ##
 
 #save
-# ggsave(filename = "pCO2bio_pCO2T_plot.jpg", # Nommez le fichier dans lequel vous voulez enregistrer, ajoutez l'extension du format de fichier que vous voulez utiliser (ex. pdf).
-#        plot = pCO2bio_pCO2T_plot, # Fournir le nom de l'objet plot dans R
-#        height = 6, # Fournir les dimensions voulues
-#        width = 19, 
-#        units = "in") 
+ ggsave(filename = "pCO2bio_pCO2T_plot.jpg", # Nommez le fichier dans lequel vous voulez enregistrer, ajoutez l'extension du format de fichier que vous voulez utiliser (ex. pdf).
+        plot = pCO2bio_pCO2T_plot, # Fournir le nom de l'objet plot dans R
+        height = 6, # Fournir les dimensions voulues
+        width = 10, 
+        units = "in") 
 
 
 ```
@@ -514,16 +589,16 @@ pCO2bio_pCO2T_plot
 → Atmospheric and water pCO~2~ (µatm) according to time (2007-2022) :  
   
 
-```{r atmospheric & water pCO2 plot, echo=FALSE, warning=FALSE, message=FALSE}
+```{r atmospheric & water pCO2 plot, echo=FALSE, warning=FALSE, message=FALSE, fig.width=10,fig.height=6}
 
-atmos_water_pCO2_plot_long <- merge3 %>% 
+atmos_water_pCO2_plot_long <- merge3[c(1:782),] %>% 
   rename(`pCO2 water` = impute_pCO2_w, `pCO2 atmospheric` = impute_pCO2_atmos, NpCO2 = NpCO2) %>% 
   pivot_longer(cols = c(`pCO2 water`, `pCO2 atmospheric`, "NpCO2"), names_to = "Legend", values_to = "value")
 
 #plot
 atmos_water_pCO2_plot <- atmos_water_pCO2_plot_long %>% 
   ggplot() +
-  ggtitle("Complete time series of pCO2 (µatm)") +
+  ggtitle("") +
   geom_line(aes(x=datetime, y=value, color= Legend), size=0.7) +
   scale_y_continuous(name="pCO2 (µatm)") + 
   scale_x_datetime(name="") + 
@@ -533,18 +608,18 @@ atmos_water_pCO2_plot
 ##
 
 #save
-# ggsave(filename = "atmos_water_pCO2_plot.jpg", # Nommez le fichier dans lequel vous voulez enregistrer, ajoutez l'extension du format de fichier que vous voulez utiliser (ex. pdf).
-#        plot = atmos_water_pCO2_plot, # Fournir le nom de l'objet plot dans R
-#        height = 6, # Fournir les dimensions voulues
-#        width = 11, 
-#        units = "in") 
+ # ggsave(filename = "atmos_water_pCO2_plot.jpg", # Nommez le fichier dans lequel vous voulez enregistrer, ajoutez l'extension du format de fichier que vous voulez utiliser (ex. pdf).
+ #        plot = atmos_water_pCO2_plot, # Fournir le nom de l'objet plot dans R
+ #        height = 6, # Fournir les dimensions voulues
+ #        width = 10, 
+ #        units = "in") 
 
 #save merge3 :
 #write.table(merge3, "DATA_SOMLIT_07-22_impute_0m_deltas_pCO2.csv", sep=";", col.names = TRUE, row.names = FALSE)
 
 ```
-
-
+  
+  
 
 ## Air-surface CO~2~ flux  
   
@@ -557,10 +632,10 @@ atmos_water_pCO2_plot
 Method used : Wanninkhof (2014)  
   
 
-```{r calcul flux, echo=FALSE, warning=FALSE, message=FALSE}
+```{r calcul flux, echo=FALSE, warning=FALSE, message=FALSE, fig.width=10,fig.height=6}
 
 #Calcul of F
-tab_flux <- merge3 %>% 
+tab_flux <- merge3[c(106:782),] %>% 
     mutate(Flux_CO2_2014 = (0.00077 * speed_ms^2 * delta_pCO2)/(24*365)) #to have a flux per hour
 
 
@@ -569,9 +644,10 @@ tab_flux %>%
   ggplot() + 
   aes(x=datetime, y=Flux_CO2_2014) + 
   geom_line(col="#967C5C") +
-  scale_x_datetime(name="") +
-  scale_y_continuous(name="Flux (mol of C/m²/y)") +
+  scale_x_datetime(name="", date_breaks = "2 year", date_minor_breaks = "1 year", date_labels = "%Y") +
+  scale_y_continuous(name="Flux (mol of C/m²/y)", labels = label_scientific(), n.breaks=8) +
   ggtitle("CO2 fluxes ocean-atmosphere (Wanninkhof 2014)") #mettre les valeurs y en notation scientifique 
+
 
 ```
   
@@ -684,27 +760,39 @@ summary_table[104:837,]
 Plot comparing the 3 CO~2~ flux calculation results :  
   
 
-```{r 3 methods comparison - plot, echo=FALSE, warning=FALSE, message=FALSE}
+```{r 3 methods comparison - plot, echo=FALSE, warning=FALSE, message=FALSE, fig.width=10,fig.height=6}
 
 #creation column for legend
 tab_flux_long <- tab_flux %>% 
-  rename(`Flux W (1992)` = Flux_wan_92, `Flux W (2014)` = Flux_CO2_2014,  `Flux Ho (2023)` = Flux_HO) %>% 
-  pivot_longer(cols=c(`Flux W (1992)`, `Flux W (2014)`, `Flux Ho (2023)`), names_to = "Legend", values_to = "value")
+  rename(`Flux W (1992)` = Flux_wan_92, `Flux W (2014)` = Flux_CO2_2014) %>% 
+  pivot_longer(cols=c(`Flux W (1992)`, `Flux W (2014)`), names_to = "Legend", values_to = "value")
 
 #plot
-tab_flux_long %>% 
+fluxes_co2_plot <- tab_flux_long %>% 
   ggplot() +
-  ggtitle("CO2 fluxes ocean-atmosphere (3 methods comparison)") +
+  ggtitle("") +
   geom_line(aes(x=datetime, y=value, color= Legend), size=0.5) +
-  scale_y_continuous(name="CO2 flux (mol/m²/y)") + 
-  scale_x_datetime(name="")
+  scale_y_continuous(name="CO2 fluxes (mol/m²/h)", labels = label_scientific(), n.breaks=8) + 
+  scale_x_datetime(name="", date_breaks = "2 year", date_minor_breaks = "1 year", date_labels = "%Y") +
+  scale_colour_discrete(type=c("#BF3030", "#677179")) + 
+  geom_hline(col = "black", yintercept = 0, linetype="dashed")
+
+fluxes_co2_plot
+
+
+#save
+ # ggsave(filename = "flux_CO2_plot.jpg", # Nommez le fichier dans lequel vous voulez enregistrer, ajoutez l'extension du format de fichier que vous voulez utiliser (ex. pdf).
+ #        plot = fluxes_co2_plot, # Fournir le nom de l'objet plot dans R
+ #        height = 6, # Fournir les dimensions voulues
+ #        width = 10, 
+ #        units = "in")
 
 
 ```
 
 
 
-```{r flux annuels, echo=FALSE, warning=FALSE, message=FALSE}
+```{r flux annuels, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7,fig.height=5}
 
 test <- tab_flux %>% 
   group_by(Year) %>% 
@@ -716,8 +804,8 @@ test %>%
   aes(x=Year, y=moy_flux) + 
   geom_bar(stat = "identity", width=0.9, fill="#303030") + 
   scale_x_discrete(name="", limits=c("2009" : "2022")) + 
-  scale_y_continuous(name="CO2 flux (mol of C/m²/h)", labels = label_scientific(), n.breaks = 10) +
-  ggtitle("Mean of CO2 fluxes per year (2009-2022)")
+  scale_y_continuous(name="CO2 fluxes (mol of C/m²/h)", labels = label_scientific(), n.breaks = 10) +
+  ggtitle("") 
 
 
 ## save flux

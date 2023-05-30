@@ -416,61 +416,6 @@ EOL_daily <- read_delim("../Data/EOL_13-23_1perday_morning.csv",
 
 ###### [EOL 1 : Table and plot of monthly means (2014-2022) - EOL temperature & salinity]{style="color:blue"}  
   
-To do monthly means, imputations of missing data of EOL by data of SOMLIT :  
-  
-  
-```{r monthly imputations somlit to eol, echo=FALSE, warning=FALSE, message=FALSE}
-
-##importation SOMLIT dataset : 
-data_somlit <- read_delim("../Data/DATA_SOMLIT_07-22_impute_0m.csv", 
-    delim = ";", escape_double = FALSE, trim_ws = TRUE)
-
-
-##selection of data :
-
-#year 2014 : february, march and december :
-year_2014 <- data_somlit[c(372, 373, 374, 375, 376, 377, 378, 414, 415, 416, 417, 418),]
-year_2014 <- year_2014 %>% 
-  dplyr::select(c(datetime, impute_temp, impute_sal))
-
-#year 2016 : may, august and september :
-year_2016 <- data_somlit[c(488, 489, 490, 491, 492, 502, 503, 504, 505, 506, 507, 508, 509, 510),]
-year_2016 <- year_2016 %>% 
-  dplyr::select(c(datetime, impute_temp, impute_sal))
-
-#year 2017 : august and september :
-year_2017 <- data_somlit[c(555, 556, 557, 558, 559, 560, 561, 562, 563),]
-year_2017 <- year_2017 %>% 
-  dplyr::select(c(datetime, impute_temp, impute_sal))
-
-#year 2019 : april :
-year_2019 <- data_somlit[c(642, 643, 644, 645, 646),]
-year_2019 <- year_2019 %>% 
-  dplyr::select(c(datetime, impute_temp, impute_sal))
-
-
-##merge of missing years somlit :
-missing_values_somlit <- full_join(year_2014, year_2016, by=c("datetime", "impute_temp", "impute_sal"))
-missing_values_somlit <- full_join(missing_values_somlit, year_2017, by=c("datetime", "impute_temp", "impute_sal"))
-missing_values_somlit <- full_join(missing_values_somlit, year_2019, by=c("datetime", "impute_temp", "impute_sal"))
-
-
-##merge with EOL :
-EOL_daily <- full_join(EOL_daily, missing_values_somlit, by=c("datetime", "temperature"="impute_temp", "salinity"="impute_sal"))
-
-EOL_daily <- EOL_daily %>% arrange(datetime)
-
-#MAJ EOL variables :
-EOL_daily <- EOL_daily %>% 
-  mutate(Year = format(datetime, format="%Y"),
-         Month = format(datetime, format="%m"),
-         Year.Month = format(datetime, format="%Y-%m"))
-
-#save :
-#write.table(EOL_daily, "EOL_13-23_1perday_morning_FILL.csv", sep=";", col.names = TRUE, row.names = FALSE)
-
-```
-  
   
 
 ```{r EOL 1 - calcul monthly means - temperature & salinity, echo=TRUE, warning=FALSE, message=FALSE}
@@ -709,27 +654,8 @@ test %>%
 ###### [EOL 2 : Table and plot of monthly means (2014-2022) - EOL temperature & salinity]{style="color:blue"}  
   
   
-Same missing values : imputations of missing data by data of SOMLIT  
-  
 
 ```{r EOL 2 - calcul monthly means - temperature & salinity, echo=TRUE, warning=FALSE, message=FALSE}
-
-##merge with EOL_2 :
-EOL_daily_2 <- full_join(EOL_daily_2, missing_values_somlit, by=c("datetime", "temperature"="impute_temp", "salinity"="impute_sal"))
-
-EOL_daily_2 <- EOL_daily_2 %>% arrange(datetime)
-
-
-#MAJ EOL variables :
-EOL_daily_2 <- EOL_daily_2 %>% 
-  mutate(Year = format(datetime, format="%Y"),
-         Month = format(datetime, format="%m"),
-         Year.Month = format(datetime, format="%Y-%m"),
-         Year.Month.Day = format(datetime, format="%Y-%m-%d"),
-         Hour = str_replace_na(Hour),
-         Hour = case_when(Hour == "NA" ~ "09:00:00", TRUE ~ Hour))
-
-##
 
 
 monthly_means_EOL2 <- ungroup(EOL_daily_2) %>% 
@@ -942,29 +868,10 @@ EOL_daily_3 <- read_delim("../Data/EOL_18-23_hourly.csv",
 
 ###### [EOL 3 : Table and plot of monthly means (2018-2022) - EOL temperature & salinity]{style="color:blue"}  
   
-Missing month : April 2019 (imputation by somlit data)  
   
 
 ```{r EOL 3 - calcul monthly means - temperature & salinity, echo=TRUE, warning=FALSE, message=FALSE}
 
-##merge with EOL_3 :
-year_2019 <- year_2019 %>% mutate(datetime = as.POSIXct(datetime))
-
-EOL_daily_3 <- full_join(EOL_daily_3, year_2019, by=c("datetime", "temperature"="impute_temp", "salinity"="impute_sal"))
-
-EOL_daily_3 <- EOL_daily_3 %>% arrange(datetime)
-
-
-#MAJ EOL variables :
-EOL_daily_3 <- EOL_daily_3 %>% 
-  mutate(Year = format(datetime, format="%Y"),
-         Month = format(datetime, format="%m"),
-         Year.Month = format(datetime, format="%Y-%m"),
-         Year.Month.Day = format(datetime, format="%Y-%m-%d"),
-         Hour = str_replace_na(Hour),
-         Hour = case_when(Hour == "NA" ~ "09:00:00", TRUE ~ Hour))
-
-##
 
 monthly_means_EOL3 <- ungroup(EOL_daily_3) %>% 
   mutate(Month = format(datetime, format="%m")) %>% 
@@ -1289,7 +1196,7 @@ AZUR_SST_RAW <- AZUR_SST_RAW %>%
 
 
 AZUR_SST_RAW <- AZUR_SST_RAW %>%
-  select(Hour, mean_SST) %>% 
+  dplyr::select(Hour, mean_SST) %>% 
   rename(datetime = Hour, temp_pelag = mean_SST) %>% 
   mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d %H:%M:%S"))
 
@@ -1337,6 +1244,62 @@ pelagic_coast_plot
 ```
   
   
+  
+## Annual cycles EOL 3 : temperature and oxygen  
+  
+  
+
+```{r daily variation EOL 3, echo=FALSE, warning=FALSE, message=FALSE}
+
+EOL_daily_3 <- EOL_daily_3 %>% 
+  mutate(datetime = format(datetime, format="%Y-%m-%d"))
+
+
+annual_cycle_temp_eol <- EOL_daily_3 %>% 
+  ggplot() +
+  geom_line(aes(x= as.Date(yday(datetime), "1970-01-01"), y=temperature, 
+                group = factor(year(datetime)), 
+                color = factor(year(datetime))), linewidth = 0.6) +
+  scale_colour_viridis_d(option="mako", direction=-1) +
+  ggtitle("") +
+  scale_x_date(date_breaks="months", date_labels="%b", name = "") +
+  labs(x="Months",colour="") +
+  theme_bw() +
+  scale_y_continuous(name = "Temp. (°C)") 
+
+annual_cycle_oxy_eol <- EOL_daily_3 %>% 
+  ggplot() +
+  geom_line(aes(x= as.Date(yday(datetime), "1970-01-01"), y=oxy_umol_kg, 
+                group = factor(year(datetime)), 
+                color = factor(year(datetime))), linewidth = 0.6) +
+  scale_colour_viridis_d(option="mako", direction=-1) +
+  ggtitle("") +
+  scale_x_date(date_breaks="months", date_labels="%b", name = "") +
+  labs(x="Months",colour="") +
+  theme_bw() +
+  scale_y_continuous(name = "Oxygen (µmol/kg)")
+
+
+annual_cycle_temp_eol
+annual_cycle_oxy_eol
+
+```
+  
+  
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
 ## Scatterplot costal (EOL) vs pelagic (Azur) SST :  
 
 *Slope : 0.9993014*  
