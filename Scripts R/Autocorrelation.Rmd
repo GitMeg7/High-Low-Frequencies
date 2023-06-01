@@ -41,6 +41,7 @@ library("autostsm")
 library("geoTS")
 library("TSA")
 library("cowplot")
+library("EnvStats")
 
 #theme for plots :
 Mytheme <- function(size_labs = 6, face_font="plain", ...) {
@@ -197,7 +198,7 @@ plot_ts_temp_less_season <- autoplot(ts_temp_less_season) +
 reg_val_less_season <- as.data.frame(plot_ts_temp_less_season$data)
 
 model_less_season <- lm(formula=y~x, data=reg_val_less_season) #compraison avec kapsenberg, pas deconnant
-#summary(model_less_season) #pour voir les erreurs des coef + la significativité
+summary(model_less_season) #pour voir les erreurs des coef + la significativité
 
 
 #plot with slope value :
@@ -209,6 +210,9 @@ plot_ts_temp_less_season <- autoplot(ts_temp_less_season) +
 
 plot_ts_temp_less_season
 
+
+FF <- kendallSeasonalTrendTest(impute_temp ~ month(datetime) + year(datetime), data = data_somlit_surf)
+FF$estimate
 
 ```
   
@@ -485,7 +489,10 @@ reg_ano <- reg
 
 reg_ano
 
-
+FF2 <- kendallSeasonalTrendTest(delta_pCO2_bio ~ month(datetime) + year(datetime), data = data_pco2)
+FF2$estimate
+#ts(variable)
+#smk.test(ts, continuity=TRUE)
 ```
   
   
@@ -586,6 +593,8 @@ plot_ts_pco2_bio_less_season <- autoplot(ts_pco2_bio_less_season) +
 
 plot_ts_pco2_bio_less_season
 
+FFpco2bio <- kendallSeasonalTrendTest(delta_pCO2_bio ~ month(datetime) + year(datetime), data = data_pco2)
+FFpco2bio$estimate
 
 ```
   
@@ -735,6 +744,8 @@ reg_ano_fluxes <- reg
 
 reg_ano_fluxes
 
+FF3 <- kendallSeasonalTrendTest(Flux_wan_92 ~ month(datetime) + year(datetime), data = data_fluxes)
+FF3$estimate
 
 ```
   
@@ -903,6 +914,9 @@ plot_ts_sal_less_season <- autoplot(ts_sal_less_season) +
 
 plot_ts_sal_less_season
 
+FFsal <- kendallSeasonalTrendTest(impute_sal ~ month(datetime) + year(datetime), data = data_somlit_surf)
+FFsal$estimate
+
 ```
   
   
@@ -963,6 +977,9 @@ plot_ts_pH_less_season <- autoplot(ts_pH_less_season) +
 
 plot_ts_pH_less_season
 
+FFpH <- kendallSeasonalTrendTest(impute_pH ~ month(datetime) + year(datetime), data = data_somlit_surf)
+FFpH$estimate
+
 ```
   
   
@@ -1018,6 +1035,9 @@ plot_ts_ta_less_season <- autoplot(ts_ta_less_season) +
   annotate(geom="text", x=2010, y=2580, label="slope : 5.59e-01 ± 9.65e-02 *", color="black")
 
 plot_ts_ta_less_season
+
+FFta <- kendallSeasonalTrendTest(impute_ta ~ month(datetime) + year(datetime), data = data_somlit_surf)
+FFta$estimate
 
 ```
   
@@ -1075,6 +1095,9 @@ plot_ts_dic_less_season <- autoplot(ts_dic_less_season) +
 
 plot_ts_dic_less_season
 
+FFdic <- kendallSeasonalTrendTest(impute_dic ~ month(datetime) + year(datetime), data = data_somlit_surf)
+FFdic$estimate
+
 ```
   
   
@@ -1131,10 +1154,12 @@ plot_ts_pco2w_less_season <- autoplot(ts_pco2w_less_season) +
 
 plot_ts_pco2w_less_season
 
+FFpCO2_w <- kendallSeasonalTrendTest(impute_pCO2_w ~ month(datetime) + year(datetime), data = data_somlit_surf)
+FFpCO2_w$estimate
+
 ```
   
   
-
 
 
 

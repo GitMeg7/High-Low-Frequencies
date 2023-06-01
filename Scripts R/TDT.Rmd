@@ -95,7 +95,7 @@ weight <- 1 / lm(abs(model_less_season$residuals) ~ model_less_season$fitted.val
 wls_model <- lm(reg_val_less_season$y ~ reg_val_less_season$x, data = reg_val_less_season, weights = weight)
 
 #view summary of model
-#summary(wls_model) # slope : 0.057757
+summary(wls_model) # slope : 0.057757
 ##
 
 ```
@@ -133,10 +133,10 @@ acf(ts_temp_decomp$random[27:806], lag.max = 60, type = "cor", plot = F) # 0.674
 
 
 Fac1 <- (3.3 * 1.134308)/abs(0.057757)
-
 Fac2 <- sqrt((1 + 0.674)/(1 - 0.674))
 
 TDT <- (Fac1 * Fac2)^(2/3) # 27.84 years
+
 
 
 #uncertainty of TDT :

@@ -72,7 +72,7 @@ EOL_RAW <- EOL_RAW %>%
          Month = format(datetime, format="%m"),
          oxygen = case_when(oxygen > 10 ~ NA_real_, TRUE ~ oxygen))
 
-summary(EOL_RAW) 
+#summary(EOL_RAW) 
 
 ```
 

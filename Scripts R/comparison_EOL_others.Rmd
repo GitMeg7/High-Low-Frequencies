@@ -1,0 +1,331 @@
+---
+title: "Comparison EOL others"
+author: "Mégane"
+date: "2023-06-01"
+output: html_document
+---
+
+```{r libraries, echo=FALSE, warning=FALSE, message=FALSE}
+
+library("readr")
+library("viridis")
+library("scales")
+library("lubridate")
+library("gsignal")
+library("FactoMineR")
+library("factoextra")
+library("gplots")
+library("heatwaveR")
+library("dplyr")
+library("imputeTS")
+library("Metrics")
+library("tidyr")
+library("tseries")
+library("forecast")
+library("tsDyn")
+library("tsoutliers")
+library("seacarb")
+library("lmodel2")
+library("lmtest")
+library("ggExtra")
+library("corrplot")
+library("ggcorrplot")
+library("marelac")
+library("spectral")
+library("signal")
+
+```
+
+
+```{r importation Data EOL raw & EOL hourly, echo=FALSE, warning=FALSE, message=FALSE}
+
+#period : septembre 2013-octobre 2022
+EOL_RAW <- read_delim("../Data/EOL_raw_complete_1323.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)  
+
+
+#sorting
+EOL_RAW <- EOL_RAW %>% 
+  rename(temperature = temp_eol_c, salinity = sal_eol_psu, oxygen = oxy_umol_kg) %>% 
+  mutate(Year.Month = format(datetime, format="%Y-%m"),
+         Year = format(datetime, format="%Y"),
+         Year.Month.Day = format(datetime, format="%Y-%m-%d"),
+         Month = format(datetime, format="%m"),
+         oxygen = case_when(oxygen > 10 ~ NA_real_, TRUE ~ oxygen))
+##
+
+#period : Jan.2018 - Dec.2022
+EOL_hourly <- read_delim("../Data/EOL_18-23_hourly.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
+  rename(temperature=temp_eol_c, salinity=sal_eol_psu) %>% 
+  mutate(datetime = as.character(datetime)) %>% 
+  mutate(datetime = as.POSIXct(datetime, format = "%Y-%m-%d")) %>% 
+  dplyr::filter(datetime <= "2022-12-31 01:00:00") %>% 
+  dplyr::select(-c(Year.Month.Day, dMonth, NB_OBS_DAY))
+
+```
+
+
+```{r importation Data solemio, echo=FALSE, warning=FALSE, message=FALSE}
+
+Solemio_2011 <- read_delim("../Data/data_solemio_2011.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Solemio_2012 <- read_delim("../Data/data_solemio_2012.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Solemio_2013 <- read_delim("../Data/data_solemio_2013.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Solemio_2014 <- read_delim("../Data/data_solemio_2014.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Solemio_2015 <- read_delim("../Data/data_solemio_2015.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Solemio_2016 <- read_delim("../Data/data_solemio_2016.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Solemio_2017 <- read_delim("../Data/data_solemio_2017.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Solemio_2018 <- read_delim("../Data/data_solemio_2018.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Solemio_2019 <- read_delim("../Data/data_solemio_2019.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Solemio_2020 <- read_delim("../Data/data_solemio_2020.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+Solemio_2021 <- read_delim("../Data/data_solemio_2021.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+merge <- rbind(Solemio_2011, Solemio_2012)
+merge <- rbind(merge, Solemio_2013)
+merge <- rbind(merge, Solemio_2014)
+merge <- rbind(merge, Solemio_2015)
+merge <- rbind(merge, Solemio_2016)
+merge <- rbind(merge, Solemio_2017)
+merge <- rbind(merge, Solemio_2018)
+merge <- rbind(merge, Solemio_2019)
+merge <- rbind(merge, Solemio_2020)
+Solemio_raw <- rbind(merge, Solemio_2021)
+
+#period : june 2011 - september 2021
+Solemio_raw <- Solemio_raw %>% arrange(Date)
+
+Solemio_raw <- Solemio_raw %>% 
+  mutate(heure = as.character(heure)) %>% 
+  mutate(Month = format(Date, format="%m"),
+         Temperature = case_when(Temperature < 10 ~ NA_real_, TRUE ~ Temperature),
+         Salinity = case_when(Salinity < 35 ~ NA_real_, TRUE ~ Salinity),
+         Date = as.character(Date),
+         Date = as.POSIXct(Date),
+         HH = substr(heure, 1,2),
+         HH = paste(HH, "00:00", sep=":"),
+         heure = HH)  %>% 
+  dplyr::select(-Depth)
+
+
+
+```
+
+
+#### EOL and SOLEMIO SST - Sept.2013 - Sept.2021  
+  
+
+```{r solemio plot, echo=FALSE, warning=FALSE, message=FALSE}
+
+
+EOL_plot <- EOL_RAW %>% 
+  mutate(Hour = format(datetime, format = "%H:%M:%S"),
+         datetime = format(datetime, format="%Y-%m-%d"),
+         datetime = as.POSIXct(datetime)) %>% 
+  dplyr::filter(datetime <= "2021-09-30") %>% 
+  mutate(Hour = as.character(Hour))
+
+
+Solemio_plot <- Solemio_raw 
+
+merge <- left_join(EOL_plot, Solemio_raw, by=c("datetime"="Date", "Hour"="heure"))
+
+
+
+merge %>% 
+  ggplot() +
+  geom_line(aes(x=datetime, y=temperature), col="orange", size = 0.7) +
+  geom_line(aes(x=datetime, y=Temperature), col="blue", size=0.7) +
+  ggtitle("EOL = orange, SOLEMIO = blue") +
+  scale_x_datetime(name="") + 
+  scale_y_continuous(name="Temp. (°C)")
+
+
+
+
+```
+  
+  
+#### EOL and SOLEMIO annual cycles (SST)  
+  
+More variability in summer for SOLEMIO  
+  
+
+```{r EOL-SOLEMIO annual cycle, echo=FALSE, warning=FALSE, message=FALSE, fig.width=10,fig.height=3}
+
+
+# Annual cycle
+EOL_annual_cycle <- merge %>% 
+  ggplot() +
+  geom_line(aes(x= as.Date(yday(datetime), "1970-01-01"), y=temperature, 
+                group = factor(year(datetime)), 
+                color = factor(year(datetime))), linewidth = 0.6) +
+  scale_colour_viridis_d(option="mako", direction=-1) +
+  ggtitle("") +
+  scale_x_date(date_breaks="months", date_labels="%b", name = "") +
+  labs(x="Months",colour="") +
+  theme_bw() +
+  scale_y_continuous(name = "Temp. (°C)") +
+  ggtitle("EOL")
+
+Solemio_annual_cycle <- merge %>% 
+  ggplot() +
+  geom_line(aes(x= as.Date(yday(datetime), "1970-01-01"), y=Temperature, 
+                group = factor(year(datetime)), 
+                color = factor(year(datetime))), linewidth = 0.6) +
+  scale_colour_viridis_d(option="mako", direction=-1) +
+  ggtitle("") +
+  scale_x_date(date_breaks="months", date_labels="%b", name = "") +
+  labs(x="Months",colour="") +
+  theme_bw() +
+  scale_y_continuous(name = "Temp. (°C)") +
+  ggtitle("SOLEMIO")
+
+plot_grid_EOL_solemio <- plot_grid(EOL_annual_cycle, Solemio_annual_cycle, align='vh', ncol=2)
+plot_grid_EOL_solemio
+
+```
+
+  
+#### Trend analysis by anomalies for SST (Bates et al., 2014)  
+  
+Temperature : same trend (decrease), more accentuated for EOL  
+Salinity : same trend (decrease), same result for both  
+  
+
+```{r Trend analysis by anomalies, echo=FALSE, warning=FALSE, message=FALSE, fig.width=10,fig.height=3}
+
+monthly_means_EOL_solemio <- ungroup(merge) %>% 
+  group_by(Month.x) %>%
+  summarise(
+    Salinity_month_sol = mean(Salinity, na.rm = TRUE),
+    Temperature_month_sol = mean(Temperature, na.rm = TRUE),
+    Salinity_month_eol = mean(salinity, na.rm = TRUE),
+    Temperature_month_eol = mean(temperature, na.rm = TRUE))
+
+monthly_means_EOL_solemio
+
+anomalies_EOL_solemio <- left_join(ungroup(merge), monthly_means_EOL_solemio, by = "Month.x") %>%
+  mutate(Salinity_ano_sol = Salinity - Salinity_month_sol,
+         Temperature_ano_sol = Temperature - Temperature_month_sol,
+         Salinity_ano_eol = Salinity - Salinity_month_eol,
+         Temperature_ano_eol = Temperature - Temperature_month_eol)
+
+
+# Regression and table anomalies
+var_list <-
+  c("Salinity_ano_sol", "Temperature_ano_sol",
+    "Salinity_ano_eol", "Temperature_ano_eol")
+
+lms <- lapply(var_list, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
+             data = anomalies_EOL_solemio))
+})
+reg <- NULL
+for (i in 1:length(var_list)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob <-
+    pf(lms[[i]]$fstatistic[1],
+       lms[[i]]$fstatistic[2],
+       lms[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg <-
+    rbind(reg, as.numeric(
+      c(
+        lms[[i]]$coefficients[2, 1],
+        lms[[i]]$coefficients[2, 2],
+        lms[[i]]$coefficients[2, 4],
+        lms[[i]]$coefficients[1, 1],
+        lms[[i]]$coefficients[1, 2],
+        lms[[i]]$coefficients[1, 4],
+        lms[[i]]$fstatistic[1],
+        lms[[i]]$fstatistic[3],
+        lms[[i]]$r.squared,
+        prob
+      )
+    ))
+}
+colnames(reg) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+
+row.names(reg) <- var_list
+reg_anomalies_eol_solemio <- reg
+
+reg_anomalies_eol_solemio
+
+
+```
+  
+  
+#### Plot of anomalies + trend for SST  
+  
+
+```{r plot of anomalies, echo=FALSE, warning=FALSE, message=FALSE, fig.width=11,fig.height=4}
+
+plot_ano_EOL <- ggplot(data = anomalies_EOL_solemio, aes(x = datetime, y = Temperature_ano_eol), na.rm=TRUE) +
+  scale_x_datetime() +
+  geom_point(colour="blue", na.rm=TRUE, size=0.65) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title="EOL - Temperature anomalies + trend (2013-2021)",x="", y="Temp. (°C)") +
+  annotate(geom="text", x=as.POSIXct("2019-03-16 01:00:00"), y=5, label="slope : -0.09 ± 0.007 *", color="black")
+
+plot_ano_EOL_2 <- ggplot(data = anomalies_EOL_solemio, aes(x = datetime, y = Salinity_ano_eol), na.rm=TRUE) +
+  scale_x_datetime() +
+  geom_point(colour="blue", na.rm=TRUE, size=0.65) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title="EOL - Salinity anomalies + trend (2013-2021)",x="", y="Salinity") +
+  annotate(geom="text", x=as.POSIXct("2019-03-16 01:00:00"), y=5, label="slope : -0.052 ± 0.002 *", color="black")
+
+plot_ano_solemio <- ggplot(data = anomalies_EOL_solemio, aes(x = datetime, y = Temperature_ano_sol), na.rm=TRUE) +
+  scale_x_datetime() +
+  geom_point(colour="blue", na.rm=TRUE, size=0.65) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title="SOLEMIO - Temperature anomalies + trend (2013-2021)",x="", y="Temp. (°C)") +
+  annotate(geom="text", x=as.POSIXct("2019-03-16 01:00:00"), y=5, label="slope : -0.03 ± 0.006 *", color="black")
+
+plot_ano_solemio_2 <- ggplot(data = anomalies_EOL_solemio, aes(x = datetime, y = Salinity_ano_sol), na.rm=TRUE) +
+  scale_x_datetime() +
+  geom_point(colour="blue", na.rm=TRUE, size=0.65) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title="SOLEMIO - Salinity anomalies + trend (2013-2021)",x="", y="Salinity") +
+  annotate(geom="text", x=as.POSIXct("2019-03-16 01:00:00"), y=5, label="slope : -0.050 ± 0.002 *", color="black")
+
+
+plot_grid_ano <- plot_grid(plot_ano_EOL, plot_ano_EOL_2, plot_ano_solemio, plot_ano_solemio_2, align='vh', ncol=2)
+plot_grid_ano
+
+```
+
+
