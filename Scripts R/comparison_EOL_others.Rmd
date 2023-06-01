@@ -209,8 +209,8 @@ plot_grid_EOL_solemio
   
 #### Trend analysis by anomalies for SST (Bates et al., 2014)  
   
-Temperature : same trend (decrease), more accentuated for EOL  
-Salinity : same trend (decrease), same result for both  
+Temperature : opposite results : increase for EOL, decrease for SOLEMIO  
+Salinity : same trend (decrease), more accentuated for SOLEMIO  
   
 
 ```{r Trend analysis by anomalies, echo=FALSE, warning=FALSE, message=FALSE, fig.width=10,fig.height=3}
@@ -228,8 +228,8 @@ monthly_means_EOL_solemio
 anomalies_EOL_solemio <- left_join(ungroup(merge), monthly_means_EOL_solemio, by = "Month.x") %>%
   mutate(Salinity_ano_sol = Salinity - Salinity_month_sol,
          Temperature_ano_sol = Temperature - Temperature_month_sol,
-         Salinity_ano_eol = Salinity - Salinity_month_eol,
-         Temperature_ano_eol = Temperature - Temperature_month_eol)
+         Salinity_ano_eol = salinity - Salinity_month_eol,
+         Temperature_ano_eol = temperature - Temperature_month_eol)
 
 
 # Regression and table anomalies
@@ -299,21 +299,21 @@ plot_ano_EOL <- ggplot(data = anomalies_EOL_solemio, aes(x = datetime, y = Tempe
   geom_point(colour="blue", na.rm=TRUE, size=0.65) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
   labs(title="EOL - Temperature anomalies + trend (2013-2021)",x="", y="Temp. (°C)") +
-  annotate(geom="text", x=as.POSIXct("2019-03-16 01:00:00"), y=5, label="slope : -0.09 ± 0.007 *", color="black")
+  annotate(geom="text", x=as.POSIXct("2019-03-16 01:00:00"), y=5, label="slope : 0.033 ± 0.003 *", color="black")
 
 plot_ano_EOL_2 <- ggplot(data = anomalies_EOL_solemio, aes(x = datetime, y = Salinity_ano_eol), na.rm=TRUE) +
   scale_x_datetime() +
   geom_point(colour="blue", na.rm=TRUE, size=0.65) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
   labs(title="EOL - Salinity anomalies + trend (2013-2021)",x="", y="Salinity") +
-  annotate(geom="text", x=as.POSIXct("2019-03-16 01:00:00"), y=5, label="slope : -0.052 ± 0.002 *", color="black")
+  annotate(geom="text", x=as.POSIXct("2019-03-16 01:00:00"), y=5, label="slope : -0.018 ± 0.0005 *", color="black")
 
 plot_ano_solemio <- ggplot(data = anomalies_EOL_solemio, aes(x = datetime, y = Temperature_ano_sol), na.rm=TRUE) +
   scale_x_datetime() +
   geom_point(colour="blue", na.rm=TRUE, size=0.65) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
   labs(title="SOLEMIO - Temperature anomalies + trend (2013-2021)",x="", y="Temp. (°C)") +
-  annotate(geom="text", x=as.POSIXct("2019-03-16 01:00:00"), y=5, label="slope : -0.03 ± 0.006 *", color="black")
+  annotate(geom="text", x=as.POSIXct("2019-03-16 01:00:00"), y=5, label="slope : -0.033 ± 0.006 *", color="black")
 
 plot_ano_solemio_2 <- ggplot(data = anomalies_EOL_solemio, aes(x = datetime, y = Salinity_ano_sol), na.rm=TRUE) +
   scale_x_datetime() +
@@ -327,5 +327,7 @@ plot_grid_ano <- plot_grid(plot_ano_EOL, plot_ano_EOL_2, plot_ano_solemio, plot_
 plot_grid_ano
 
 ```
+  
+  
 
 
