@@ -1,0 +1,387 @@
+---
+title: "Comparison PtB vs others"
+author: "Mégane"
+date: "2023-06-01"
+output: html_document
+---
+
+```{r libraries, echo=FALSE, warning=FALSE, message=FALSE}
+
+library("readr")
+library("viridis")
+library("scales")
+library("lubridate")
+library("gsignal")
+library("FactoMineR")
+library("factoextra")
+library("gplots")
+library("heatwaveR")
+library("dplyr")
+library("imputeTS")
+library("Metrics")
+library("tidyr")
+library("tseries")
+library("forecast")
+library("tsDyn")
+library("tsoutliers")
+library("seacarb")
+library("lmodel2")
+library("lmtest")
+library("ggExtra")
+library("corrplot")
+library("ggcorrplot")
+library("marelac")
+library("spectral")
+library("signal")
+
+```
+
+
+```{r importation Data SOMLIT, echo=FALSE, warning=FALSE, message=FALSE}
+
+#period : January 2007 - December 2022
+SOMLIT <- read_delim("../Data/DATA_SOMLIT_07-22_CLEAN.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+# surface : 
+SOMLIT_surf <- read_delim("../Data/DATA_SOMLIT_07-22_impute_0m.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
+  dplyr::select(datetime, temperature, salinity, Year, Month, Year.Month) %>% 
+  rename(SOM_T = temperature, SOM_sal = salinity)
+
+# 50m :
+SOMLIT_50 <- read_delim("../Data/DATA_SOMLIT_07-22_impute_50m.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+
+```
+
+
+```{r importation Data, echo=FALSE, warning=FALSE, message=FALSE}
+
+#period : January 2007 - December 2022
+MEDIT_site <- read_delim("../Data/Somlit_Medit_sites.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+# surface : 
+MEDIT_site_surf <- MEDIT_site %>% 
+  dplyr::filter(PROFONDEUR <= 3) %>% 
+  dplyr::select(-c(hour, PROFONDEUR)) %>% 
+  group_by(datetime) %>% 
+  mutate(temperature = mean(TEMPERATURE, na.rm = TRUE),
+         salinity = mean(SALINITE, na.rm = TRUE)) %>% 
+  dplyr::select(-c(TEMPERATURE, SALINITE))
+  
+
+MEDIT_site_surf <- distinct(MEDIT_site_surf)
+
+#Jan.2007 - Dec.2022
+SOLA_surf <- MEDIT_site_surf %>% dplyr::filter(site == "Sola" & datetime <= "2022-12-13") %>% dplyr::select(-site) %>% 
+  rename(SOLA_T = temperature, SOLA_sal = salinity) %>% 
+  mutate(SOLA_T = case_when(SOLA_T > 30 ~ NA_real_, TRUE ~ SOLA_T),
+         SOLA_sal = case_when(SOLA_sal < 35 ~ NA_real_, TRUE ~ SOLA_sal),
+         SOLA_sal = case_when(SOLA_sal > 40 ~ NA_real_, TRUE ~ SOLA_sal))
+
+#Jan.2007 - Dec.2022
+FRIOUL_surf <- MEDIT_site_surf %>% dplyr::filter(site == "Frioul" & datetime <= "2022-12-13") %>% dplyr::select(-site) %>% 
+  rename(FR_T = temperature, FR_sal = salinity) %>% 
+  mutate(FR_T = case_when(FR_T > 30 ~ NA_real_, TRUE ~ FR_T),
+         FR_sal = case_when(FR_sal < 35 ~ NA_real_, TRUE ~ FR_sal),
+         FR_sal = case_when(FR_sal > 40 ~ NA_real_, TRUE ~ FR_sal))
+
+# Feb.2015 - Dec.2022
+SETE_surf <- MEDIT_site_surf %>% dplyr::filter(site == "Sete" & datetime > "2014-12-22") %>% dplyr::select(-site) %>% 
+  rename(SETE_T = temperature, SETE_sal = salinity) %>% 
+  mutate(SETE_T = case_when(SETE_T > 30 ~ NA_real_, TRUE ~ SETE_T),
+         SETE_T = case_when(SETE_T <8 ~ NA_real_, TRUE ~ SETE_T),
+         SETE_sal = case_when(SETE_sal < 35 ~ NA_real_, TRUE ~ SETE_sal),
+         SETE_sal = case_when(SETE_sal > 40 ~ NA_real_, TRUE ~ SETE_sal))
+
+
+# 50m :
+
+```
+
+#### SST observations (2007-2022)  
+  
+
+```{r SST plot, echo=FALSE, warning=FALSE, message=FALSE, fig.width=10, fig.height=6}
+
+merge_sites <- full_join(SOMLIT_surf, FRIOUL_surf, by="datetime")
+merge_sites <- full_join(merge_sites, SOLA_surf, by="datetime")
+merge_sites <- full_join(merge_sites, SETE_surf, by="datetime")
+
+merge_sites <- merge_sites %>% 
+  mutate(datetime = as.character(datetime),
+         datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>% 
+  dplyr::select(-Year.Month)
+
+merge_sites_plot_long <- merge_sites %>% 
+  rename(`Point B` = SOM_T, FRIOUL = FR_T, SOLA = SOLA_T, SETE = SETE_T) %>% 
+  pivot_longer(cols = c(`Point B`, FRIOUL, SOLA, SETE), names_to = "Legend", values_to = "value")
+
+
+merge_sites_plot <- merge_sites_plot_long %>% 
+  ggplot() +
+  ggtitle("SST observations (2007-2022)") +
+  geom_point(aes(x=datetime, y=value, color= Legend), size=0.9) +
+  scale_y_continuous(name="Temp. (°C)") + 
+  scale_x_datetime(name="") + 
+  scale_colour_discrete(type=c("#9683EC", "orange", "brown", "#067790"))
+
+merge_sites_plot
+
+
+```
+  
+  
+#### SST annual cycles  
+  
+More variability in summer for Frioul and Sète sites  
+Higher temperature in summer at Point B  
+  
+
+```{r SST annual cycles, echo=FALSE, warning=FALSE, message=FALSE, fig.width=10, fig.height=8}
+
+SOMLIT_annual_cycle <- SOMLIT_surf %>% 
+  ggplot() +
+  geom_line(aes(x= as.Date(yday(datetime), "1970-01-01"), y=SOM_T, 
+                group = factor(year(datetime)), 
+                color = factor(year(datetime))), linewidth = 0.6) +
+  scale_colour_viridis_d(option="mako", direction=-1) +
+  ggtitle("") +
+  scale_x_date(date_breaks="months", date_labels="%b", name = "") +
+  labs(x="Months",colour="") +
+  theme_bw() +
+  scale_y_continuous(name = "Temp. (°C)") +
+  ggtitle("Point B SST")
+
+FRIOUL_annual_cycle <- FRIOUL_surf %>% 
+  ggplot() +
+  geom_line(aes(x= as.Date(yday(datetime), "1970-01-01"), y=FR_T, 
+                group = factor(year(datetime)), 
+                color = factor(year(datetime)), na.rm = T), linewidth = 0.6) +
+  scale_colour_viridis_d(option="mako", direction=-1) +
+  ggtitle("") +
+  scale_x_date(date_breaks="months", date_labels="%b", name = "") +
+  labs(x="Months",colour="") +
+  theme_bw() +
+  scale_y_continuous(name = "Temp. (°C)") +
+  ggtitle("FRIOUL SST")
+
+SOLA_annual_cycle <- SOLA_surf %>% 
+  ggplot() +
+  geom_line(aes(x= as.Date(yday(datetime), "1970-01-01"), y=SOLA_T, 
+                group = factor(year(datetime)), 
+                color = factor(year(datetime)), na.rm = T), linewidth = 0.6) +
+  scale_colour_viridis_d(option="mako", direction=-1) +
+  ggtitle("") +
+  scale_x_date(date_breaks="months", date_labels="%b", name = "") +
+  labs(x="Months",colour="") +
+  theme_bw() +
+  scale_y_continuous(name = "Temp. (°C)") +
+  ggtitle("SOLA SST")
+
+SETE_annual_cycle <- SETE_surf %>% 
+  ggplot() +
+  geom_line(aes(x= as.Date(yday(datetime), "1970-01-01"), y=SETE_T, 
+                group = factor(year(datetime)), 
+                color = factor(year(datetime)), na.rm = T), linewidth = 0.6) +
+  scale_colour_viridis_d(option="mako", direction=-1) +
+  ggtitle("") +
+  scale_x_date(date_breaks="months", date_labels="%b", name = "") +
+  labs(x="Months",colour="") +
+  theme_bw() +
+  scale_y_continuous(name = "Temp. (°C)") +
+  ggtitle("SETE SST")
+
+
+plot_grid_medit_sites <- plot_grid(SOMLIT_annual_cycle, SOLA_annual_cycle, FRIOUL_annual_cycle, SETE_annual_cycle, 
+                                   align='vh', ncol=2)
+plot_grid_medit_sites
+
+```
+  
+  
+#### Trend analysis by anomalies (Bates et al., 2014)  
+  
+SETE : non-significative slope for temperature  
+Increase of temperature at Point B > Sola > Frioul  
+  
+
+```{r Trend analysis by anomalies, echo=FALSE, warning=FALSE, message=FALSE, fig.width=10,fig.height=3}
+
+monthly_means <- ungroup(merge_sites) %>% 
+  group_by(Month) %>%
+  summarise(
+    Salinity_month_SOM = mean(SOM_sal, na.rm = TRUE),
+    Temperature_month_SOM = mean(SOM_T, na.rm = TRUE),
+    Salinity_month_FR = mean(FR_sal, na.rm = TRUE),
+    Temperature_month_FR = mean(FR_T, na.rm = TRUE),
+    Salinity_month_SOLA = mean(SOLA_sal, na.rm = TRUE),
+    Temperature_month_SOLA = mean(SOLA_T, na.rm = TRUE),
+    Salinity_month_SETE = mean(SETE_sal, na.rm = TRUE),
+    Temperature_month_SETE = mean(SETE_T, na.rm = TRUE))
+
+monthly_means
+
+
+anomalies <- left_join(ungroup(merge_sites), monthly_means, by = "Month") %>%
+  mutate(Salinity_ano_SOM = SOM_sal - Salinity_month_SOM,
+         Temperature_ano_SOM = SOM_T - Temperature_month_SOM,
+         Salinity_ano_FR = FR_sal - Salinity_month_FR,
+         Temperature_ano_FR = FR_T - Temperature_month_FR,
+         Salinity_ano_SOLA = SOLA_sal - Salinity_month_SOLA,
+         Temperature_ano_SOLA = SOLA_T - Temperature_month_SOLA,
+         Salinity_ano_SETE = SETE_sal - Salinity_month_SETE,
+         Temperature_ano_SETE = SETE_T - Temperature_month_SETE)
+
+
+# Regression and table anomalies
+var_list <-
+  c("Salinity_ano_SOM", "Temperature_ano_SOM", "Salinity_ano_FR", "Temperature_ano_FR",
+    "Salinity_ano_SOLA", "Temperature_ano_SOLA", "Salinity_ano_SETE", "Temperature_ano_SETE")
+
+lms <- lapply(var_list, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
+             data = anomalies))
+})
+
+reg <- NULL
+for (i in 1:length(var_list)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob <-
+    pf(lms[[i]]$fstatistic[1],
+       lms[[i]]$fstatistic[2],
+       lms[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg <-
+    rbind(reg, as.numeric(
+      c(
+        lms[[i]]$coefficients[2, 1],
+        lms[[i]]$coefficients[2, 2],
+        lms[[i]]$coefficients[2, 4],
+        lms[[i]]$coefficients[1, 1],
+        lms[[i]]$coefficients[1, 2],
+        lms[[i]]$coefficients[1, 4],
+        lms[[i]]$fstatistic[1],
+        lms[[i]]$fstatistic[3],
+        lms[[i]]$r.squared,
+        prob
+      )
+    ))
+}
+colnames(reg) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+
+row.names(reg) <- var_list
+reg_anomalies <- reg
+
+reg_anomalies
+
+
+```
+  
+  
+
+```{r plot of anomalies, echo=FALSE, warning=FALSE, message=FALSE, fig.width=11,fig.height=8}
+
+anomalies <- anomalies %>% mutate(datetime = as.character(datetime),
+                                  datetime = as.POSIXct(datetime))
+
+
+plot_ano_SOM <- ggplot(data = anomalies, aes(x = datetime, y = Temperature_ano_SOM), na.rm=TRUE) +
+  scale_x_datetime() +
+  geom_point(colour="blue", na.rm=TRUE, size=0.65) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title="Point B - Temperature anomalies + trend (2007-2022)",x="", y="Temp. (°C)") +
+  annotate(geom="text", x=as.POSIXct("2019-03-16 01:00:00"), y=5, label="slope : 0.066 ± 0.01 *", color="black")
+
+plot_ano_SOM_2 <- ggplot(data = anomalies, aes(x = datetime, y = Salinity_ano_SOM), na.rm=TRUE) +
+  scale_x_datetime() +
+  geom_point(colour="blue", na.rm=TRUE, size=0.65) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title="Point B - Salinity anomalies + trend (2007-2022)",x="", y="Salinity") +
+  annotate(geom="text", x=as.POSIXct("2019-03-16 01:00:00"), y=3, label="non-significative", color="black")
+
+plot_ano_FR <- ggplot(data = anomalies, aes(x = datetime, y = Temperature_ano_FR), na.rm=TRUE) +
+  scale_x_datetime() +
+  geom_point(colour="blue", na.rm=TRUE, size=0.65) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title="FRIOUL - Temperature anomalies + trend (2007-2022)",x="", y="Temp. (°C)") +
+  annotate(geom="text", x=as.POSIXct("2019-03-16 01:00:00"), y=5, label="non-significative", color="black")
+
+plot_ano_FR_2 <- ggplot(data = anomalies, aes(x = datetime, y = Salinity_ano_FR), na.rm=TRUE) +
+  scale_x_datetime() +
+  geom_point(colour="blue", na.rm=TRUE, size=0.65) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title="FRIOUL - Salinity anomalies + trend (2007-2022)",x="", y="Salinity") +
+  annotate(geom="text", x=as.POSIXct("2019-03-16 01:00:00"), y=2, label="non-significative", color="black")
+
+plot_ano_SOLA <- ggplot(data = anomalies, aes(x = datetime, y = Temperature_ano_SOLA), na.rm=TRUE) +
+  scale_x_datetime() +
+  geom_point(colour="blue", na.rm=TRUE, size=0.65) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title="SOLA - Temperature anomalies + trend (2007-2022)",x="", y="Temp. (°C)") +
+  annotate(geom="text", x=as.POSIXct("2019-03-16 01:00:00"), y=7, label="non-significative", color="black")
+
+plot_ano_SOLA_2 <- ggplot(data = anomalies, aes(x = datetime, y = Salinity_ano_SOLA), na.rm=TRUE) +
+  scale_x_datetime() +
+  geom_point(colour="blue", na.rm=TRUE, size=0.65) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title="SOLA - Salinity anomalies + trend (2007-2022)",x="", y="Salinity") +
+  annotate(geom="text", x=as.POSIXct("2019-03-16 01:00:00"), y=3, label="slope : -0.014 ± 0.006 *", color="black")
+
+plot_ano_SETE <- ggplot(data = anomalies, aes(x = datetime, y = Temperature_ano_SETE), na.rm=TRUE) +
+  scale_x_datetime() +
+  geom_point(colour="blue", na.rm=TRUE, size=0.65) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title="SETE - Temperature anomalies + trend (2007-2022)",x="", y="Temp. (°C)") +
+  annotate(geom="text", x=as.POSIXct("2019-03-16 01:00:00"), y=5, label="non-significative", color="black")
+
+plot_ano_SETE_2 <- ggplot(data = anomalies, aes(x = datetime, y = Salinity_ano_SETE), na.rm=TRUE) +
+  scale_x_datetime() +
+  geom_point(colour="blue", na.rm=TRUE, size=0.65) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title="SETE - Salinity anomalies + trend (2007-2022)",x="", y="Salinity") +
+  annotate(geom="text", x=as.POSIXct("2019-03-16 01:00:00"), y=2, label="non-significative", color="black")
+
+
+plot_grid_ano <- plot_grid(plot_ano_SOM, plot_ano_SOM_2, plot_ano_FR, plot_ano_FR_2, 
+                           plot_ano_SOLA, plot_ano_SOLA_2, plot_ano_SETE, plot_ano_SETE_2, 
+                           align='vh', ncol=2)
+plot_grid_ano
+
+```
+  
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -135,7 +135,7 @@ Solemio_raw <- Solemio_raw %>%
 #### EOL and SOLEMIO SST - Sept.2013 - Sept.2021  
   
 
-```{r solemio plot, echo=FALSE, warning=FALSE, message=FALSE}
+```{r EOL-solemio plot, echo=FALSE, warning=FALSE, message=FALSE}
 
 
 EOL_plot <- EOL_RAW %>% 
@@ -207,7 +207,7 @@ plot_grid_EOL_solemio
 ```
 
   
-#### Trend analysis by anomalies for SST (Bates et al., 2014)  
+#### Trend analysis by anomalies (Bates et al., 2014)  
   
 Temperature : opposite results : increase for EOL, decrease for SOLEMIO  
 Salinity : same trend (decrease), more accentuated for SOLEMIO  
