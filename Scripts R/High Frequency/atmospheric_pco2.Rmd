@@ -1,0 +1,493 @@
+---
+title: "Atmospheric pCO~2~"
+author: "Mégane"
+date: "2023-04-17"
+output: html_document
+---
+
+
+```{r libraries, echo=FALSE, warning=FALSE, message=FALSE}
+library("readr")
+library("viridis")
+library("scales")
+library("lubridate")
+library("gsignal")
+library("FactoMineR")
+library("factoextra")
+library("gplots")
+library("heatwaveR")
+library("dplyr")
+library("imputeTS")
+library("Metrics")
+library("tidyr")
+library("tseries")
+library("forecast")
+library("tsDyn")
+library("tsoutliers")
+library("seacarb")
+library("lmodel2")
+library("lmtest")
+library("ggExtra")
+library("corrplot")
+library("ggcorrplot")
+library("marelac")
+library("kableExtra")
+library("stringr")
+library("berryFunctions")
+```
+
+
+→ 5 sites\
+→ Frequency : hourly\
+→ Selection of data taken at 09:00 AM  
+→ Converts xCO2 (mole fraction of CO2) into pCO2 (partial pressure of CO2)   
+  
+1 : Monte Cimone (8m) - 2011-2022\
+2 : Plateau Rosa (10m) - 2007-2022\
+3 : Corse Ersa (40m) - 2013-2020\
+4 : Observatoire Haute Provence (10m) - 2014-2020\
+5 : Lampedusa (10) - 2006-2022
+
+```{r importation data pco2 air, echo=FALSE, warning=FALSE, message=FALSE}
+#unity (umol/mol, ppm)
+
+### MONTE CIMONE
+atmospheric_co2_MONTE_CIMONE <- read_delim("../Data/atmospheric_co2_MONTE_CIMONE_fev_2011_2022.CO2", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+#selection of 09:00 AM data :
+atmospheric_co2_MONTE_CIMONE <- atmospheric_co2_MONTE_CIMONE %>% 
+  unite(col='datetime', c('Year', 'Month', 'Day'), sep='-') %>%
+  unite(col='time', c('Hour', 'Minute'), sep=':') %>% 
+  dplyr::filter(time == "09:00")
+
+#data sorting :
+atmospheric_co2_MONTE_CIMONE <- atmospheric_co2_MONTE_CIMONE %>% 
+  mutate(datetime = format(datetime, format="%Y-%m-%d")) %>% 
+  mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>%
+  rename(CO2_MC = co2) %>% 
+  mutate(CO2_MC = case_when(CO2_MC == -999.990 ~ NA_real_ , TRUE ~ CO2_MC)) %>%
+  select(datetime, CO2_MC)
+
+####################
+
+### PLATEAU ROSA
+atmospheric_co2_PLATEAU_ROSA <- read_delim("../Data/atmospheric_co2_PLATEAU_ROSA_2007_2022.CO2", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+#selection of 09:00 AM data :
+atmospheric_co2_PLATEAU_ROSA <- atmospheric_co2_PLATEAU_ROSA %>% 
+  unite(col='datetime', c('Year', 'Month', 'Day'), sep='-') %>% 
+  unite(col='time', c('Hour', 'Minute'), sep=':') %>% 
+  dplyr::filter(time == "09:00")
+
+#data sorting :
+atmospheric_co2_PLATEAU_ROSA <- atmospheric_co2_PLATEAU_ROSA %>% 
+  mutate(datetime = format(datetime, format="%Y-%m-%d")) %>% 
+  mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>%
+  rename(CO2_PR = co2) %>% 
+  mutate(CO2_PR = case_when(CO2_PR == -999.990 ~ NA_real_ , TRUE ~ CO2_PR)) %>% 
+  select(datetime, CO2_PR)
+
+####################
+
+#CORSE ERSA
+atmospheric_co2_CORSE <- read_delim("../Data/atmospheric_co2_CORSE_RAW_2013_2020.CO2", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+#selection of 09:00 AM data :
+atmospheric_co2_CORSE <- atmospheric_co2_CORSE %>% 
+  unite(col='datetime', c('Year', 'Month', 'Day'), sep='-') %>% 
+  unite(col='time', c('Hour', 'Minute'), sep=':') %>% 
+  dplyr::filter(time == "09:00")
+
+#data sorting :
+atmospheric_co2_CORSE <- atmospheric_co2_CORSE %>% 
+  mutate(datetime = format(datetime, format="%Y-%m-%d")) %>% 
+  mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>%
+  rename(CO2_CORSE = co2) %>% 
+  mutate(CO2_CORSE = case_when(CO2_CORSE == -999.990 ~ NA_real_ , TRUE ~ CO2_CORSE)) %>% 
+  select(datetime, CO2_CORSE)
+
+####################
+
+#OBSERVATOIRE HAUTE PROVENCE
+atmospheric_co2_HAUTE_PROV <- read_delim("../Data/atmospheric_co2_HAUTE_PROVENCE_RAW_2014_2020.CO2", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+#selection of 09:00 AM data :
+atmospheric_co2_HAUTE_PROV <- atmospheric_co2_HAUTE_PROV %>% 
+  unite(col='datetime', c('Year', 'Month', 'Day'), sep='-') %>% 
+  unite(col='time', c('Hour', 'Minute'), sep=':') %>% 
+  dplyr::filter(time == "09:00")
+
+#data sorting :
+atmospheric_co2_HAUTE_PROV <- atmospheric_co2_HAUTE_PROV %>% 
+  mutate(datetime = format(datetime, format="%Y-%m-%d")) %>% 
+  mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>%
+  rename(CO2_HP = co2) %>% 
+  mutate(CO2_HP = case_when(CO2_HP == -999.990 ~ NA_real_ , TRUE ~ CO2_HP)) %>% 
+  select(datetime, CO2_HP)
+
+####################
+
+#LAMPEDUSA
+atmospheric_co2_LAMPEDUSA <- read_delim("../Data/atmospheric_co2_LAMPEDUSA_2006_2022.CO2", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+#selection of 09:00 AM data :
+atmospheric_co2_LAMPEDUSA <- atmospheric_co2_LAMPEDUSA %>% 
+  unite(col='datetime', c('Year', 'Month', 'Day'), sep='-') %>% 
+  unite(col='time', c('Hour', 'Minute'), sep=':') %>% 
+  dplyr::filter(time == "09:00")
+
+#data sorting :
+atmospheric_co2_LAMPEDUSA <- atmospheric_co2_LAMPEDUSA %>% 
+  mutate(datetime = format(datetime, format="%Y-%m-%d")) %>% 
+  mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>%
+  rename(CO2_LAMP = co2) %>% 
+  mutate(CO2_LAMP = case_when(CO2_LAMP == -999.990 ~ NA_real_ , TRUE ~ CO2_LAMP)) %>% 
+  select(datetime, CO2_LAMP)
+
+##
+```
+
+#### Summary 5 sites (µatm)
+
+```{r summary 5 sites atmospheric pCO2 NA values, echo=FALSE, warning=FALSE, message=FALSE}
+
+#merge of 5 sites data : pCO2_air
+pCO2_atmos <- left_join(atmospheric_co2_LAMPEDUSA, atmospheric_co2_MONTE_CIMONE, by="datetime")
+pCO2_atmos <- left_join(pCO2_atmos, atmospheric_co2_PLATEAU_ROSA, by="datetime") 
+pCO2_atmos <- left_join(pCO2_atmos, atmospheric_co2_CORSE, by="datetime")
+pCO2_atmos <- left_join(pCO2_atmos, atmospheric_co2_HAUTE_PROV, by="datetime")
+
+#conversion dry mol fraction of CO2 into partial pressure of CO2(µatm) :
+pCO2_atmos <- pCO2_atmos %>% 
+  mutate(pCO2_LAMP = x2pCO2(S=35, T=25, Patm=1.0, xCO2=CO2_LAMP),
+         pCO2_MC = x2pCO2(S=35, T=25, Patm=1.0, xCO2=CO2_MC),
+         pCO2_PR = x2pCO2(S=35, T=25, Patm=1.0, xCO2=CO2_PR),
+         pCO2_CORSE = x2pCO2(S=35, T=25, Patm=1.0, xCO2=CO2_CORSE),
+         pCO2_HP = x2pCO2(S=35, T=25, Patm=1.0, xCO2=CO2_HP))
+
+#summary :
+summary(pCO2_atmos[,c(7:11)])
+
+#save :
+#write.table(pCO2_atmos, "DATA_pCO2_atmos_06-22.csv", sep=";", col.names = TRUE, row.names = FALSE)
+
+```
+  
+  
+
+## Visualisation 5 sites atmospheric pCO~2~ (µatm)  
+  
+
+```{r Visualisation 5 sites atmospheric pCO2, echo=FALSE, warning=FALSE, message=FALSE, fig.width=9,fig.height=4}
+
+
+#creation column for legend
+pCO2_atmos_long <- pCO2_atmos %>% 
+  rename(Corsica = pCO2_CORSE, `Haute Provence` = pCO2_HP, Lampedusa = pCO2_LAMP, `Monte Cimone` = pCO2_MC, 
+         `Plateau Rosa` = pCO2_PR) %>% 
+  pivot_longer(cols=c(Corsica, `Haute Provence`, Lampedusa, `Monte Cimone`, `Plateau Rosa`), 
+               names_to = "Legend", values_to = "value")
+
+#plot
+pCO2_atmos_long %>% 
+  ggplot() +
+  ggtitle("Atmospheric pCO2 of the 5 sites according to time") +
+  geom_point(aes(x=datetime, y=value, color= Legend), size=0.5) +
+  scale_y_continuous(name="pCO2 (µatm)") + 
+  scale_x_datetime(name="", date_breaks="2 year", date_minor_breaks="1 years", date_labels = "%Y") +
+  scale_colour_discrete(type=c("#0000FF", "#568203", "#048B9A", "#E9383F", "#C4698F"))
+
+
+
+```
+  
+  
+
+#### Corsica vs Haute Provence  
+  
+*Haute Provence = land site (variations explained by other variables like vegetation)*  
+  
+
+```{r Corsica vs Haute Provence , echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center', fig.show='hold'}
+
+#creation column for legend
+corse_HP <- pCO2_atmos %>% 
+  select(datetime, pCO2_CORSE, pCO2_HP)
+
+corse_HP_long <- corse_HP %>% 
+  rename(Corsica = pCO2_CORSE, `Haute Provence` = pCO2_HP) %>% 
+  pivot_longer(cols=Corsica :`Haute Provence`, names_to = "Legend", values_to = "value")
+
+#plot
+corse_HP_long[4798: 11260,] %>% 
+  ggplot() +
+  ggtitle("Atmospheric pCO2 of Corsica vs Haute Provence according to time") +
+  geom_point(aes(x=datetime, y=value, color= Legend), size=0.5) +
+  scale_y_continuous(name="pCO2 (µatm)") + 
+  scale_x_datetime(name="") +
+  scale_colour_discrete(type=c("#0000FF", "#568203"))
+##
+
+#scatter plot :
+corse_HP[4798: 11260,] %>% 
+  ggplot() +
+  aes(x=pCO2_HP, y=pCO2_CORSE) +
+  geom_point(size=0.85) +
+  geom_smooth(method="lm", formula = y ~ x) +
+  scale_x_continuous(name="Haute Provence Observatory") +
+  scale_y_continuous(name="Corsica") +
+  ggtitle("Relationship between Corsica and HP observatory sites") +
+  annotate(geom="text", x=420, y=430, label="slope : 0.73 ± 0.01 *  R-adj : 0.73", color="black")
+
+#slope + intercept
+
+reg_corse_HP <- lm(data = corse_HP, pCO2_CORSE ~ pCO2_HP)
+#summary(reg_corse_HP)
+
+```
+  
+  
+
+### Corsica vs Plateau Rosa  
+  
+*Better fit*  
+*Necessity to take Plateau Rosa data to fill in the series before 2013 and after 2020*  
+  
+
+```{r Corsica vs Plateau Rosa, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center', fig.show='hold'}
+
+#creation column for legend
+corse_PR <- pCO2_atmos %>% 
+  select(datetime, pCO2_CORSE, pCO2_PR)
+
+corse_PR_long <- corse_PR %>% 
+  rename(Corsica = pCO2_CORSE, `Plateau Rosa` = pCO2_PR) %>% 
+  pivot_longer(cols=Corsica :`Plateau Rosa`, names_to = "Legend", values_to = "value")
+
+#plot
+corse_PR_long %>% 
+  ggplot() +
+  ggtitle("Atmospheric pCO2 of Corsica vs Plateau Rosa according to time") +
+  geom_point(aes(x=datetime, y=value, color= Legend), size=0.5) +
+  scale_y_continuous(name="pCO2 (µatm)") + 
+  scale_x_datetime(name="", date_breaks="2 year", date_minor_breaks="1 years", date_labels = "%Y") +
+  scale_colour_discrete(type=c("#0000FF", "#C4698F"))
+##
+
+#scatter plot :
+corse_PR %>% 
+  ggplot() +
+  aes(x=pCO2_PR, y=pCO2_CORSE) +
+  geom_point(size=0.85) +
+  stat_smooth(method="lm", formula = y ~ x) +
+  scale_x_continuous(name="Plateau Rosa") +
+  scale_y_continuous(name="Corsica") +
+  ggtitle("Relationship between Corsica and Plateau Rosa sites") +
+  annotate(geom="text", x=390, y=420, label="slope : 0.99 ± 0.01 *  R-adj : 0.84", color="black")
+
+#slope + intercept
+
+reg_corse_PR <- lm(data = corse_PR, pCO2_CORSE ~ pCO2_PR)
+#summary(reg_corse_PR)
+
+```
+  
+  
+### Corsica vs Lampedusa  
+  
+*Good fit*  
+*Necessity to take Lampedusa data to fill in the series before 2013 and after 2020*  
+  
+
+```{r Corsica vs Lampedusa, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center', fig.show='hold'}
+
+#creation column for legend
+corse_LAMP <- pCO2_atmos %>% 
+  select(datetime, pCO2_CORSE, pCO2_LAMP)
+
+corse_LAMP_long <- corse_LAMP %>% 
+  rename(Corsica = pCO2_CORSE, Lampedusa = pCO2_LAMP) %>% 
+  pivot_longer(cols=Corsica :Lampedusa, names_to = "Legend", values_to = "value")
+
+#plot
+corse_LAMP_long %>% 
+  ggplot() +
+  ggtitle("Atmospheric pCO2 of Corsica vs Lampedusa according to time") +
+  geom_point(aes(x=datetime, y=value, color= Legend), size=0.5) +
+  scale_y_continuous(name="pCO2 (µatm)") + 
+  scale_x_datetime(name="", date_breaks="2 year", date_minor_breaks="1 years", date_labels = "%Y") + 
+  scale_colour_discrete(type=c("#0000FF", "#048B9A"))
+##
+
+#scatter plot :
+corse_LAMP %>% 
+  ggplot() +
+  aes(x=pCO2_LAMP, y=pCO2_CORSE) +
+  geom_point(size=0.85) +
+  stat_smooth(method="lm", formula = y ~ x) +
+  scale_x_continuous(name="Lampedusa") +
+  scale_y_continuous(name="Corsica") +
+  ggtitle("Relationship between Corsica and Lampedusa sites") +
+  annotate(geom="text", x=390, y=420, label="slope : 0.99 ± 0.009 *  R-adj : 0.86", color="black")
+
+#slope + intercept
+
+reg_corse_LAMP <- lm(data = corse_LAMP, pCO2_CORSE ~ pCO2_LAMP)
+#summary(reg_corse_LAMP)
+
+```
+  
+  
+### Plateau Rosa vs Lampedusa  
+  
+*Best fit*  
+*Necessity to take Lampedusa data to fill in the series before 2013 and after 2020*  
+  
+
+```{r Plateau vs Lampedusa, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center', fig.show='hold'}
+
+#creation column for legend
+PR_LAMP <- pCO2_atmos %>% 
+  select(datetime, pCO2_PR, pCO2_LAMP)
+
+PR_LAMP_long <- PR_LAMP %>% 
+  rename(`Plateau Rosa` = pCO2_PR, Lampedusa = pCO2_LAMP) %>% 
+  pivot_longer(cols=c(`Plateau Rosa`, Lampedusa), names_to = "Legend", values_to = "value")
+
+#plot
+PR_LAMP_long %>% 
+  ggplot() +
+  ggtitle("Atmospheric pCO2 of Plateau Rosa vs Lampedusa according to time") +
+  geom_point(aes(x=datetime, y=value, color= Legend), size=0.5) +
+  scale_y_continuous(name="pCO2 (µatm)") + 
+  scale_x_datetime(name="", date_breaks="2 year", date_minor_breaks="1 years", date_labels = "%Y") + 
+  scale_colour_discrete(type=c("#C4698F", "#048B9A"))
+##
+
+#scatter plot :
+PR_LAMP %>% 
+  ggplot() +
+  aes(x=pCO2_LAMP, y=pCO2_PR) +
+  geom_point(size=0.85) +
+  stat_smooth(method="lm", formula = y ~ x) +
+  scale_x_continuous(name="Lampedusa") +
+  scale_y_continuous(name="Plateau Rosa") +
+  ggtitle("Relationship between Plateau Rosa and Lampedusa sites") +
+  annotate(geom="text", x=390, y=420, label="slope : 0.98 ± 0.005 *  R-adj : 0.93", color="black")
+
+#slope + intercept
+
+reg_PR_LAMP <- lm(data = PR_LAMP, pCO2_PR ~ pCO2_LAMP)
+#summary(reg_PR_LAMP)
+
+```
+  
+  
+  
+## NA values  
+  
+#### Lampedusa site (2006-2022)  
+  
+Number of NA : 1805  
+  
+```{r LAMPEDUSA NA values, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center', fig.show='hold'}
+
+#LAMPEDUSA : 1805 NA
+#summary(pCO2_atmos$pCO2_LAMP)
+
+#plot nb NA par années
+atmospheric_co2_LAMPEDUSA_NA_plot <- pCO2_atmos %>% 
+  dplyr::mutate(Year = format(datetime, format="%Y"),
+                Month = format(datetime, format="%m-%d")) %>% 
+  dplyr::group_by(Year, Month) 
+
+atmospheric_co2_LAMPEDUSA_NA_plot$pCO2_LAMP[is.na(atmospheric_co2_LAMPEDUSA_NA_plot$pCO2_LAMP)] <- "NA"
+
+atmospheric_co2_LAMPEDUSA_NA_plot %>% 
+  dplyr::filter(pCO2_LAMP == "NA") %>% 
+  dplyr::group_by(Year) %>% 
+  dplyr::summarise(number_of_NA = n()) %>% 
+  ggplot(aes(x = Year, y = number_of_NA))  +
+  ggtitle("NA occurences by year - Lampedusa site") +
+  geom_segment(aes(x = Year, xend = Year, y = 0, yend = number_of_NA), 
+               color = "grey", linewidth = 2) +
+  geom_point(size = 4, fill = "#048B9A", shape = 21, color = "black") +
+  coord_flip() +
+  scale_x_discrete(name = "") +
+  scale_y_continuous(name = "NA number", limits = c(0,300), breaks = seq(0, 300, 50))
+
+```
+  
+  
+#### Plateau Rosa site (2007-2022)  
+  
+Number of NA : 1354
+  
+```{r PLATEAU ROSA NA values, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6, fig.height=4, fig.align='center', fig.show='hold'}
+
+#PLATEAU ROSA : 1354 NA
+#summary(pCO2_atmos$pCO2_PR)
+
+#plot nb NA par années
+atmospheric_co2_PLATEAU_ROSA_NA_plot <- pCO2_atmos %>% 
+  dplyr::mutate(Year = format(datetime, format="%Y"),
+                Month = format(datetime, format="%m-%d")) %>% 
+  dplyr::group_by(Year, Month) 
+
+atmospheric_co2_PLATEAU_ROSA_NA_plot$pCO2_PR[is.na(atmospheric_co2_PLATEAU_ROSA_NA_plot$pCO2_PR)] <- "NA"
+
+atmospheric_co2_PLATEAU_ROSA_NA_plot %>% 
+  dplyr::filter(pCO2_PR == "NA") %>% 
+  dplyr::group_by(Year) %>% 
+  dplyr::summarise(number_of_NA = n()) %>% 
+  ggplot(aes(x = Year, y = number_of_NA))  +
+  ggtitle("NA occurences by year - Plateau Rosa site") +
+  geom_segment(aes(x = Year, xend = Year, y = 0, yend = number_of_NA), 
+               color = "grey", linewidth = 2) +
+  geom_point(size = 4, fill = "#C4698F", shape = 21, color = "black") +
+  coord_flip() +
+  scale_x_discrete(name = "") +
+  scale_y_continuous(name = "NA number", limits = c(0,200), breaks = seq(0, 200, 50))
+
+```
+  
+  
+#### Corsica site (2013-2022)
+
+Number of NA : 3398
+
+```{r visualisation CORSICA NA values, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4,fig.align='center', fig.show='hold'}
+
+#CORSICA : 3398 NA
+#summary(pCO2_atmos$pCO2_CORSE)
+
+#plot nb NA par années
+atmospheric_co2_CORSICA_NA_plot <- pCO2_atmos %>% 
+  dplyr::mutate(Year = format(datetime, format="%Y"),
+                Month = format(datetime, format="%m-%d")) %>% 
+  dplyr::group_by(Year, Month) 
+
+atmospheric_co2_CORSICA_NA_plot$pCO2_CORSE[is.na(atmospheric_co2_CORSICA_NA_plot$pCO2_CORSE)] <- "NA"
+
+atmospheric_co2_CORSICA_NA_plot %>% 
+  dplyr::filter(pCO2_CORSE == "NA") %>% 
+  dplyr::group_by(Year) %>% 
+  dplyr::summarise(number_of_NA = n()) %>% 
+  ggplot(aes(x = Year, y = number_of_NA))  +
+  ggtitle("NA occurences by year - Corsica site") +
+  geom_segment(aes(x = Year, xend = Year, y = 0, yend = number_of_NA), 
+               color = "grey", linewidth = 2) +
+  geom_point(size = 4, fill = "#0000FF", shape = 21, color = "black") +
+  coord_flip() +
+  scale_x_discrete(name = "") +
+  scale_y_continuous(name = "NA number", limits = c(0,400), breaks = seq(0, 400, 50))
+
+```
+  
+  
+
