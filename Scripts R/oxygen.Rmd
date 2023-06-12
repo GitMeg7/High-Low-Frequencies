@@ -656,7 +656,7 @@ plot_AOU_EOL
 plot_AOU_EOL_annual_cycle
 ##
 
-#scatter plot AOU vs T
+#scatter plot DO vs T
 data_EOL %>% 
   ggplot() +
   aes(x=temp_eol_c, y=oxy_umol_kg) + 
@@ -670,6 +670,16 @@ data_EOL %>%
 #summary(lm(data_EOL$oxy_umol_kg ~ data_EOL$temp_eol_c))
 ##
 
+#Mean AOU by year :
+
+data_EOL %>% 
+  ggplot() +
+  aes(x=Year, y=mean_AOU) +
+  geom_point(shape = 7, size = 2, col="brown") +
+  geom_line() +
+  scale_x_discrete(name="", limits=c("2018" : "2022")) + 
+  scale_y_continuous(name="AOU (µmol/kg)") +
+  ggtitle("Mean of AOU per year at EOL - surface (2018-2022)")
 
 ```
   
