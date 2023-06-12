@@ -604,6 +604,17 @@ AOU_EOL = OSAT - data_EOL$oxy_umol_kg
 data_EOL <- data_EOL %>% 
   mutate(AOU = AOU_EOL)
 
+data_EOL <- cbind(data_EOL, OSAT)
+
+
+#negative AOU (Garcia et al., 2005)
+# −AOU = O2 − OSAT
+
+data_EOL <- data_EOL %>% 
+  mutate(neg_AOU = oxy_umol_kg - OSAT) %>% 
+  group_by(Year) %>% 
+  mutate(mean_AOU = mean(AOU, na.rm = T))
+
 ```
   
   
@@ -676,77 +687,25 @@ Positive trend :
 monthly_means_AOU_EOL <- ungroup(data_EOL) %>% 
   mutate(month = format(datetime, format="%m")) %>% 
   group_by(month) %>%
-  summarise(AOU_month = mean(AOU, na.rm = TRUE))
+  summarise(AOU_month = mean(AOU, na.rm = TRUE),
+            neg_AOU_month = mean(neg_AOU, na.rm = TRUE),
+            OSAT_month = mean(OSAT, na.rm = TRUE),
+            DO_month = mean(oxy_umol_kg, na.rm = TRUE))
 
 ##
 
 ## Parameters
 
 anomalies_AOU_EOL <- left_join(ungroup(data_EOL), monthly_means_AOU_EOL, by = c("Month" = "month")) %>%
-  mutate(AOU_ano = AOU - AOU_month)
+  mutate(AOU_ano = AOU - AOU_month,
+         neg_AOU_ano = neg_AOU - neg_AOU_month,
+         OSAT_ano = OSAT - OSAT_month,
+         DO_ano = oxy_umol_kg - DO_month)
 
 
-
-# Regressions and tables of key parameters
-var_list <- "AOU"
-
-lm.test <- vector("list", length(var_list))
-
-for(i in seq_along(var_list)){
-  lm.test[[i]] <- lm(reformulate(var_list[i], "datetime"), data = anomalies_AOU_EOL)
-}
-
-
-
-lms <- lapply(var_list, function(x) {
-  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
-             data = anomalies_AOU_EOL))
-})
-
-reg <- NULL
-for (i in 1:length(var_list)) {
-  #one loops through all anomalies
-  # calculate probability of fstatistic because it cannot be extracted from lms above
-  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
-  # slope returned by lm is per second
-  prob <-
-    pf(lms[[i]]$fstatistic[1],
-       lms[[i]]$fstatistic[2],
-       lms[[i]]$fstatistic[3],
-       lower.tail = FALSE)
-  reg <-
-    rbind(reg, as.numeric(
-      c(
-        lms[[i]]$coefficients[2, 1],
-        lms[[i]]$coefficients[2, 2],
-        lms[[i]]$coefficients[2, 4],
-        lms[[i]]$coefficients[1, 1],
-        lms[[i]]$coefficients[1, 2],
-        lms[[i]]$coefficients[1, 4],
-        lms[[i]]$fstatistic[1],
-        lms[[i]]$fstatistic[3],
-        lms[[i]]$r.squared,
-        prob
-      )
-    ))
-}
-
-colnames(reg) <-
-  c("Slope",
-    "SE Slope",
-    "P Slope",
-    "Intercept",
-    "SE int.",
-    "P int.",
-    "F",
-    "df",
-    "R2",
-    "P value")
-row.names(reg) <- var_list
-reg_ano_AOU_EOL <- reg
 
 # Regression and table anomalies
-var_list <- "AOU_ano"
+var_list <- c("AOU_ano", "neg_AOU_ano", "OSAT_ano", "DO_ano")
 
 lms <- lapply(var_list, function(x) {
   summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), data = anomalies_AOU_EOL))
@@ -810,6 +769,39 @@ plot_AOU_EOL
 plot_ano_AOU_EOL
 
 ```
+  
+  
+→ Plot mean annual anomalies of O~2~, O~2~sat and negative AOU (Mavropoulou et al., 2020)  
+  
+Negative AOU and dissolved oxygen are similar in magnitude all over the period  
+O~2~sat is close to zero  
+DO and O~2~sat are similar in magnitude for 2018-2020  
+  
+→ thus, the solubility changes have a secondary role in the observed dissolved oxygen variations  
+  
+
+```{r plot mean annual O2, O2 sat & AOU monthly means - EOL, echo=FALSE, warning=FALSE, message=FALSE, fig.width=9,fig.height=4}
+
+anomalies_AOU_EOL <- anomalies_AOU_EOL %>% 
+  group_by(Year) %>% 
+  mutate(mean_neg_AOU_ano = mean(neg_AOU_ano, na.rm=TRUE),
+         mean_OSAT_ano = mean(OSAT_ano, na.rm=TRUE),
+         mean_DO_ano = mean(DO_ano, na.rm=TRUE))
+
+anomalies_AOU_EOL %>%
+ggplot() + 
+  geom_point(aes(x=Year, y=mean_neg_AOU_ano), col="black") +
+  geom_line(aes(x=Year, y=mean_neg_AOU_ano), col="black") +
+  geom_point(aes(x=Year, y=mean_OSAT_ano), col="darkred") +
+  geom_line(aes(x=Year, y=mean_OSAT_ano), col="darkred") +
+  geom_point(aes(x=Year, y=mean_DO_ano), col="#048B9A") + 
+  geom_line(aes(x=Year, y=mean_DO_ano), col="#048B9A") +
+  scale_y_continuous(name="Oxygen(µmol/kg)") +
+  scale_x_discrete(name="", limits = c("2018" : "2022"))
+
+
+```
+  
   
   
 ## Point B - AOU calculation (Apparent Oxygen Utilisation) :  
