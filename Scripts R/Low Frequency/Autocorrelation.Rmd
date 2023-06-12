@@ -283,7 +283,7 @@ model_less_season %>%
   
   
   
-## pCO2 bio : Point B (2007-sept.2022)  
+## pCO2 bio : Point B (2007-Dec.2021)  
   
 #### By residuals (Bates et al. 2014)  
   
@@ -295,6 +295,11 @@ model_less_season %>%
 data_pco2 <- read_delim("../../Data/DATA_SOMLIT_07-22_impute_0m_deltas_pCO2.csv", 
                         delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
   dplyr::filter(datetime <= "2021-12-28")
+
+## Amplitude :
+data_pco2 <- data_pco2 %>% 
+  group_by(Year) %>% 
+  mutate(ampli_bio = max(delta_pCO2_bio) - min(delta_pCO2_bio))
 
 ## Monthly means
 
@@ -436,7 +441,7 @@ plot_ano_pCO2bio <- ggplot(data = anomalies, aes(x = datetime, y = bio_pco2_ano)
   geom_point(colour="#22427C", na.rm=TRUE, size = 0.7) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
   labs(title="",x="", y="ΔpCO2 (bio)  (µatm)") +
-  annotate(geom="text", x=as.Date("2010-03-02"), y=80, label="slope : 3.56 ± 0.15 *", color="black")
+  annotate(geom="text", x=as.Date("2010-03-02"), y=80, label="slope : 3.58 ± 0.15 *", color="black")
 
 plot_delta_bio <- data_pco2 %>% 
   ggplot() +
@@ -519,7 +524,7 @@ plot_ts_pco2_bio_less_season <- autoplot(ts_pco2_bio_less_season) +
   xlab("") + ylab("delta pCO2 (µatm)") +
   ggtitle("Surface delta pCO2 bio variations (without seasonality)") +
   geom_smooth(method=lm) +
-  annotate(geom="text", x=2010, y=100, label="slope : 3.44 ± 0.25 *", color="black")
+  annotate(geom="text", x=2010, y=100, label="slope : 2.50 ± 0.26 *", color="black")
 
 plot_ts_pco2_bio_less_season
 

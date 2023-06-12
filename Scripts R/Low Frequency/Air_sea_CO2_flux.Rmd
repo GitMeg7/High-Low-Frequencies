@@ -47,7 +47,7 @@ Unity : m/s
 ```{r Importation data wind speed, echo=FALSE, warning=FALSE, message=FALSE}
 
 #importation data wind speed (model) of Azur buoy : dec.2008 - dec.2022) :
-Wind_Azur <- read_csv("../Data/Wind_speed_10m_Azur_buoy/model_wind_speed_AZUR.csv") 
+Wind_Azur <- read_csv("../../Data/Wind_speed_10m_Azur_buoy/model_wind_speed_AZUR.csv") 
 
 #delete december 2008 :
 Wind_Azur <- Wind_Azur[319:121962,] #jan.2009 to dec.2022
@@ -55,7 +55,7 @@ Wind_Azur <- Wind_Azur[319:121962,] #jan.2009 to dec.2022
 ##
 
 #importation data wind speed (model) of EOL buoy (fin 2011-2022) :
-Wind_EOL <- read_csv("../Data/model_wind_speed_EOL.csv") %>% arrange(date)
+Wind_EOL <- read_csv("../../Data/model_wind_speed_EOL.csv") %>% arrange(date)
 
 #delete december 2008 :
 Wind_EOL <- Wind_EOL[319:121962,] #jan.2009 to dec.2022
@@ -135,7 +135,7 @@ Unity : µatm
 #period : jan. 2007 - dec. 2022
 #measurements every tuesday at 09h AM
 
-SOMLIT_pcO2 <- read_delim("../Data/DATA_SOMLIT_07-22_impute_0m.csv", 
+SOMLIT_pcO2 <- read_delim("../../Data/DATA_SOMLIT_07-22_impute_0m.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
 # delta pCO2 = pCO2 seawater - pCO2 air 
@@ -192,7 +192,7 @@ TpCO~2~ = only temperature effects on pCO~2~ water variations
 #formula NpCO2 : pCO2w obs * e(0.0423*Tmean-Tobs)
 #formula TpCO2 : pCO2mean * exp[0.0423(Tobs - Tmean)]
 
-pco2_bio <- read_delim("../Data/DATA_SOMLIT_07-22_impute_0m.csv", 
+pco2_bio <- read_delim("../../Data/DATA_SOMLIT_07-22_impute_0m.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
 pco2_bio <- pco2_bio %>% 
@@ -285,7 +285,7 @@ Method used : Wanninkhof (2014)
 
 ```{r calcul flux, echo=FALSE, warning=FALSE, message=FALSE, fig.width=10,fig.height=6}
 
-tab_flux <- read_delim("../Data/DATA_SOMLIT_07-22_impute_0m_deltas_pCO2.csv", 
+tab_flux <- read_delim("../../Data/DATA_SOMLIT_07-22_impute_0m_deltas_pCO2.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
 
@@ -500,7 +500,7 @@ Point B (01/06/2009 - 10/04/2011) :
 
 ```{r comparison Pt B - Carioca, echo=FALSE, warning=FALSE, message=FALSE}
 
-Carioca <- read_delim("../Data/pCO2_carioca/pco2_AT_CT_98_19_Cathy2022.csv", 
+Carioca <- read_delim("../../Data/pCO2_carioca/pco2_AT_CT_98_19_Cathy2022.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% dplyr::filter(PRESS == 5) %>% 
   mutate(Date = as.character(Date),
          Date = as.POSIXct(Date))

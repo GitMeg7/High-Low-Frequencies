@@ -59,7 +59,7 @@ Mytheme <- function(size_labs = 6, face_font="plain", ...) {
 ```{r importation Data EOL raw, echo=FALSE, warning=FALSE, message=FALSE}
 
 #period : septembre 2013-octobre 2022
-EOL_RAW <- read_delim("../Data/EOL_raw_complete_1323.csv", 
+EOL_RAW <- read_delim("../../Data/EOL_raw_complete_1323.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)  
 
 
@@ -90,10 +90,13 @@ EOL_RAW %>%
 
 
 ```
+  
+  
+
 ```{r importation data SOMLIT clean, echo=FALSE, message=FALSE, warning=FALSE}
 
 #period : jan. 2007 - dec. 2022
-SOMLIT <- read_delim("../Data/DATA_SOMLIT_07-22_CLEAN.csv", 
+SOMLIT <- read_delim("../../Data/DATA_SOMLIT_07-22_CLEAN.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
 #selection data surface 1m 
@@ -404,7 +407,7 @@ Missing values :
 
 ```{r importation Data EOL 1 - daily, echo=FALSE, warning=FALSE, message=FALSE}
 
-EOL_daily <- read_delim("../Data/EOL_13-23_1perday_morning.csv", 
+EOL_daily <- read_delim("../../Data/EOL_13-23_1perday_morning.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
   rename(temperature=temp_eol_c, salinity=sal_eol_psu) %>% 
   mutate(datetime = as.POSIXct(datetime)) %>% 
@@ -619,7 +622,7 @@ plot_ano_sal_EOL_1
 
 ```{r importation Data EOL 2 - daily, echo=FALSE, warning=FALSE, message=FALSE}
 
-EOL_daily_2 <- read_delim("../Data/EOL_13-23_2perday_morning_afternoon.csv", 
+EOL_daily_2 <- read_delim("../../Data/EOL_13-23_2perday_morning_afternoon.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
   rename(temperature=temp_eol_c, salinity=sal_eol_psu) %>% 
   mutate(datetime = as.POSIXct(datetime)) %>% 
@@ -856,7 +859,7 @@ plot_ano_sal_EOL_2
 
 ```{r importation Data EOL 3 - hourly, echo=FALSE, warning=FALSE, message=FALSE}
 
-EOL_daily_3 <- read_delim("../Data/EOL_18-23_hourly.csv", 
+EOL_daily_3 <- read_delim("../../Data/EOL_18-23_hourly.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
   rename(temperature=temp_eol_c, salinity=sal_eol_psu) %>% 
   mutate(datetime = as.POSIXct(datetime)) %>% 
@@ -1097,84 +1100,84 @@ summary_table
 #temperature in °C
 
 #annee 2011
-Azur_SST_2011 <- read_delim("../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2011.dat", 
+Azur_SST_2011 <- read_delim("../../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2011.dat", 
                             delim = ";", escape_double = FALSE, col_names = FALSE, 
                             trim_ws = TRUE)
 
 Azur_SST_2011 <- Azur_SST_2011 %>% rename(datetime=X1, SST=X2)
 ##
 #annee 2012
-Azur_SST_2012 <- read_delim("../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2012.dat", 
+Azur_SST_2012 <- read_delim("../../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2012.dat", 
                             delim = ";", escape_double = FALSE, col_names = FALSE, 
                             trim_ws = TRUE)
 
 Azur_SST_2012 <- Azur_SST_2012 %>% rename(datetime=X1, SST=X2)
 ##
 #annee 2013
-Azur_SST_2013 <- read_delim("../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2013.dat", 
+Azur_SST_2013 <- read_delim("../../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2013.dat", 
                             delim = ";", escape_double = FALSE, col_names = FALSE, 
                             trim_ws = TRUE)
 
 Azur_SST_2013 <- Azur_SST_2013 %>% rename(datetime=X1, SST=X2)
 ##
 #annee 2014
-Azur_SST_2014 <- read_delim("../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2014.dat", 
+Azur_SST_2014 <- read_delim("../../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2014.dat", 
                             delim = ";", escape_double = FALSE, col_names = FALSE, 
                             trim_ws = TRUE)
 
 Azur_SST_2014 <- Azur_SST_2014 %>% rename(datetime=X1, SST=X2)
 ##
 #annee 2015
-Azur_SST_2015 <- read_delim("../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2015.dat", 
+Azur_SST_2015 <- read_delim("../../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2015.dat", 
                             delim = ";", escape_double = FALSE, col_names = FALSE, 
                             trim_ws = TRUE)
 
 Azur_SST_2015 <- Azur_SST_2015 %>% rename(datetime=X1, SST=X2)
 ##
 #annee 2016
-Azur_SST_2016 <- read_delim("../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2016.dat", 
+Azur_SST_2016 <- read_delim("../../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2016.dat", 
                             delim = ";", escape_double = FALSE, col_names = FALSE, 
                             trim_ws = TRUE)
 
 Azur_SST_2016 <- Azur_SST_2016 %>% rename(datetime=X1, SST=X2)
 ##
 #annee 2017
-Azur_SST_2017 <- read_delim("../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2017.dat", 
+Azur_SST_2017 <- read_delim("../../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2017.dat", 
                             delim = ";", escape_double = FALSE, col_names = FALSE, 
                             trim_ws = TRUE)
 
 Azur_SST_2017 <- Azur_SST_2017 %>% rename(datetime=X1, SST=X2)
 ##
 #annee 2018
-Azur_SST_2018 <- read_delim("../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2018.dat", 
+Azur_SST_2018 <- read_delim("../../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2018.dat", 
                             delim = ";", escape_double = FALSE, col_names = FALSE, 
                             trim_ws = TRUE)
 
 Azur_SST_2018 <- Azur_SST_2018 %>% rename(datetime=X1, SST=X2)
 ##
 #annee 2019
-Azur_SST_2019 <- read_delim("../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2019.dat", 
+Azur_SST_2019 <- read_delim("../../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2019.dat", 
                             delim = ";", escape_double = FALSE, col_names = FALSE, 
                             trim_ws = TRUE)
 
 Azur_SST_2019 <- Azur_SST_2019 %>% rename(datetime=X1, SST=X2)
 ##
 #annee 2020
-Azur_SST_2020 <- read_delim("../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2020.dat", 
+Azur_SST_2020 <- read_delim("../../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2020.dat", 
                             delim = ";", escape_double = FALSE, col_names = FALSE, 
                             trim_ws = TRUE)
 
 Azur_SST_2020 <- Azur_SST_2020 %>% rename(datetime=X1, SST=X2)
 ##
 #annee 2021
-Azur_SST_2021 <- read_delim("../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2021.dat", 
+Azur_SST_2021 <- read_delim("../../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2021.dat", 
                             delim = ";", escape_double = FALSE, col_names = FALSE, 
                             trim_ws = TRUE)
 
 Azur_SST_2021 <- Azur_SST_2021 %>% rename(datetime=X1, SST=X2)
 ##
 #annee 2022
-Azur_SST_2022 <- read_delim("../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2022.dat", 
+Azur_SST_2022 <- read_delim("../../Data/SST_Azur_buoy/ODAS_CA_SST/Azur_SST_2022.dat", 
                             delim = ";", escape_double = FALSE, col_names = FALSE, 
                             trim_ws = TRUE)
 
@@ -1345,7 +1348,7 @@ Unity : m/s
 ```{r wind speed data EOL, echo=FALSE, warning=FALSE, message=FALSE}
 
 #importation data wind speed (model) of EOL buoy (fin 2011-2022) :
-Wind_EOL <- read_csv("../Data/model_wind_speed_EOL.csv") %>% arrange(date)
+Wind_EOL <- read_csv("../../Data/model_wind_speed_EOL.csv") %>% arrange(date)
 
 #delete december 2008 :
 Wind_EOL <- Wind_EOL %>% 
@@ -1360,7 +1363,7 @@ Wind_EOL <- Wind_EOL %>%
 #save Wind_CapF :
 #write.table(Wind_CapF, "DATA_CAP_FERRAT_12-20_01-22.csv", sep=";", col.names = TRUE, row.names = FALSE)
 
-Wind_CapF <- read_delim("../Data/DATA_CAP_FERRAT_12-20_01-22.csv", 
+Wind_CapF <- read_delim("../../Data/DATA_CAP_FERRAT_12-20_01-22.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
 

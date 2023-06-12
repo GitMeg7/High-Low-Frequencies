@@ -61,8 +61,9 @@ Mytheme <- function(size_labs = 6, face_font="plain", ...) {
 #oxygen EOL : only from 05-05-2017 - mars.2023
 #frequency : hourly (raw)
 #unity : umol/kg
-data_EOL <- read_delim("../Data/EOL_raw_complete_1323.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
-  dplyr::filter(datetime >= "2018-01-01 00:00:00" & datetime <= "2022-11-22 05:00:00")
+data_EOL <- read_delim("../Data/EOL_18-23_hourly.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
+  dplyr::filter(datetime <= "2022-12-31")
 
 
 ```
@@ -198,24 +199,24 @@ colnames(reg) <-
 row.names(reg) <- var_list
 reg_ano_EOL_oxy <- reg
 
-reg_ano_EOL_oxy #pourquoi p-value = 0
+#reg_ano_EOL_oxy #pourquoi p-value = 0
 
 
 ## Plot anomalies EOL oxy :
 
 #plot 1 : raw oxygen data
 plot_ano_EOL_oxy_raw <- ggplot(data = anomalies_EOL_oxy, aes(x = datetime, y = oxy_EOL_ano), na.rm=TRUE) +
-  scale_x_datetime(date_breaks="2 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  scale_x_date(date_breaks="1 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_point(colour="#2C75FF", na.rm=TRUE, size = 0.8) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
   labs(title="Anomalies trend for EOL oxygen data (2018-2022)",x="", y="Oxygen (µmol/kg)") +
-  annotate(geom="text", x=as.POSIXct("2020-04-22 04:00:00"), y=50, label="slope : -1.21 ± 0.027 *", color="black")
+  annotate(geom="text", x=as.Date("2020-04-22 04:00:00"), y=50, label="slope : -1.21 ± 0.027 *", color="black")
 
 plot_EOL_oxy_raw <- data_EOL %>% 
   ggplot() +
   aes(x=datetime, y=oxy_umol_kg) + 
   geom_line(size=0.8, col = "#22427C", linewidth = 0.5) +
-  scale_x_datetime(name="") +
+  scale_x_date(name="", date_breaks="1 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   scale_y_continuous(name="Oxygen (µmol/kg)") +
   ggtitle("EOL oxygen time series in µmol/kg (2018-2022)")
 #geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE)
@@ -225,339 +226,9 @@ plot_EOL_oxy_raw
 plot_ano_EOL_oxy_raw
 ```
   
-## Point B raw - oxygen time series trend analysis by residuals (substracting climatological monthly means)  
-  
-*Analysis without interpolations* 
-  
-###### → surface data (1m) :  
-
-
-```{r data oxygen SOMLIT, echo=FALSE, warning=FALSE, message=FALSE}
-
-#oxygen SOMLIT : from jan.2002 - dec.2022
-#frequency : weekly
-#unity : umol/kg
-data_somlit_surf_raw <- read_delim("../Data/DATA_SOMLIT_02-22_oxy.csv", 
-    delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
-  dplyr::filter(PROF_NUM < 3) %>% 
-  mutate(Month = format(datetime, format="%m"))
-
-data_somlit_prof_raw <- read_delim("../Data/DATA_SOMLIT_02-22_oxy.csv", 
-    delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
-  dplyr::filter(PROF_NUM > 3) %>% 
-  mutate(Month = format(datetime, format="%m"))
-
-```
-
-  
-```{r trend analysis SOMLIT oxy - surface - raw, echo=FALSE, warning=FALSE, message=FALSE}
-
-
-## Monthly means surface :
-
-monthly_means_somlit_oxy_surf <- ungroup(data_somlit_surf_raw) %>% 
-  group_by(Month) %>%
-  summarise(oxy_somlit_month = mean(oxy_umol_kg, na.rm = TRUE))
-
-##
-
-## Parameters
-
-anomalies_somlit_oxy_surf <- left_join(ungroup(data_somlit_surf_raw), monthly_means_somlit_oxy_surf, by = "Month") %>%
-  mutate(oxy_somlit_ano = oxy_umol_kg - oxy_somlit_month)
-
-
-
-# Regressions and tables of key parameters
-var_list <- "oxy_umol_kg"
-
-lm.test <- vector("list", length(var_list))
-
-for(i in seq_along(var_list)){
-  lm.test[[i]] <- lm(reformulate(var_list[i], "datetime"), data = anomalies_somlit_oxy_surf)
-}
-
-
-
-lms <- lapply(var_list, function(x) {
-  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
-             data = anomalies_somlit_oxy_surf))
-})
-
-reg <- NULL
-for (i in 1:length(var_list)) {
-  #one loops through all anomalies
-  # calculate probability of fstatistic because it cannot be extracted from lms above
-  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
-  # slope returned by lm is per second
-  prob <-
-    pf(lms[[i]]$fstatistic[1],
-       lms[[i]]$fstatistic[2],
-       lms[[i]]$fstatistic[3],
-       lower.tail = FALSE)
-  reg <-
-    rbind(reg, as.numeric(
-      c(
-        lms[[i]]$coefficients[2, 1],
-        lms[[i]]$coefficients[2, 2],
-        lms[[i]]$coefficients[2, 4],
-        lms[[i]]$coefficients[1, 1],
-        lms[[i]]$coefficients[1, 2],
-        lms[[i]]$coefficients[1, 4],
-        lms[[i]]$fstatistic[1],
-        lms[[i]]$fstatistic[3],
-        lms[[i]]$r.squared,
-        prob
-      )
-    ))
-}
-
-colnames(reg) <-
-  c("Slope",
-    "SE Slope",
-    "P Slope",
-    "Intercept",
-    "SE int.",
-    "P int.",
-    "F",
-    "df",
-    "R2",
-    "P value")
-row.names(reg) <- var_list
-reg_ano_somlit_oxy_surf <- reg
-
-# Regression and table anomalies
-var_list <- "oxy_somlit_ano"
-
-lms <- lapply(var_list, function(x) {
-  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), data = anomalies_somlit_oxy_surf))
-})
-
-reg <- NULL
-for (i in 1:length(var_list)) {
-  #one loops through all anomalies
-  # calculate probability of fstatistic because it cannot be extracted from lms above
-  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
-  # slope returned by lm is per second
-  prob <-
-    pf(lms[[i]]$fstatistic[1],
-       lms[[i]]$fstatistic[2],
-       lms[[i]]$fstatistic[3],
-       lower.tail = FALSE)
-  reg <-
-    rbind(reg, as.numeric(
-      c(
-        lms[[i]]$coefficients[2, 1],
-        lms[[i]]$coefficients[2, 2],
-        lms[[i]]$coefficients[2, 4],
-        lms[[i]]$coefficients[1, 1],
-        lms[[i]]$coefficients[1, 2],
-        lms[[i]]$coefficients[1, 4],
-        lms[[i]]$fstatistic[1],
-        lms[[i]]$fstatistic[3],
-        lms[[i]]$r.squared,
-        prob
-      )
-    ))
-}
-colnames(reg) <-
-  c("Slope",
-    "SE Slope",
-    "P Slope",
-    "Intercept",
-    "SE int.",
-    "P int.",
-    "F",
-    "df",
-    "R2",
-    "P value")
-row.names(reg) <- var_list
-reg_ano_somlit_oxy_surf <- reg
-
-reg_ano_somlit_oxy_surf 
-
-
-## Plot anomalies Point B surface :
-
-plot_ano_somlit_oxy_surf <- ggplot(data = anomalies_somlit_oxy_surf, aes(x = datetime, y = oxy_somlit_ano), na.rm=TRUE) +
-  scale_x_datetime(date_breaks="2 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
-  geom_point(colour="#2C75FF", na.rm=TRUE, size = 0.8) + 
-  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
-  labs(title="Anomalies trend for oxygen data (surface) at Point B (2002-2022)",x="", y="Oxygen (μmol/kg)") +
-  annotate(geom="text", x=as.POSIXct("2020-04-22 04:00:00"), y=50, label="slope : 0.37 ± 0.067 *", color="black")
-
-
-plot_somlit_oxy_surf <- data_somlit_surf_raw %>% 
-  ggplot() +
-  aes(x=datetime, y=oxy_umol_kg) + 
-  geom_line(size=0.8, col = "#22427C", linewidth = 0.5) +
-  scale_x_datetime(name="") +
-  scale_y_continuous(name="Oxygen (μmol/kg)") +
-  ggtitle("Point B oxygen time series (surface) in μmol/kg (2002-2022)")
-#geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE)
-##
-
-plot_somlit_oxy_surf
-plot_ano_somlit_oxy_surf
-```
-
   
   
-###### → 50 m depth data :  
-  
-```{r trend analysis SOMLIT oxy - 50m - raw, echo=FALSE, warning=FALSE, message=FALSE}
-
-
-## Monthly means 50m :
-
-monthly_means_somlit_oxy_prof <- ungroup(data_somlit_prof_raw) %>% 
-  group_by(Month) %>%
-  summarise(oxy_somlit_month = mean(oxy_umol_kg, na.rm = TRUE))
-
-##
-
-## Parameters
-
-anomalies_somlit_oxy_prof <- left_join(ungroup(data_somlit_prof_raw), monthly_means_somlit_oxy_prof, by = "Month") %>%
-  mutate(oxy_somlit_ano = oxy_umol_kg - oxy_somlit_month)
-
-
-
-# Regressions and tables of key parameters
-var_list <- "oxy_umol_kg"
-
-lm.test <- vector("list", length(var_list))
-
-for(i in seq_along(var_list)){
-  lm.test[[i]] <- lm(reformulate(var_list[i], "datetime"), data = anomalies_somlit_oxy_prof)
-}
-
-
-
-lms <- lapply(var_list, function(x) {
-  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
-             data = anomalies_somlit_oxy_prof))
-})
-
-reg <- NULL
-for (i in 1:length(var_list)) {
-  #one loops through all anomalies
-  # calculate probability of fstatistic because it cannot be extracted from lms above
-  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
-  # slope returned by lm is per second
-  prob <-
-    pf(lms[[i]]$fstatistic[1],
-       lms[[i]]$fstatistic[2],
-       lms[[i]]$fstatistic[3],
-       lower.tail = FALSE)
-  reg <-
-    rbind(reg, as.numeric(
-      c(
-        lms[[i]]$coefficients[2, 1],
-        lms[[i]]$coefficients[2, 2],
-        lms[[i]]$coefficients[2, 4],
-        lms[[i]]$coefficients[1, 1],
-        lms[[i]]$coefficients[1, 2],
-        lms[[i]]$coefficients[1, 4],
-        lms[[i]]$fstatistic[1],
-        lms[[i]]$fstatistic[3],
-        lms[[i]]$r.squared,
-        prob
-      )
-    ))
-}
-
-colnames(reg) <-
-  c("Slope",
-    "SE Slope",
-    "P Slope",
-    "Intercept",
-    "SE int.",
-    "P int.",
-    "F",
-    "df",
-    "R2",
-    "P value")
-row.names(reg) <- var_list
-reg_ano_somlit_oxy_prof <- reg
-
-# Regression and table anomalies
-var_list <- "oxy_somlit_ano"
-
-lms <- lapply(var_list, function(x) {
-  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), data = anomalies_somlit_oxy_prof))
-})
-
-reg <- NULL
-for (i in 1:length(var_list)) {
-  #one loops through all anomalies
-  # calculate probability of fstatistic because it cannot be extracted from lms above
-  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
-  # slope returned by lm is per second
-  prob <-
-    pf(lms[[i]]$fstatistic[1],
-       lms[[i]]$fstatistic[2],
-       lms[[i]]$fstatistic[3],
-       lower.tail = FALSE)
-  reg <-
-    rbind(reg, as.numeric(
-      c(
-        lms[[i]]$coefficients[2, 1],
-        lms[[i]]$coefficients[2, 2],
-        lms[[i]]$coefficients[2, 4],
-        lms[[i]]$coefficients[1, 1],
-        lms[[i]]$coefficients[1, 2],
-        lms[[i]]$coefficients[1, 4],
-        lms[[i]]$fstatistic[1],
-        lms[[i]]$fstatistic[3],
-        lms[[i]]$r.squared,
-        prob
-      )
-    ))
-}
-colnames(reg) <-
-  c("Slope",
-    "SE Slope",
-    "P Slope",
-    "Intercept",
-    "SE int.",
-    "P int.",
-    "F",
-    "df",
-    "R2",
-    "P value")
-row.names(reg) <- var_list
-reg_ano_somlit_oxy_prof <- reg
-
-reg_ano_somlit_oxy_prof 
-
-
-## Plot anomalies Point B 50m :
-
-plot_ano_somlit_oxy_prof <- ggplot(data = anomalies_somlit_oxy_prof, aes(x = datetime, y = oxy_somlit_ano), na.rm=TRUE) +
-  scale_x_datetime(date_breaks="2 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
-  geom_point(colour="#2C75FF", na.rm=TRUE, size = 0.8) + 
-  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
-  labs(title="Anomalies trend for oxygen data (50 m) at Point B (2002-2022)",x="", y="Oxygen (μmol/kg)") +
-  annotate(geom="text", x=as.POSIXct("2020-04-22 04:00:00"), y=50, label="slope : 0.30 ± 0.078 *", color="black")
-
-plot_somlit_oxy_prof <- data_somlit_prof_raw %>% 
-  ggplot() +
-  aes(x=datetime, y=oxy_umol_kg) + 
-  geom_line(size=0.8, col = "#22427C", linewidth = 0.5) +
-  scale_x_datetime(name="") +
-  scale_y_continuous(name="Oxygen (μmol/kg)") +
-  ggtitle("Point B oxygen time series (50 m) in μmol/kg (2002-2022)")
-#geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE)
-##
-
-plot_somlit_oxy_prof
-plot_ano_somlit_oxy_prof
-```
-
-  
-  
-## Point B clean - oxygen time series trend analysis by residuals (substracting climatological monthly means)  
+## Point B - oxygen time series trend analysis by residuals (substracting climatological monthly means)  
   
 *Analysis with interpolations* 
   
@@ -576,11 +247,13 @@ data_somlit_surf <- read_delim("../Data/DATA_SOMLIT_02-22_oxy_CLEAN_impute_0m.cs
 
 ```
 
+
 → Trend analysis by residuals (Bates et al. 2014) :  
   
-Observed dissolved oxygen : positive trend (Garcia et al., 1998)  
-*slope : 0.37 ± 0.067 μmol/kg par année*  
+Observed dissolved oxygen : positive trend (Garcia et al., 2005)  
+*slope : 0.33 ± 0.061 μmol/kg per year*  
   
+
 ```{r trend analysis SOMLIT oxy - surface, echo=FALSE, warning=FALSE, message=FALSE}
 
 
@@ -705,7 +378,7 @@ colnames(reg) <-
 row.names(reg) <- var_list
 reg_ano_somlit_surf <- reg
 
-reg_ano_somlit_oxy_surf 
+#reg_ano_somlit_surf 
 
 
 ## Plot anomalies Point B surface :
@@ -715,14 +388,14 @@ plot_ano_somlit_surf <- ggplot(data = anomalies_somlit_surf, aes(x = datetime, y
   geom_point(colour="#2C75FF", na.rm=TRUE, size = 0.8) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
   labs(title="Anomalies trend for oxygen data (surface) at Point B (2002-2022)",x="", y="Oxygen (μmol/kg)") +
-  annotate(geom="text", x=as.POSIXct("2020-04-22 04:00:00"), y=50, label="slope : 0.37 ± 0.067 *", color="black")
+  annotate(geom="text", x=as.POSIXct("2020-04-22 04:00:00"), y=50, label="slope : 0.33 ± 0.061 *", color="black")
 
 
 plot_somlit_surf <- data_somlit_surf %>% 
   ggplot() +
   aes(x=datetime, y=oxy_umol_kg) + 
   geom_line(size=0.8, col = "#22427C", linewidth = 0.5) +
-  scale_x_datetime(name="") +
+  scale_x_datetime(name="", date_breaks="2 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   scale_y_continuous(name="Oxygen (μmol/kg)") +
   ggtitle("Point B oxygen time series (surface) in μmol/kg (2002-2022)")
 #geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE)
@@ -750,8 +423,8 @@ data_somlit_prof <- read_delim("../Data/DATA_SOMLIT_02-22_oxy_CLEAN_impute_50m.c
 
 → Trend analysis by residuals (Bates et al. 2014) :  
   
-*légère augmentation de l'oxygène dissous à 50 mètres (μmol/kg) : *  
-*slope : 0.30 ± 0.078 μmol/kg par année*  
+Observed dissolved oxygen : positive trend (Garcia et al., 2005)  
+*slope : 0.20 ± 0.068 μmol/kg per year*  
   
 ```{r trend analysis SOMLIT oxy - 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -876,7 +549,7 @@ colnames(reg) <-
 row.names(reg) <- var_list
 reg_ano_somlit_prof <- reg
 
-reg_ano_somlit_oxy_prof 
+#reg_ano_somlit_prof 
 
 
 ## Plot anomalies Point B 50m :
@@ -893,7 +566,7 @@ plot_somlit_prof <- data_somlit_prof %>%
   ggplot() +
   aes(x=datetime, y=oxy_umol_kg) + 
   geom_line(size=0.8, col = "#22427C", linewidth = 0.5) +
-  scale_x_datetime(name="") +
+  scale_x_datetime(name="", date_breaks="2 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   scale_y_continuous(name="Oxygen (μmol/kg)") +
   ggtitle("Point B oxygen time series (50m) in μmol/kg (2002-2022)")
 #geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE)
@@ -934,7 +607,6 @@ data_EOL <- data_EOL %>%
 ```
   
   
-
 → AOU (EOL) annual cycle :  
   
 AOU : valeurs majoritairement négatives = 
@@ -952,7 +624,7 @@ plot_AOU_EOL <- data_EOL %>%
   aes(x=datetime, y=AOU) + 
   geom_line(col = "#01796F") + 
   ggtitle("AOU in µmol/kg at sea surface - EOL (2018-2022)") +
-  scale_x_datetime(name="") + 
+  scale_x_date(name="", date_breaks="1 year", date_minor_breaks="1 years", labels = date_format("%Y")) + 
   scale_y_continuous(name="AOU (µmol/kg)")
 ##
 
@@ -976,46 +648,27 @@ plot_AOU_EOL_annual_cycle
 #scatter plot AOU vs T
 data_EOL %>% 
   ggplot() +
-  aes(x=temp_eol_c, y=AOU) + 
+  aes(x=temp_eol_c, y=oxy_umol_kg) + 
   geom_point() + 
   scale_x_continuous(name="Temp. (°C)") + 
-  scale_y_continuous(name="AOU (µmol/kg)") +
-  ggtitle("AOU according to temperature : EOL (2018-2022)") +
+  scale_y_continuous(name="DO (µmol/kg)") +
+  ggtitle("DO according to temperature : EOL (2018-2022)") +
   geom_smooth(method=lm) + 
-  annotate(geom="text", x=22, y=60, label="slope : -0.46 ± 0.009 *", color="black")
+  annotate(geom="text", x=25, y=260, label="slope : -3.55 ± 0.009 *", color="black")
 
-#summary(lm(data_EOL$AOU ~ data_EOL$temp_eol_c))
+#summary(lm(data_EOL$oxy_umol_kg ~ data_EOL$temp_eol_c))
 ##
-
-#histogram AOU by year :
-
-data_EOL <- data_EOL %>% 
-  mutate(Year = format(datetime, format="%Y"),
-         month = format(datetime, format="%m")) %>% 
-  group_by(Year) %>% 
-  mutate(mean_AOU = mean(AOU, na.rm = T))
-  
-data_EOL %>% 
-  ggplot() +
-  aes(x=Year, y=mean_AOU) +
-  geom_bar(stat = "identity", width=0.9, fill="#303030") +
-  scale_x_discrete(name="", limits=c("2018" : "2022")) + 
-  scale_y_continuous(name="AOU (µmol/kg)") +
-  ggtitle("Mean of AOU per year (2018-2022)")
-
-#echelle pas bonne je sais pas pourquoi
-
 
 
 ```
   
   
   
-
 ###### Trend analysis by residuals - AOU - EOL (Bates et al. 2014) :  
   
-*augmentation de l'AOU (µmol/kg) : *  
-*slope : 1.34 ± 0.023 µmol/kg par année* 
+Positive trend :  
+*slope : 1.34 ± 0.023 µmol/kg per year*  
+  
 
 ```{r trend analysis AOU - EOL, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -1029,7 +682,7 @@ monthly_means_AOU_EOL <- ungroup(data_EOL) %>%
 
 ## Parameters
 
-anomalies_AOU_EOL <- left_join(ungroup(data_EOL), monthly_means_AOU_EOL, by = "month") %>%
+anomalies_AOU_EOL <- left_join(ungroup(data_EOL), monthly_means_AOU_EOL, by = c("Month" = "month")) %>%
   mutate(AOU_ano = AOU - AOU_month)
 
 
@@ -1140,16 +793,16 @@ colnames(reg) <-
 row.names(reg) <- var_list
 reg_ano_AOU_EOL <- reg
 
-reg_ano_AOU_EOL 
+#reg_ano_AOU_EOL 
 
 
 #plot anomalies AOU surface :
 plot_ano_AOU_EOL <- ggplot(data = anomalies_AOU_EOL, aes(x = datetime, y = AOU_ano), na.rm=TRUE) +
-  scale_x_datetime(date_breaks="1 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  scale_x_date(date_breaks="1 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_point(colour="#2C75FF", na.rm=TRUE, size = 0.8) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
   labs(title="Anomalies trend for AOU at EOL (2018-2022)",x="", y="AOU (µmol/kg)") +
-  annotate(geom="text", x=as.POSIXct("2020-04-22 04:00:00"), y=50, label="slope : 1.34 ± 0.023 *", color="black")
+  annotate(geom="text", x=as.Date("2020-04-22 04:00:00"), y=50, label="slope : 1.34 ± 0.023 *", color="black")
 
 
 
@@ -1157,8 +810,9 @@ plot_AOU_EOL
 plot_ano_AOU_EOL
 
 ```
-
-## Point B clean - AOU calculation (Apparent Oxygen Utilisation) :  
+  
+  
+## Point B - AOU calculation (Apparent Oxygen Utilisation) :  
   
 AOU  = [O~2~ saturation] in µmol/kg  - [O~2~ observed] in µmol/kg  
 Unity : µmol/kg  
@@ -1192,16 +846,16 @@ data_somlit_surf <- data_somlit_surf %>%
 data_somlit_surf <- cbind(data_somlit_surf, OSAT)
 
 
-#negative AOU (Garcia et al., 1998)
+#negative AOU (Garcia et al., 2005)
 # −AOU = O2 − OSAT
 
 data_somlit_surf <- data_somlit_surf %>% 
-  mutate(neg_AOU = oxy_umol_kg - OSAT)
+  mutate(neg_AOU = oxy_umol_kg - OSAT) %>% 
+  group_by(year) %>% 
+  mutate(mean_AOU = mean(AOU, na.rm = T)) 
 
 ```
   
-  
-
 
 → AOU (surface) annual cycle : low values in summer  
   
@@ -1232,7 +886,7 @@ data_somlit_surf %>%
   geom_point() + 
   scale_x_continuous(name="Temp. (°C)") + 
   scale_y_continuous(name="DO (µmol/kg)") +
-  ggtitle("Correlation between temperature and issolved at Point B (2002-2022)") +
+  ggtitle("Correlation between temperature and DO at Point B (2002-2022)") +
   geom_smooth(method=lm) + 
   annotate(geom="text", x=22, y=125, label="slope : -2.72 ± 0.09 *", color="black")
 
@@ -1240,6 +894,20 @@ data_somlit_surf %>%
 #cor(data_somlit_surf$T, data_somlit_surf$oxy_umol_kg)
 ##
 
+#Mean AOU by year :
+
+data_somlit_surf <- data_somlit_surf %>% 
+  group_by(year) %>% 
+  mutate(mean_AOU = mean(AOU, na.rm = T))
+  
+data_somlit_surf %>% 
+  ggplot() +
+  aes(x=year, y=mean_AOU) +
+  geom_point(shape = 7, size = 2, col="brown") +
+  geom_line() +
+  scale_x_discrete(name="", limits=c("2002" : "2022")) + 
+  scale_y_continuous(name="AOU (µmol/kg)") +
+  ggtitle("Mean of AOU per year at Point B - surface (2002-2022)")
 
 
 ```
@@ -1276,10 +944,9 @@ plot_AOU_min_max_mean_surf
 ```
   
   
-
 ###### Trend analysis by residuals - AOU - surface (Bates et al. 2014) :  
   
-AOU : negative trend (Garcia et al., 1998)  
+AOU : negative trend (Garcia et al., 2005)  
 Inverse relation between AOU and observed O~2~  
 *slope : -0.50 ± 0.060 µmol/kg par année* 
 
@@ -1290,7 +957,8 @@ monthly_means_AOU_surf <- ungroup(data_somlit_surf) %>%
   group_by(month) %>%
   summarise(AOU_month = mean(AOU, na.rm = TRUE),
             OSAT_month = mean(OSAT, na.rm = TRUE),
-            neg_AOU_month = mean(neg_AOU, na.rm = TRUE))
+            neg_AOU_month = mean(neg_AOU, na.rm = TRUE),
+            DO_month = mean(oxy_umol_kg, na.rm= TRUE))
 
 ##
 
@@ -1299,12 +967,13 @@ monthly_means_AOU_surf <- ungroup(data_somlit_surf) %>%
 anomalies_AOU_surf <- left_join(ungroup(data_somlit_surf), monthly_means_AOU_surf, by = "month") %>%
   mutate(AOU_ano = AOU - AOU_month,
          OSAT_ano = OSAT - OSAT_month,
-         neg_AOU_ano = neg_AOU - neg_AOU_month)
+         neg_AOU_ano = neg_AOU - neg_AOU_month,
+         DO_ano = oxy_umol_kg - DO_month)
 
 
 
 # Regressions and tables of key parameters
-var_list <- c("AOU","OSAT", "neg_AOU")
+var_list <- c("AOU","OSAT","neg_AOU", "oxy_umol_kg")
 
 lm.test <- vector("list", length(var_list))
 
@@ -1362,7 +1031,7 @@ row.names(reg) <- var_list
 reg_ano_AOU_surf <- reg
 
 # Regression and table anomalies
-var_list <- c("AOU_ano", "OSAT_ano", "neg_AOU_ano")
+var_list <- c("AOU_ano", "OSAT_ano", "neg_AOU_ano", "DO_ano")
 
 lms <- lapply(var_list, function(x) {
   summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), data = anomalies_AOU_surf))
@@ -1437,49 +1106,38 @@ plot_ano_AOU_surf
   
   
   
-→ Plot monthly means of O~2~, O~2~sat and negative AOU anomalies (Mavropoulou et al., 2020)  
+→ Plot mean annual anomalies of O~2~, O~2~sat and negative AOU (Mavropoulou et al., 2020)  
   
-Negative AOU and dissolved oxygen are similar in magnitude (r = 0.98)  
+Negative AOU and dissolved oxygen are similar in magnitude all over the period  
 O~2~sat is close to zero  
-→ thus, the solubility changes have a secondary role in the observed dissolved oxygen variations  
+DO and O~2~sat are similar in magnitude on 2 periods : 2002-2005 and 2011-2017  
   
+→ thus, out of these two periods, the solubility changes have a secondary role in the observed dissolved oxygen variations  
   
 
-```{r plot O2, O2 sat & AOU monthly means, echo=FALSE, warning=FALSE, message=FALSE}
+```{r plot mean annual O2, O2 sat & AOU monthly means, echo=FALSE, warning=FALSE, message=FALSE, fig.width=9,fig.height=4}
 
 anomalies_AOU_surf <- anomalies_AOU_surf %>% 
   group_by(year) %>% 
-  mutate(annual_mean_AOU = mean(AOU_ano),
-         annual_mean_OSAT = mean(OSAT_ano),
-         annual_mean_neg_AOU = mean(neg_AOU_ano))
+  mutate(mean_neg_AOU_ano = mean(neg_AOU_ano, na.rm=TRUE),
+         mean_OSAT_ano = mean(OSAT_ano, na.rm=TRUE),
+         mean_DO_ano = mean(DO_ano, na.rm=TRUE))
 
-anomalies_somlit_surf <- anomalies_somlit_surf %>% 
-  group_by(year) %>% 
-  mutate(annual_mean = mean(oxy_somlit_ano))
-
-plot_df <- data.frame(datetime = anomalies_AOU_surf$year, AOU = anomalies_AOU_surf$annual_mean_AOU, 
-                      neg_AOU = anomalies_AOU_surf$annual_mean_neg_AOU,
-                        OSAT = anomalies_AOU_surf$annual_mean_OSAT, OXY = anomalies_somlit_surf$annual_mean)
-
-plot_df <- distinct(plot_df)
-
-plot_df %>% 
+anomalies_AOU_surf %>%
 ggplot() + 
-  geom_line(aes(x=datetime, y=neg_AOU), col="black") +
-  geom_line(aes(x=datetime, y=OSAT), col="darkgreen") +
-  geom_line(aes(x=datetime, y=OXY), col="blue") + 
-  scale_y_continuous(name="Oxygen(µmol/kg)")
-
-#cor(plot_df$neg_AOU, plot_df$OXY, method="pearson")
-
-
+  geom_point(aes(x=year, y=mean_neg_AOU_ano), col="black") +
+  geom_line(aes(x=year, y=mean_neg_AOU_ano), col="black") +
+  geom_point(aes(x=year, y=mean_OSAT_ano), col="darkred") +
+  geom_line(aes(x=year, y=mean_OSAT_ano), col="darkred") +
+  geom_point(aes(x=year, y=mean_DO_ano), col="#048B9A") + 
+  geom_line(aes(x=year, y=mean_DO_ano), col="#048B9A") +
+  scale_y_continuous(name="Oxygen(µmol/kg)") +
+  scale_x_discrete(name="", limits=c("2002" : "2022"))
 
 
 ```
-
-
-
-
+  
+  
 ###### Trend analysis by moving average (decompose function) :  
   
 *Quick overview of the components of the series*   
@@ -1504,7 +1162,6 @@ autoplot(AOU_ts_decomp) +
 ```
   
   
-
 → Remove seasonality :  
   
 measured values - seasonal pattern  
@@ -1568,6 +1225,17 @@ AOU = OSAT_prof - data_somlit_prof$oxy_umol_kg
 data_somlit_prof <- data_somlit_prof %>% 
   mutate(AOU = AOU)
 
+data_somlit_prof <- cbind(data_somlit_prof, OSAT_prof)
+
+
+
+#negative AOU (Garcia et al., 2005)
+# −AOU = O2 − OSAT
+
+data_somlit_prof <- data_somlit_prof %>% 
+  mutate(neg_AOU = oxy_umol_kg - OSAT_prof) %>% 
+  group_by(year) %>% 
+  mutate(mean_AOU = mean(AOU, na.rm = T)) 
 ```
   
 
@@ -1621,7 +1289,7 @@ data_somlit_prof %>%
   geom_line() +
   scale_x_discrete(name="", limits=c("2002" : "2022")) + 
   scale_y_continuous(name="AOU (µmol/kg)") +
-  ggtitle("Mean of AOU per year (2002-2022)")
+  ggtitle("Mean of AOU per year at Point B - 50 m (2002-2022)")
 
 
 
@@ -1641,77 +1309,24 @@ Inverse relation between AOU and observed O~2~
 ## Monthly means AOU surface :
 monthly_means_AOU_prof <- ungroup(data_somlit_prof) %>% 
   group_by(month) %>%
-  summarise(AOU_month = mean(AOU, na.rm = TRUE))
+  summarise(AOU_month = mean(AOU, na.rm = TRUE),
+            neg_AOU_month = mean(neg_AOU, na.rm=TRUE),
+            OSAT_month = mean(OSAT_prof, na.rm=TRUE),
+            DO_month = mean(oxy_umol_kg, na.rm=TRUE))
 
 ##
 
 ## Parameters
 
 anomalies_AOU_prof <- left_join(ungroup(data_somlit_prof), monthly_means_AOU_prof, by = "month") %>%
-  mutate(AOU_ano = AOU - AOU_month)
+  mutate(AOU_ano = AOU - AOU_month,
+         neg_AOU_ano = neg_AOU - neg_AOU_month,
+         OSAT_ano = OSAT_prof - OSAT_month,
+         DO_ano = oxy_umol_kg - DO_month)
 
-
-
-# Regressions and tables of key parameters
-var_list <- "AOU"
-
-lm.test <- vector("list", length(var_list))
-
-for(i in seq_along(var_list)){
-  lm.test[[i]] <- lm(reformulate(var_list[i], "datetime"), data = anomalies_AOU_prof)
-}
-
-
-
-lms <- lapply(var_list, function(x) {
-  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
-             data = anomalies_AOU_prof))
-})
-
-reg <- NULL
-for (i in 1:length(var_list)) {
-  #one loops through all anomalies
-  # calculate probability of fstatistic because it cannot be extracted from lms above
-  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
-  # slope returned by lm is per second
-  prob <-
-    pf(lms[[i]]$fstatistic[1],
-       lms[[i]]$fstatistic[2],
-       lms[[i]]$fstatistic[3],
-       lower.tail = FALSE)
-  reg <-
-    rbind(reg, as.numeric(
-      c(
-        lms[[i]]$coefficients[2, 1],
-        lms[[i]]$coefficients[2, 2],
-        lms[[i]]$coefficients[2, 4],
-        lms[[i]]$coefficients[1, 1],
-        lms[[i]]$coefficients[1, 2],
-        lms[[i]]$coefficients[1, 4],
-        lms[[i]]$fstatistic[1],
-        lms[[i]]$fstatistic[3],
-        lms[[i]]$r.squared,
-        prob
-      )
-    ))
-}
-
-colnames(reg) <-
-  c("Slope",
-    "SE Slope",
-    "P Slope",
-    "Intercept",
-    "SE int.",
-    "P int.",
-    "F",
-    "df",
-    "R2",
-    "P value")
-row.names(reg) <- var_list
-reg_ano_AOU_prof <- reg
 
 # Regression and table anomalies
-var_list <- "AOU_ano"
+var_list <- c("AOU_ano", "neg_AOU_ano", "OSAT_ano", "DO_ano")
 
 lms <- lapply(var_list, function(x) {
   summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), data = anomalies_AOU_prof))
@@ -1784,7 +1399,38 @@ plot_ano_AOU_prof
 ```
   
   
+→ Plot mean annual anomalies of O~2~, O~2~sat and negative AOU (Mavropoulou et al., 2020)  
+  
+Negative AOU and dissolved oxygen are similar in magnitude all over the period  
+O~2~sat is close to zero  
+DO and O~2~sat are similar in magnitude only for 2002-2004  
+  
+→ thus, the solubility changes have a secondary role in the observed dissolved oxygen variations  
+  
 
+```{r plot mean annual O2, O2 sat & AOU monthly means - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=9,fig.height=4}
+
+anomalies_AOU_prof <- anomalies_AOU_prof %>% 
+  group_by(year) %>% 
+  mutate(mean_neg_AOU_ano = mean(neg_AOU_ano, na.rm=TRUE),
+         mean_OSAT_ano = mean(OSAT_ano, na.rm=TRUE),
+         mean_DO_ano = mean(DO_ano, na.rm=TRUE))
+
+anomalies_AOU_prof %>%
+ggplot() + 
+  geom_point(aes(x=year, y=mean_neg_AOU_ano), col="black") +
+  geom_line(aes(x=year, y=mean_neg_AOU_ano), col="black") +
+  geom_point(aes(x=year, y=mean_OSAT_ano), col="darkred") +
+  geom_line(aes(x=year, y=mean_OSAT_ano), col="darkred") +
+  geom_point(aes(x=year, y=mean_DO_ano), col="#048B9A") + 
+  geom_line(aes(x=year, y=mean_DO_ano), col="#048B9A") +
+  scale_y_continuous(name="Oxygen(µmol/kg)") +
+  scale_x_discrete(name="", limits=c("2002" : "2022"))
+
+
+```
+  
+  
 ###### Trend analysis by moving average (decompose function) :  
   
 *Quick overview of the components of the series*   
@@ -1804,7 +1450,6 @@ autoplot(AOU_ts_prof_decomp) +
 ```
   
   
-
 → Remove seasonality :  
   
 *applying trend on the outputed series*  
@@ -1873,12 +1518,12 @@ plot_AOU_ts_prof_less_season
 ###comparaison flux CO2 Point B avec flux CO2 large (dyfamed) :
 #merlivat 2018 (seanoe data pco2) dyfamed flux co2 large
 #recup AT/CT pour comparer les 2 periodes
-#faire avec data pco2 atmos + vents de azur + pco2 data recup sur seanoe (carioca = large) + laurent envoie les 2 dernieres années (2020-2021)
+#faire avec data pco2 atmos + vents de azur + pco2 data recup sur seanoe (carioca = large) + laurent envoie les 2 dernieres années (2020-2021) : trop de data manquantes
 
 
 ###comparaison tendances temperature EOL vs autres bouées :
 #coriolis cotier : autres series temp autres sites, au moins temperature (solemio, sète, sola, poeme)
-#comparer les series + tendances sur une mm periode
+#comparer les series + tendances sur une mm periode : FAIT
 
 
 
