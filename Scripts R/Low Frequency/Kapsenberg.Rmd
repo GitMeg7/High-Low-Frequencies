@@ -32,6 +32,8 @@ library("seacarb")
 library("lmodel2")
 library("lmtest")
 library("cowplot")
+library("kableExtra")
+library("knitr")
 ```
 
 ```{r import data (0m et 50m) + periode 2007-2015, echo=FALSE, warning=FALSE, message=FALSE}
@@ -751,7 +753,7 @@ data_0722_50m <- read_delim("../../Data/DATA_SOMLIT_07-22_impute_50m.csv",
 
 ```
 
-```{r calculate monthly means 2007-2022 - surface, echo=FALSE, warning=FALSE, message=FALSE}
+```{r calculate monthly means 2007-2022 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=10}
 
 #choix pH 18 car moyenne temperature sur toute la periode 2007-2022 : 18.83
 
@@ -773,45 +775,25 @@ monthly_means_0m_0722 <- ungroup(data_0722) %>%
     pCO2_month = mean(impute_pCO2_w, na.rm = TRUE),
     SD_pCO2 = sd(impute_pCO2_w, na.rm = TRUE))
 
-monthly_means_0m_0722
 
+##RAPPORT##
 
+monthly_means_0m_0722_rapport <- monthly_means_0m_0722 %>% 
+  mutate(`T (°C)` = paste(round(Temperature_month, digits=2), "±", round(SD_temp, digits=2)),
+         S = paste(round(Salinity_month, digits=2), "±", round(SD_sal, digits=2)),
+        `pH (18)` = paste(round(pH18_month, digits=2), "±", round(SD_PH18, digits=2)),
+        `*A*~T~ (μmol.kg^-1^)` = paste(round(ta_month, digits=2), "±", round(SD_ta, digits=2)),
+        `*C*~T~ (μmol.kg^-1^)` = paste(round(dic_month, digits=2), "±", round(SD_dic, digits=2)),
+        `*p*CO~2~ (μatm)` = paste(round(pCO2_month, digits=2), "±", round(SD_pCO2, digits=2)))
 
-
-# ## TEST TDT : 
-# test_tdt <- data_0722 %>% 
-#   group_by(Year.Month) %>% 
-#   mutate(monthly = mean(impute_temp)) %>% 
-#   group_by(Month) %>% 
-#   mutate(Temperature_month = mean(impute_temp))
-#   
-# annual = mean(monthly_means_0m_0722$Temperature_month)
-# 
-# test_monthly_means <- monthly_means_0m_0722 %>% 
-#   mutate(adj = Temperature_month - annual)
-# 
-# test_tdt <- test_tdt %>% 
-#   mutate(adj = Temperature_month - annual, 
-#          new = monthly - adj)
-
-
-
-# 
-# test_monthly_means %>% 
-#   ggplot() + 
-#   geom_histogram(aes(x=Month, y=adj), stat = "identity") 
-#   #geom_point(aes(x=Month, y=new), col = "red")
-# 
-# test_tdt %>% 
-#   ggplot() + 
-#   geom_line(aes(x=datetime, y=impute_temp), col="grey") +
-#   geom_point(aes(x=datetime, y=monthly), col="darkblue") + 
-#   geom_point(aes(x=datetime, y=new), col="red") + 
-#   geom_smooth(method=lm, aes(x=datetime, y=new), col="red")
-# 
-# 
-# SD <- sd(test_tdt$new)
-
+monthly_means_0m_0722_rapport <- monthly_means_0m_0722_rapport %>% 
+  dplyr::select(Month, `T (°C)`, S, `pH (18)`, `*A*~T~ (μmol.kg^-1^)`, 
+                `*C*~T~ (μmol.kg^-1^)`, `*p*CO~2~ (μatm)`) %>% 
+  rename(Mois = Month)
+        
+        
+kable(monthly_means_0m_0722_rapport, caption="Monthly means at Point B (surface)",
+      format = "pipe", align='l')
 
 
 ```
@@ -832,79 +814,15 @@ ano_0m_0722 <- left_join(ungroup(data_0722), monthly_means_0m_0722, by = "Month"
     pH18_ano = pH_18 - pH18_month,
     pCO2_ano = pCO2_w - pCO2_month)
 
-# Regressions and tables of key parameters
-var_list2 <-
-  c("salinity",
-    "temperature",
-    "dic",
-    "ta",
-    "pH_calc",
-    "pH_18",
-    "pCO2_w")
-
-lm.test2 <- vector("list", length(var_list2))
-
-for(i in seq_along(var_list2)){
-  lm.test2[[i]] <- lm(reformulate(var_list2[i], "datetime"), data = ano_0m_0722)
-}
-
-
-lms2 <- lapply(var_list2, function(x) {
-  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
-             data = ano_0m_0722))
-})
-
-reg2 <- NULL
-for (i in 1:length(var_list2)) {
-  #one loops through all anomalies
-  # calculate probability of fstatistic because it cannot be extracted from lms above
-  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
-  # slope returned by lm is per second
-  prob2 <-
-    pf(lms2[[i]]$fstatistic[1],
-       lms2[[i]]$fstatistic[2],
-       lms2[[i]]$fstatistic[3],
-       lower.tail = FALSE)
-  reg2 <-
-    rbind(reg2, as.numeric(
-      c(
-        lms2[[i]]$coefficients[2, 1],
-        lms2[[i]]$coefficients[2, 2],
-        lms2[[i]]$coefficients[2, 4],
-        lms2[[i]]$coefficients[1, 1],
-        lms2[[i]]$coefficients[1, 2],
-        lms2[[i]]$coefficients[1, 4],
-        lms2[[i]]$fstatistic[1],
-        lms2[[i]]$fstatistic[3],
-        lms2[[i]]$r.squared,
-        prob2
-      )
-    ))
-}
-
-colnames(reg2) <-
-  c("Slope",
-    "SE Slope",
-    "P Slope",
-    "Intercept",
-    "SE int.",
-    "P int.",
-    "F",
-    "df",
-    "R2",
-    "P value")
-row.names(reg2) <- var_list2
-reg_ano_surf2 <- reg2
 
 # Regression and table anomalies
 var_list2 <-
-  c(
+  c("Temperature_ano",
     "Salinity_ano",
-    "Temperature_ano",
-    "dic_ano",
-    "ta_ano",
     "pH_calc_ano",
     "pH18_ano",
+    "ta_ano",
+    "dic_ano",
     "pCO2_ano"
   )
 lms2 <- lapply(var_list2, function(x) {
@@ -951,7 +869,25 @@ colnames(reg2) <-
 row.names(reg2) <- var_list2
 reg_ano_surf2 <- reg2
 
-reg_ano_surf2
+
+reg_ano_surf2_rapport <- as.data.frame(reg_ano_surf2)
+reg_ano_surf2_rapport <- reg_ano_surf2_rapport %>% 
+  mutate(Variables = c("T (°C)", "S", "pH~calc~", "pH~(18)~", "*A*~T~ (μmol.kg^-1^)",
+                       "*C*~T~ (μmol.kg^-1^)", "*p*CO~2~ (μatm)"))
+
+reg_ano_surf2_rapport <- reg_ano_surf2_rapport %>% 
+  mutate( 
+  `Pente ± sd` = paste(round(reg_ano_surf2_rapport$Slope, digits=3), "±", round(reg_ano_surf2_rapport$`SE Slope`, digits=4)), 
+  `P pente` = format(reg_ano_surf2_rapport$`P Slope`, scientific=TRUE),
+  `Int. ± sd` = paste(round(reg_ano_surf2_rapport$Intercept, digits=2), "±", round(reg_ano_surf2_rapport$`SE int.`, digits=2)),
+  `P Int.` = format(reg_ano_surf2_rapport$`P int.`,scientific=TRUE), 
+  `R^2^` = round(reg_ano_surf2_rapport$R2, digits=4))
+
+
+reg_ano_surf2_rapport <- reg_ano_surf2_rapport[,c(11:16)]
+
+kable(reg_ano_surf2_rapport, caption="Time series anomaly regression analyses (Point B surface)", 
+      format = "pipe", align='l')
 
 ```
   
@@ -991,14 +927,14 @@ plot_ano_sal2 <- ggplot(data = ano_0m_0722, aes(x = datetime, y = Salinity_ano),
   scale_y_continuous(breaks=c(-2,-1,0,0.5)) +
   geom_point(colour="#22427C", na.rm=TRUE, size=0.7) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
-  labs(title="",x="", y="Salinity")
+  labs(title="",x="", y="Salinité")
 
 plot_sal_0722 <- data_0722 %>% 
   ggplot() +
   aes(x=datetime, y=impute_sal) + 
   geom_line(size=0.7, col="#303030") +
   scale_x_date(name="", date_breaks="4 year", date_minor_breaks="1 years", labels = NULL) +
-  scale_y_continuous(name="Salinity") 
+  scale_y_continuous(name="Salinité") 
 #  ggtitle("Surface salinity time series at Point B (2007-2022)")
 
 plot_sal_0722
@@ -1063,18 +999,43 @@ plot_ano_ta_0722 <- ggplot(data = ano_0m_0722, aes(x = datetime, y = ta_ano), na
   scale_x_date(date_breaks="4 year", date_minor_breaks="1 years", labels = NULL) +
   geom_point(colour="#22427C", na.rm=TRUE, size=0.7) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
-  labs(title="",x="",y= "Total alkalinity (µmol/kg)")
+  labs(title="",x="",y=expression(paste(italic(A)[T], " (",mu, "mol ", kg^-1,")")))
 
 plot_ta_0722 <- data_0722 %>% 
   ggplot() +
   aes(x=datetime, y=impute_ta) + 
   geom_line(size=0.7, col="#303030") +
   scale_x_date(name="", date_breaks="4 year", date_minor_breaks="1 years", labels = NULL) +
-  scale_y_continuous(name="Total alkalinity (µmol/kg)") 
-#  ggtitle("Surface total alkalinity time series (2007-2022)")
+  labs(title="",x="",y=expression(paste(italic(A)[T], " (",mu, "mol ", kg^-1,")")))
+  
+
 
 plot_ta_0722
 plot_ano_ta_0722
+```
+  
+  
+###### Plot of anomalies : DIC (2007-2022) - surface  
+  
+
+```{r, plot anomalies DIC 2007-2022 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+plot_ano_dic_0722 <- ggplot(data = ano_0m_0722, aes(x = datetime, y = dic_ano), na.rm=TRUE) +
+  scale_x_date(date_breaks="4 year", date_minor_breaks="1 years", labels = NULL) +
+  geom_point(colour="#22427C", na.rm=TRUE, size=0.7) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title="",x="",y=expression(paste(italic(C)[T], " (",mu, "mol ", kg^-1,")")))
+
+plot_dic_0722 <- data_0722 %>% 
+  ggplot() +
+  aes(x=datetime, y=impute_dic) + 
+  geom_line(size=0.7, col="#303030") +
+  scale_x_date(name="", date_breaks="4 year", date_minor_breaks="1 years", labels = NULL) +
+  labs(title="",x="",y=expression(paste(italic(C)[T], " (",mu, "mol ", kg^-1,")")))
+
+
+plot_dic_0722
+plot_ano_dic_0722
 ```
   
   
@@ -1087,14 +1048,14 @@ plot_ano_pCO22 <- ggplot(data = ano_0m_0722, aes(x = datetime, y = pCO2_ano), na
   scale_x_date(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_point(colour="#22427C", na.rm=TRUE, size=0.7) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
-  labs(title="",x="",y=expression(paste(pCO[2], " (",mu, "atm)")))
+  labs(title="",x="",y=expression(paste(italic(p), CO[2], " (",mu, "atm)")))
 
 plot_pCO2_0722 <- data_0722 %>% 
   ggplot() +
   aes(x=datetime, y=impute_pCO2_w) + 
   geom_line(size=0.7, col="#303030") +
-  scale_x_date(name="", date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
-  scale_y_continuous(name="pCO2 (μatm)") 
+  scale_x_date(date_breaks="4 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  labs(title="",x="",y=expression(paste(italic(p), CO[2], " (",mu, "atm)")))
 #  ggtitle("Time series observations at 0m of pCO2 (2007-2022)")
 
 plot_pCO2_0722
@@ -1103,10 +1064,11 @@ plot_ano_pCO22
   
   
 
-```{r rapport, echo=FALSE, warning=FALSE, message=FALSE, fig.width=10,fig.height=11}
+```{r plot pour rapport, echo=FALSE, warning=FALSE, message=FALSE, fig.width=12,fig.height=11}
 
-plot_grid_1 <- plot_grid(plot_temp_0722, plot_ano_temp2, plot_sal_0722, plot_ano_sal2, plot_ph_0722, plot_ano_ph2, 
-          plot_ta_0722, plot_ano_ta_0722, plot_pCO2_0722, plot_ano_pCO22, align='vh', ncol=2)
+plot_grid_1 <- plot_grid(plot_temp_0722, plot_ano_temp2, plot_sal_0722, plot_ano_sal2, 
+                         plot_ph_18_0722, plot_ano_ph_18_2, plot_ta_0722, plot_ano_ta_0722, 
+                         plot_dic_0722, plot_ano_dic_0722, plot_pCO2_0722, plot_ano_pCO22, align='vh', ncol=2)
 
 plot_grid_1
 
@@ -1125,7 +1087,7 @@ plot_grid_1
   
 *(rajouter les SD)*
 
-```{r calculate monthly means 2007-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE}
+```{r calculate monthly means 2007-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=10}
 
 monthly_means_50m_0722 <- ungroup(data_0722_50m) %>% 
   group_by(Month) %>%
@@ -1145,7 +1107,25 @@ monthly_means_50m_0722 <- ungroup(data_0722_50m) %>%
     pCO2_month = mean(impute_pco2_w, na.rm = TRUE),
     SD_pCO2 = sd(impute_pco2_w, na.rm = TRUE))
 
-monthly_means_50m_0722
+
+##RAPPORT##
+
+monthly_means_50m_0722_rapport <- monthly_means_50m_0722 %>% 
+  mutate(`T (°C)` = paste(round(Temperature_month, digits=2), "±", round(SD_temp, digits=2)),
+         S = paste(round(Salinity_month, digits=2), "±", round(SD_sal, digits=2)),
+        `pH (18)` = paste(round(pH18_month, digits=2), "±", round(SD_PH18, digits=2)),
+        `*A*~T~ (μmol.kg^-1^)` = paste(round(ta_month, digits=2), "±", round(SD_ta, digits=2)),
+        `*C*~T~ (μmol.kg^-1^)` = paste(round(dic_month, digits=2), "±", round(SD_dic, digits=2)),
+        `*p*CO~2~ (μatm)` = paste(round(pCO2_month, digits=2), "±", round(SD_pCO2, digits=2)))
+
+monthly_means_50m_0722_rapport <- monthly_means_50m_0722_rapport %>% 
+  dplyr::select(Month, `T (°C)`, S, `pH (18)`, `*A*~T~ (μmol.kg^-1^)`, 
+                `*C*~T~ (μmol.kg^-1^)`, `*p*CO~2~ (μatm)`) %>% 
+  rename(Mois = Month)
+        
+        
+kable(monthly_means_50m_0722_rapport, caption="Monthly means at Point B (50 m)",
+      format = "pipe", align='l')
 
 ```
   
@@ -1165,79 +1145,15 @@ ano_50m_0722 <- left_join(ungroup(data_0722_50m), monthly_means_50m_0722, by = "
     pH18_ano = pH_18 - pH18_month,
     pCO2_ano = impute_pco2_w - pCO2_month)
 
-# Regressions and tables of key parameters
-var_list <-
-  c("salinity",
-    "temperature",
-    "dic",
-    "ta",
-    "pH_calc",
-    "pH_18",
-    "pCO2_w")
-
-lm.test <- vector("list", length(var_list))
-
-for(i in seq_along(var_list)){
-  lm.test[[i]] <- lm(reformulate(var_list[i], "datetime"), data = ano_50m_0722)
-}
-
-
-lms <- lapply(var_list, function(x) {
-  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
-             data = ano_50m_0722))
-})
-
-reg <- NULL
-for (i in 1:length(var_list)) {
-  #one loops through all anomalies
-  # calculate probability of fstatistic because it cannot be extracted from lms above
-  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
-  # slope returned by lm is per second
-  prob <-
-    pf(lms[[i]]$fstatistic[1],
-       lms[[i]]$fstatistic[2],
-       lms[[i]]$fstatistic[3],
-       lower.tail = FALSE)
-  reg <-
-    rbind(reg, as.numeric(
-      c(
-        lms[[i]]$coefficients[2, 1],
-        lms[[i]]$coefficients[2, 2],
-        lms[[i]]$coefficients[2, 4],
-        lms[[i]]$coefficients[1, 1],
-        lms[[i]]$coefficients[1, 2],
-        lms[[i]]$coefficients[1, 4],
-        lms[[i]]$fstatistic[1],
-        lms[[i]]$fstatistic[3],
-        lms[[i]]$r.squared,
-        prob
-      )
-    ))
-}
-
-colnames(reg) <-
-  c("Slope",
-    "SE Slope",
-    "P Slope",
-    "Intercept",
-    "SE int.",
-    "P int.",
-    "F",
-    "df",
-    "R2",
-    "P value")
-row.names(reg) <- var_list
-reg_ano_50m <- reg
 
 # Regression and table anomalies
 var_list <-
-  c(
+  c("Temperature_ano",
     "Salinity_ano",
-    "Temperature_ano",
-    "dic_ano",
-    "ta_ano",
     "pH_calc_ano",
     "pH18_ano",
+    "ta_ano",
+    "dic_ano",
     "pCO2_ano"
   )
 lms <- lapply(var_list, function(x) {
@@ -1284,7 +1200,27 @@ colnames(reg) <-
 row.names(reg) <- var_list
 reg_ano_50m <- reg
 
-reg_ano_50m
+
+##RAPPORT##
+
+reg_ano_50m_rapport <- as.data.frame(reg_ano_50m)
+reg_ano_50m_rapport <- reg_ano_50m_rapport %>% 
+  mutate(Variables = c("T (°C)", "S", "pH~calc~", "pH~(18)~", "*A*~T~ (μmol.kg^-1^)",
+                       "*C*~T~ (μmol.kg^-1^)", "*p*CO~2~ (μatm)"))
+
+reg_ano_50m_rapport <- reg_ano_50m_rapport %>% 
+  mutate( 
+  `Pente ± sd` = paste(round(reg_ano_50m_rapport$Slope, digits=3), "±", round(reg_ano_50m_rapport$`SE Slope`, digits=4)), 
+  `P pente` = format(reg_ano_50m_rapport$`P Slope`, scientific=TRUE),
+  `Int. ± sd` = paste(round(reg_ano_50m_rapport$Intercept, digits=2), "±", round(reg_ano_50m_rapport$`SE int.`, digits=2)),
+  `P Int.` = format(reg_ano_50m_rapport$`P int.`,scientific=TRUE), 
+  `R^2^` = round(reg_ano_50m_rapport$R2, digits=4))
+
+
+reg_ano_50m_rapport <- reg_ano_50m_rapport[,c(11:16)]
+
+kable(reg_ano_50m_rapport, caption="Time series anomaly regression analyses (Point B 50 m)", 
+      format = "pipe", align='l')
 
 ```
   
@@ -1395,15 +1331,15 @@ plot_ano_ta_0722_50m <- ggplot(data = ano_50m_0722, aes(x = datetime, y = ta_ano
   scale_x_date(date_breaks="4 year", date_minor_breaks="1 years", labels = NULL) +
   geom_point(colour="#22427C", na.rm=TRUE, size=0.7) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
-  labs(title="",x="",y="Total alkalinity (μmol/kg)")
+  labs(title="",x="",y=expression(paste(italic(A)[T], " (",mu, "mol ", kg^-1,")")))
 
 plot_ta_0722_50m <- data_0722_50m %>% 
   ggplot() +
   aes(x=datetime, y=impute_ta) + 
   geom_line(size=0.7, col="#303030") +
   scale_x_date(name="", date_breaks="4 year", date_minor_breaks="1 years", labels = NULL) +
-  scale_y_continuous(name="Total alkalinity (μmol/kg)") 
-#  ggtitle("50m total alcalinity time series (2007-2022)")
+  labs(title="",x="",y=expression(paste(italic(A)[T], " (",mu, "mol ", kg^-1,")")))
+
 
 plot_ta_0722_50m
 plot_ano_ta_0722_50m
@@ -1411,6 +1347,30 @@ plot_ano_ta_0722_50m
 ```
   
 
+###### Plot of anomalies : DIC (2007-2022) - 50m  
+  
+
+```{r, plot anomalies DIC 2007-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
+
+plot_ano_dic_0722_50m <- ggplot(data = ano_50m_0722, aes(x = datetime, y = dic_ano), na.rm=TRUE) +
+  scale_x_date(date_breaks="4 year", date_minor_breaks="1 years", labels = NULL) +
+  geom_point(colour="#22427C", na.rm=TRUE, size=0.7) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title="",x="",y=expression(paste(italic(C)[T], " (",mu, "mol ", kg^-1,")")))
+
+plot_dic_0722_50m <- data_0722_50m %>% 
+  ggplot() +
+  aes(x=datetime, y=impute_dic) + 
+  geom_line(size=0.7, col="#303030") +
+  scale_x_date(name="", date_breaks="4 year", date_minor_breaks="1 years", labels = NULL) +
+  labs(title="",x="",y=expression(paste(italic(C)[T], " (",mu, "mol ", kg^-1,")")))
+
+
+plot_dic_0722_50m
+plot_ano_dic_0722_50m
+```
+  
+  
 ###### Plot of anomalies : pCO2 (2007-2022) - 50m  
   
 
@@ -1436,12 +1396,12 @@ plot_ano_pCO22_50m
   
   
 
-```{r rapport_50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=10,fig.height=11}
+```{r rapport_50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=12,fig.height=11}
 
 plot_grid_2 <- plot_grid(plot_temp_0722_50m, plot_ano_temp2_50m, plot_sal_0722_50m, plot_ano_sal2_50m, 
-                         plot_ph_0722_50m, plot_ano_ph2_50m, plot_ta_0722_50m, plot_ano_ta_0722_50m, 
-                         plot_pCO2_0722_50m, plot_ano_pCO22_50m, align='vh', ncol=2)
-
+                         plot_ph_18_0722_50m, plot_ano_ph_18_2_50m, plot_ta_0722_50m, plot_ano_ta_0722_50m, 
+                         plot_dic_0722_50m, plot_ano_dic_0722_50m, plot_pCO2_0722_50m, plot_ano_pCO22_50m,
+                         align='vh', ncol=2)
 
 plot_grid_2
 

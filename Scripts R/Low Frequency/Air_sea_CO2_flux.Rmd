@@ -146,7 +146,7 @@ SOMLIT_pcO2 <- read_delim("../../Data/DATA_SOMLIT_07-22_impute_0m.csv",
 ## Annual cycle of seawater pCO~2~ at Point B (2007-2022) :  
   
 
-```{r annual cycle of pCO2 (2007-2021), echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=5}
+```{r annual cycle of pCO2 (2007-2021), echo=FALSE, warning=FALSE, message=FALSE, fig.width=7,fig.height=5}
 
 #Jan.2007 - Sept.2022 :
 annual_cycle_pco2Plot <- SOMLIT_pcO2 %>% 
@@ -161,8 +161,6 @@ annual_cycle_pco2Plot <- SOMLIT_pcO2 %>%
   theme_bw() +
   scale_y_continuous(name = "pCO2 (µatm)") 
 
-annual_cycle_pco2Plot
-##
 
 #save
  # ggsave(filename = "annual_cycle_pco2Plot.jpg", # Nommez le fichier dans lequel vous voulez enregistrer, ajoutez l'extension du format de fichier que vous voulez utiliser (ex. pdf).
@@ -170,6 +168,21 @@ annual_cycle_pco2Plot
  #        height = 5, # Fournir les dimensions voulues
  #        width = 8, 
  #        units = "in") 
+
+
+
+##polar plot :
+ts_pco2w <- ts(SOMLIT_pcO2$impute_pCO2_w, start = c(2007,1), end = c(2022,39), freq = 52)
+
+polar_plot_pco2w <- ggseasonplot(ts_pco2w, polar = TRUE, main="", xlab="", ylab = "",
+             season.labels = c("Jan","Feb","Mar","Apr","May","Jun","Jul",
+                               "Aug","Sep","Oct","Nov","Dec")) +
+  scale_colour_discrete(name="Années", type=c("#80D0D0", "#83A697", "#97DFC6", "#B0F2B6",  "#F4FEFE", "#FFF0BC", 
+                               "#F7E269", "#EFD807", "#DD985C", "#ED7F10", "#CC5500", "#FF866A", 
+                               "#E9383F", "#C60800", "#850606", "#6E0B14"))
+
+annual_cycle_pco2Plot
+polar_plot_pco2w
 ```
   
   
@@ -187,7 +200,7 @@ TpCO~2~ = only temperature effects on pCO~2~ water variations
 -   delta pCO~2~(bio) : biological effects = pCO~2~ water - TpCO~2~  
   
 
-```{r NpCO2 & TpCO2 & deltas calculations, echo=FALSE, warning=FALSE, message=FALSE, fig.width=10,fig.height=6}
+```{r NpCO2 & TpCO2 & deltas calculations, echo=FALSE, warning=FALSE, message=FALSE, fig.width=9,fig.height=6}
 
 #formula NpCO2 : pCO2w obs * e(0.0423*Tmean-Tobs)
 #formula TpCO2 : pCO2mean * exp[0.0423(Tobs - Tmean)]
@@ -218,20 +231,35 @@ pCO2bio_pCO2T_plot <- pCO2bio_pCO2T_plot_long %>%
   ggplot() +
   ggtitle("") +
   geom_line(aes(x=datetime, y=value, color= Legend), size=0.5) +
+  labs(colour="Legend :") +
+  theme(legend.position = c(0.025, 1), legend.justification = c("left", "top"),
+        legend.box.just = "left", legend.margin = margin(6, 6, 6, 6)) +
   scale_y_continuous(name="ΔpCO2 (µatm)") + 
-  scale_x_date(name="") + 
+  scale_x_date(name="", date_breaks="2 year", date_minor_breaks="1 years", labels = date_format("%Y")) + 
   scale_colour_discrete(type=c("#096A09", "#E9383F"))
 
 pCO2bio_pCO2T_plot
 ##
 
-#save
-# ggsave(filename = "pCO2bio_pCO2T_plot.jpg", # Nommez le fichier dans lequel vous voulez enregistrer, ajoutez l'extension du format de fichier que vous voulez utiliser (ex. pdf).
-#         plot = pCO2bio_pCO2T_plot, # Fournir le nom de l'objet plot dans R
-#         height = 6, # Fournir les dimensions voulues
-#         width = 10, 
-#         units = "in") 
+##RAPPORT##
+pco2_bio_plot_rapport <- pco2_bio %>% 
+  ggplot() +
+  geom_line(aes(x=datetime, y=delta_pCO2_T), col = "#BF3030", size = 0.4) +
+  geom_line(aes(x=datetime, y=delta_pCO2_bio), col = "#096A09", size = 0.6) +
+  scale_y_continuous(name="ΔpCO2 (µatm)") + 
+  scale_x_date(name="", date_breaks="2 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
+  geom_hline(col = "black", yintercept = 0, linetype="dashed")
+#  theme(panel.background = element_rect(fill = "#CCCCCC", size = 0.3, linetype="solid"))
 
+
+
+#save
+ # ggsave(filename = "pCO2bio_pCO2T_plot.jpg", # Nommez le fichier dans lequel vous voulez enregistrer, ajoutez l'extension du format de fichier que vous voulez utiliser (ex. pdf).
+ #         plot = pco2_bio_plot_rapport, # Fournir le nom de l'objet plot dans R
+ #         height = 6, # Fournir les dimensions voulues
+ #         width = 9, 
+ #         units = "in") 
+ 
 
 ```
   
@@ -243,8 +271,8 @@ pCO2bio_pCO2T_plot
 ```{r atmospheric & water pCO2 plot, echo=FALSE, warning=FALSE, message=FALSE, fig.width=10,fig.height=6}
 
 atmos_water_pCO2_plot_long <- pco2_bio %>% 
-  rename(`pCO2 seawater` = impute_pCO2_w, `pCO2 atmospheric` = impute_pCO2_atmos, NpCO2 = NpCO2) %>% 
-  pivot_longer(cols = c(`pCO2 seawater`, `pCO2 atmospheric`, "NpCO2"), names_to = "Legend", values_to = "value")
+  rename(`pCO2 ocean` = impute_pCO2_w, `pCO2 atmosphere` = impute_pCO2_atmos, NpCO2 = NpCO2) %>% 
+  pivot_longer(cols = c(`pCO2 ocean`, `pCO2 atmosphere`, "NpCO2"), names_to = "Legend", values_to = "value")
 
 #plot
 atmos_water_pCO2_plot <- atmos_water_pCO2_plot_long %>% 
@@ -252,7 +280,7 @@ atmos_water_pCO2_plot <- atmos_water_pCO2_plot_long %>%
   ggtitle("") +
   geom_line(aes(x=datetime, y=value, color= Legend), size=0.7) +
   scale_y_continuous(name="pCO2 (µatm)") + 
-  scale_x_date(name="") + 
+  scale_x_date(name="", date_breaks="2 year", date_minor_breaks="1 years", labels = date_format("%Y")) + 
   scale_colour_discrete(type=c("#708D23", "#CC5500", "#56739A"))
 
 atmos_water_pCO2_plot

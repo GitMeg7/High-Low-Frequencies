@@ -40,17 +40,17 @@ library("signal")
 ```{r importation Data SOMLIT, echo=FALSE, warning=FALSE, message=FALSE}
 
 #period : January 2007 - December 2022
-SOMLIT <- read_delim("../Data/DATA_SOMLIT_07-22_CLEAN.csv", 
+SOMLIT <- read_delim("../../Data/DATA_SOMLIT_07-22_CLEAN.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
 # surface : 
-SOMLIT_surf <- read_delim("../Data/DATA_SOMLIT_07-22_impute_0m.csv", 
+SOMLIT_surf <- read_delim("../../Data/DATA_SOMLIT_07-22_impute_0m.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
   dplyr::select(datetime, temperature, salinity, Year, Month, Year.Month) %>% 
   rename(SOM_T = temperature, SOM_sal = salinity)
 
 # 50m :
-SOMLIT_50 <- read_delim("../Data/DATA_SOMLIT_07-22_impute_50m.csv", 
+SOMLIT_50 <- read_delim("../../Data/DATA_SOMLIT_07-22_impute_50m.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
 
@@ -60,7 +60,7 @@ SOMLIT_50 <- read_delim("../Data/DATA_SOMLIT_07-22_impute_50m.csv",
 ```{r importation Data, echo=FALSE, warning=FALSE, message=FALSE}
 
 #period : January 2007 - December 2022
-MEDIT_site <- read_delim("../Data/Somlit_Medit_sites.csv", 
+MEDIT_site <- read_delim("../../Data/Somlit_Medit_sites.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
 # surface : 

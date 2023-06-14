@@ -194,7 +194,7 @@ intercept_EOL_SOM_T <- reg_EOL_SOM_T$coefficients[[1]]
   
   
 
-```{r calcul monthly means - temperature & salinity, echo=TRUE, warning=FALSE, message=FALSE}
+```{r calcul monthly means - temperature & salinity, echo=TRUE, warning=FALSE, message=FALSE, fig.width=8,fig.height=10}
 
 EOL_RAW <- EOL_RAW %>% 
   dplyr::filter(datetime >= "2014-01-07 01:00:00" & datetime <= "2022-12-31 01:00:00")
@@ -206,12 +206,28 @@ monthly_means <- ungroup(EOL_RAW) %>%
   group_by(Month) %>%
   summarise(
     Salinity_month = mean(salinity, na.rm = TRUE),
-    Temperature_month = mean(temperature, na.rm = TRUE))
+    SD_sal = sd(salinity, na.rm = TRUE),
+    Temperature_month = mean(temperature, na.rm = TRUE),
+    SD_temp = sd(temperature, na.rm = TRUE))
 
-monthly_means
+
+##RAPPORT##
+
+monthly_means_rapport <- monthly_means %>% 
+  mutate(`T (°C)` = paste(round(Temperature_month, digits=2), "±", round(SD_temp, digits=2)),
+         S = paste(round(Salinity_month, digits=2), "±", round(SD_sal, digits=2)),
+         `T (°C)` = paste(round(Temperature_month, digits=2), "±", round(SD_temp, digits=2)),
+         S = paste(round(Salinity_month, digits=2), "±", round(SD_sal, digits=2)))
+
+monthly_means_rapport <- monthly_means_rapport %>% 
+  dplyr::select(Month, `T (°C)`, S, SD_sal, SD_temp, Salinity_month, Temperature_month) %>% 
+  rename(`Mois  ` = Month)
+        
+        
+kable(monthly_means_rapport, caption="Monthly means at EOL (surface)", format = "pipe", align='l')
+
 
 ```
-  
   
   
 ###### [Table of time series anomalies regression analyses (2014-2022) - EOL temperature & salinity]{style="color:green"}  
@@ -335,7 +351,23 @@ colnames(reg_raw) <-
 row.names(reg_raw) <- var_list
 reg_anomalies_raw <- reg_raw
 
-reg_anomalies_raw
+##RAPPORT##
+reg_anomalies_raw_rapport <- as.data.frame(reg_anomalies_raw)
+reg_anomalies_raw_rapport <- reg_anomalies_raw_rapport %>% 
+  mutate(Variables = c("T (°C)", "S"))
+
+reg_anomalies_raw_rapport <- reg_anomalies_raw_rapport %>% 
+  mutate( 
+  `Pente ± sd` = paste(round(reg_anomalies_raw_rapport$Slope, digits=3), "±", round(reg_anomalies_raw_rapport$`SE Slope`, digits=4)), 
+  `P pente` = reg_anomalies_raw_rapport$`P Slope`, 
+  `Int. ± sd` = paste(round(reg_anomalies_raw_rapport$Intercept, digits=2), "±", round(reg_anomalies_raw_rapport$`SE int.`, digits=2)),
+  `P Int.` = reg_anomalies_raw_rapport$`P int.`, 
+  `R^2^` = round(reg_anomalies_raw_rapport$R2, digits=4))
+
+
+reg_anomalies_raw_rapport <- reg_anomalies_raw_rapport[,c(11:16)]
+
+kable(reg_anomalies_raw_rapport, caption="Time series anomaly regression analyses (EOL)", format = "pipe", align='l')
 ```
   
   

@@ -63,7 +63,7 @@ Mytheme <- function(size_labs = 6, face_font="plain", ...) {
 #unity : umol/kg
 data_EOL <- read_delim("../Data/EOL_18-23_hourly.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
-  dplyr::filter(datetime <= "2022-12-31")
+  dplyr::filter(datetime <= "2022-11-21")
 
 
 ```
@@ -623,7 +623,7 @@ data_EOL <- data_EOL %>%
 AOU : valeurs majoritairement négatives = 
 *plus faibles valeurs en été*  
   
-*scatter plot : Temp. influence significativement AOU : quand T augmente, AOU diminue*  
+*scatter plot : Temp. influence significativement AOU (r = -0.90) : quand T augmente, AOU diminue*  
   
 Shifts : 2020 and 2021  
   
@@ -668,7 +668,7 @@ data_EOL %>%
   annotate(geom="text", x=25, y=260, label="slope : -3.55 ± 0.009 *", color="black")
 
 #summary(lm(data_EOL$oxy_umol_kg ~ data_EOL$temp_eol_c))
-##
+#cor.test(data_EOL$temp_eol_c, data_EOL$oxy_umol_kg, na.action=na.omit)
 
 #Mean AOU by year :
 
@@ -1263,7 +1263,7 @@ plot_AOU_prof_annual_cycle <- data_somlit_prof %>%
 plot_AOU_prof_annual_cycle
 ##
 
-#scatter plot AOU vs T
+#scatter plot DO vs T
 data_somlit_prof %>% 
   ggplot() +
   aes(x=T, y=oxy_umol_kg) + 

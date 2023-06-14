@@ -40,7 +40,7 @@ library("signal")
 ```{r importation Data EOL raw & EOL hourly, echo=FALSE, warning=FALSE, message=FALSE}
 
 #period : septembre 2013-octobre 2022
-EOL_RAW <- read_delim("../Data/EOL_raw_complete_1323.csv", 
+EOL_RAW <- read_delim("../../Data/EOL_raw_complete_1323.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)  
 
 
@@ -55,7 +55,7 @@ EOL_RAW <- EOL_RAW %>%
 ##
 
 #period : Jan.2018 - Dec.2022
-EOL_hourly <- read_delim("../Data/EOL_18-23_hourly.csv", 
+EOL_hourly <- read_delim("../../Data/EOL_18-23_hourly.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
   rename(temperature=temp_eol_c, salinity=sal_eol_psu) %>% 
   mutate(datetime = as.character(datetime)) %>% 
@@ -68,37 +68,37 @@ EOL_hourly <- read_delim("../Data/EOL_18-23_hourly.csv",
 
 ```{r importation Data solemio, echo=FALSE, warning=FALSE, message=FALSE}
 
-Solemio_2011 <- read_delim("../Data/data_solemio_2011.csv", 
+Solemio_2011 <- read_delim("../../Data/data_solemio_2011.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-Solemio_2012 <- read_delim("../Data/data_solemio_2012.csv", 
+Solemio_2012 <- read_delim("../../Data/data_solemio_2012.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-Solemio_2013 <- read_delim("../Data/data_solemio_2013.csv", 
+Solemio_2013 <- read_delim("../../Data/data_solemio_2013.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-Solemio_2014 <- read_delim("../Data/data_solemio_2014.csv", 
+Solemio_2014 <- read_delim("../../Data/data_solemio_2014.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-Solemio_2015 <- read_delim("../Data/data_solemio_2015.csv", 
+Solemio_2015 <- read_delim("../../Data/data_solemio_2015.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-Solemio_2016 <- read_delim("../Data/data_solemio_2016.csv", 
+Solemio_2016 <- read_delim("../../Data/data_solemio_2016.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-Solemio_2017 <- read_delim("../Data/data_solemio_2017.csv", 
+Solemio_2017 <- read_delim("../../Data/data_solemio_2017.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-Solemio_2018 <- read_delim("../Data/data_solemio_2018.csv", 
+Solemio_2018 <- read_delim("../../Data/data_solemio_2018.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-Solemio_2019 <- read_delim("../Data/data_solemio_2019.csv", 
+Solemio_2019 <- read_delim("../../Data/data_solemio_2019.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-Solemio_2020 <- read_delim("../Data/data_solemio_2020.csv", 
+Solemio_2020 <- read_delim("../../Data/data_solemio_2020.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-Solemio_2021 <- read_delim("../Data/data_solemio_2021.csv", 
+Solemio_2021 <- read_delim("../../Data/data_solemio_2021.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
 merge <- rbind(Solemio_2011, Solemio_2012)

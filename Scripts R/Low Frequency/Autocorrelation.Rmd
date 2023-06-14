@@ -5,7 +5,6 @@ date: "2023-05-11"
 output: html_document
 ---
 
-
 ```{r libraries, echo=FALSE, warning=FALSE, message=FALSE}
 library("readr")
 library("viridis")
@@ -63,9 +62,7 @@ Mytheme <- function(size_labs = 6, face_font="plain", ...) {
 
 ```
 
-
-## TEST on surface data at Point B (2007-2022), clean tab + imputed values  
-  
+## TEST on surface data at Point B (2007-2022), clean tab + imputed values
 
 ```{r import data somlit, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -76,11 +73,10 @@ data_somlit_surf <- read_delim("../../Data/DATA_SOMLIT_07-22_impute_0m.csv",
 
 ```
 
+### → **Temperature :**
 
-### → **Temperature :**  
-  
-*Plots*  
-  
+*Plots*
+
 ```{r creation ts object + plots, echo=FALSE, warning=FALSE, message=FALSE}
 
 #frequency : 365.25/7 = 52.17857
@@ -92,29 +88,36 @@ ggtitle('Sea surface temperature (°C) at Point B - 2007-2022') +
 xlab('') +
 ylab('Temp. (°C')
 
+autoplot_ts_temp
+
 #creation data frame de ts_temp :
 df_ts_temp <- as.data.frame(autoplot_ts_temp$data) %>% 
   rename(DATE = x, TEMP = y)
 
 #seasonal plot :
-seasonal_plot_ts_temp <- ggseasonplot(ts_temp, year.labels = F, year.labels.left = F)
+#seasonal_plot_ts_temp <- ggseasonplot(ts_temp, year.labels = F, year.labels.left = F)
 
 #polar plot :
-polar_plot <- ggseasonplot(ts_temp, polar = TRUE)
+#polar_plot <- ggseasonplot(ts_temp, polar = TRUE)
 
 
-autoplot_ts_temp
-seasonal_plot_ts_temp
-polar_plot
+##polar plot :
+polar_plot_temp <- ggseasonplot(ts_temp, polar = TRUE, main="", xlab="", ylab = "",
+             season.labels = c("Jan","Feb","Mar","Apr","May","Jun","Jul",
+                               "Aug","Sep","Oct","Nov","Dec")) +
+  scale_colour_discrete(name="Années", type=c("#80D0D0", "#83A697", "#97DFC6", "#B0F2B6",  "#F4FEFE", "#FFF0BC", 
+                               "#F7E269", "#EFD807", "#DD985C", "#ED7F10", "#CC5500", "#FF866A", 
+                               "#E9383F", "#C60800", "#850606", "#6E0B14"))
+
+polar_plot_temp
 
 ```
 
-*Correlogram*  
-  
-Trend pattern (correlogram 1 : less correlation with increasing lags),  
-Seasonal pattern (correlogram 2 : correlation (highest value at lag 52/53) and anti-correlation (lowest value at lag 26/27) successions),  
-Periodicity = 52 (highest correlation value at 52/53)  
-  
+*Correlogram*
+
+Trend pattern (correlogram 1 : less correlation with increasing lags),\
+Seasonal pattern (correlogram 2 : correlation (highest value at lag 52/53) and anti-correlation (lowest value at lag 26/27) successions),\
+Periodicity = 52 (highest correlation value at 52/53)
 
 ```{r autocorrelation temperature - surface, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -125,16 +128,13 @@ correlogram2 <- acf(ts_temp, type = "cor", lag.max = 55, plot = T)
 
 
 ```
-    
-*Trend and seasonal patterns identification :*  
-  
-Time series = Tt + St + ɛt  
-with Tt : trend
-     St : seasonal pattern
-     ɛt : residual part  
-  
-#### Trend estimation by moving average (manually) :  
-  
+
+*Trend and seasonal patterns identification :*
+
+Time series = Tt + St + ɛt\
+with Tt : trend St : seasonal pattern ɛt : residual part
+
+#### Trend estimation by moving average (manually) :
 
 ```{r moving average manual, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -148,13 +148,11 @@ scale_colour_manual(values=c("Data"="grey50","26-MA"="red","52-MA"="blue"),
 
 
 ```
-  
 
-#### Trend estimation by moving average (decompose function) :  
-  
-*Quick overview of the components of the series*   
-*increasing trend more visible*  
-  
+#### Trend estimation by moving average (decompose function) :
+
+*Quick overview of the components of the series*\
+*increasing trend more visible*
 
 ```{r decompose function, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -168,19 +166,17 @@ autoplot(ts_temp_decomp) +
 #plot(ts_temp_decomp$figure)
 
 ```
-  
 
-#### Remove seasonality :  
-  
-→ measured values - seasonal pattern  
-OR  
-→ trend + remainders  
-  
-*by appling trend on this series, we see the increase*  
-  
-slope : 0.058 ± 0.009  
-Int. : -98.07 ± 18.57  
-  
+#### Remove seasonality :
+
+→ measured values - seasonal pattern\
+OR\
+→ trend + remainders
+
+*by appling trend on this series, we see the increase*
+
+slope : 0.058 ± 0.009\
+Int. : -98.07 ± 18.57
 
 ```{r remove seasonal pattern, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -219,14 +215,11 @@ FFtemp <- kendallSeasonalTrendTest(impute_temp ~ month(datetime) + year(datetime
 FFtemp$estimate
 
 ```
-  
-  
 
-#### White noise test :  
-  
-If residuals of the time series are assimilated to a white noise = stationary time series  
-Stationary time series = no trend + no seasonality  
-  
+#### White noise test :
+
+If residuals of the time series are assimilated to a white noise = stationary time series\
+Stationary time series = no trend + no seasonality
 
 ```{r white noise, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -240,12 +233,10 @@ Box.test(ts_temp_decomp$random, type = "Ljung-Box")
 #so we reject that residuals could be associated to a white noise
 
 ```
-  
-*significative p-value, so we reject that residuals could be associated to a white noise*  
-  
 
-#### WLS fit (Sutton et al. 2022) :  
-  
+*significative p-value, so we reject that residuals could be associated to a white noise*
+
+#### WLS fit (Sutton et al. 2022) :
 
 ```{r Best practices, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -279,14 +270,10 @@ model_less_season %>%
 
 
 ```
-  
-  
-  
-  
-## pCO2 bio : Point B (2007-Dec.2021)  
-  
-#### By residuals (Bates et al. 2014)  
-  
+
+## pCO2 bio : Point B (2007-Dec.2021)
+
+#### By residuals (Bates et al. 2014)
 
 ```{r pCO2 bio - bates regression, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -429,8 +416,6 @@ FF2$estimate
 #ts(variable)
 #smk.test(ts, continuity=TRUE)
 ```
-  
-  
 
 ```{r pCO2 bio - bates plots, echo=FALSE, warning=FALSE, message=FALSE, fig.width=12,fig.height=4}
 
@@ -466,11 +451,8 @@ plot_grid_delta_bio
 
 
 ```
-  
-  
-  
-#### By autocorrelation (decompose function)  
-  
+
+#### By autocorrelation (decompose function)
 
 ```{r pCO2 bio - autocorrelation, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -498,10 +480,8 @@ autoplot(ts_pco2_bio_decomp) +
   xlab(' ')
 
 ```
-  
-  
-→ remove seasonality :  
-  
+
+→ remove seasonality :
 
 ```{r delta pco2 bio - remove seasonality, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -532,15 +512,10 @@ FFpco2bio <- kendallSeasonalTrendTest(delta_pCO2_bio ~ month(datetime) + year(da
 FFpco2bio$estimate
 
 ```
-  
-  
-  
-  
-## CO2 fluxes : Point B (2009-2021)  
-  
-#### By residuals (Bates et al. 2014)  
-  
-  
+
+## CO2 fluxes : Point B (2009-2021)
+
+#### By residuals (Bates et al. 2014)
 
 ```{r CO2 fluxes - bates regression, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -681,11 +656,9 @@ FF3 <- kendallSeasonalTrendTest(Flux_wan_92 ~ month(datetime) + year(datetime), 
 FF3$estimate
 
 ```
-  
-  
-*by Wanninkhof et al. (2014) method :*  
-Increase of CO2 fluxes (more and more sources)  
-  
+
+*by Wanninkhof et al. (2014) method :*\
+Increase of CO2 fluxes (more and more sources)
 
 ```{r co2 fluxes - bates plots, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -710,10 +683,8 @@ plot_flux_wan_14
 plot_ano_flux_wan_14
 
 ```
-  
-  
-#### By autocorrelation (decompose function)  
-  
+
+#### By autocorrelation (decompose function)
 
 ```{r co2 fluxes - autocorrelation, echo=FALSE, warning=FALSE, message=FALSE}
 #NAs :
@@ -744,10 +715,8 @@ autoplot(ts_flux_2014_decomp) +
   xlab(' ')
 
 ```
-  
-  
-→ remove seasonality : bug dans les data  
-  
+
+→ remove seasonality : bug dans les data
 
 ```{r co2 fluxes - remove seasonality, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -776,29 +745,22 @@ plot_ts_flux_2014_less_season
 
 
 ```
-  
-  
-  
-## Point B - period 2007-2022  
-  
-  
-### SURFACE  
-  
-- Temperature (°C) → done above ✓  
-- Salinity  
-- pH calculated  
-- pH normalized (18 °C)  
-- Total alcalinity (µmol/kg)  
-- Total carbon - DIC (µmol/kg)
-- Seawater pCO~2~ (µatm)  
-  
-  
-#### By autocorrelation (decompose function)  
-  
-  
-###### Salinity :  
-  
-  
+
+## Point B - period 2007-2022
+
+### SURFACE
+
+-   Temperature (°C) → done above ✓\
+-   Salinity\
+-   pH calculated\
+-   pH normalized (18 °C)\
+-   Total alcalinity (µmol/kg)\
+-   Total carbon - DIC (µmol/kg)
+-   Seawater pCO~2~ (µatm)
+
+#### By autocorrelation (decompose function)
+
+###### Salinity :
 
 ```{r salinity - point b - autocorr, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -852,11 +814,8 @@ FFsal <- kendallSeasonalTrendTest(impute_sal ~ month(datetime) + year(datetime),
 FFsal$estimate
 
 ```
-  
-  
-###### pH calculated :  
-  
-  
+
+###### pH calculated :
 
 ```{r pH - point b - autocorr, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -913,12 +872,8 @@ FFpH <- kendallSeasonalTrendTest(pH_calc ~ month(datetime) + year(datetime), dat
 FFpH$estimate
 
 ```
-  
-  
 
-###### pH normalized (18) :  
-  
-  
+###### pH normalized (18) :
 
 ```{r pH(18) - point b - autocorr, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -976,9 +931,7 @@ FFpH_18$estimate
 
 ```
 
-###### Total alcalinity :  
-  
-  
+###### Total alcalinity :
 
 ```{r alcalinity - point b - autocorr, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -1032,12 +985,8 @@ FFta <- kendallSeasonalTrendTest(impute_ta ~ month(datetime) + year(datetime), d
 FFta$estimate
 
 ```
-  
-  
 
-###### Total carbon :  
-  
-  
+###### Total carbon :
 
 ```{r dic - point b - autocorr, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -1091,12 +1040,8 @@ FFdic <- kendallSeasonalTrendTest(impute_dic ~ month(datetime) + year(datetime),
 FFdic$estimate
 
 ```
-  
-  
 
-###### Seawater pCO~2~  
-  
-  
+###### Seawater pCO~2~
 
 ```{r pco2 water - point b - autocorr, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -1150,25 +1095,20 @@ FFpCO2_w <- kendallSeasonalTrendTest(impute_pCO2_w ~ month(datetime) + year(date
 FFpCO2_w$estimate
 
 ```
-  
-  
-  
-### 50 m  
-  
-- Temperature (°C)  
-- Salinity  
-- pH calculated  
-- pH normalized (18 °C)  
-- Total alcalinity (µmol/kg)  
-- Total carbon - DIC (µmol/kg)
-- Seawater pCO~2~ (µatm)  
-  
-  
-#### By autocorrelation (decompose function)  
-  
-  
-###### Temperature :  
-  
+
+### 50 m
+
+-   Temperature (°C)\
+-   Salinity\
+-   pH calculated\
+-   pH normalized (18 °C)\
+-   Total alcalinity (µmol/kg)\
+-   Total carbon - DIC (µmol/kg)
+-   Seawater pCO~2~ (µatm)
+
+#### By autocorrelation (decompose function)
+
+###### Temperature :
 
 ```{r temperature - point b - autocorr - 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -1204,8 +1144,7 @@ FFtemp_50$estimate
 
 ```
 
-###### Salinity :  
-  
+###### Salinity :
 
 ```{r salinity - point b - autocorr - 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -1259,11 +1198,8 @@ FFsal_50 <- kendallSeasonalTrendTest(impute_sal ~ month(datetime) + year(datetim
 FFsal_50$estimate
 
 ```
-  
-  
-###### pH calculated :   
-  
-  
+
+###### pH calculated :
 
 ```{r pH - point b - autocorr - 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -1320,12 +1256,8 @@ FFpH_50 <- kendallSeasonalTrendTest(pH_calc ~ month(datetime) + year(datetime), 
 FFpH_50$estimate
 
 ```
-  
-  
 
-###### pH normalized (18) :  
-  
-  
+###### pH normalized (18) :
 
 ```{r pH(18) - point b - autocorr - 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -1382,12 +1314,8 @@ FFpH_18_50 <- kendallSeasonalTrendTest(pH_18 ~ month(datetime) + year(datetime),
 FFpH_18_50$estimate
 
 ```
-  
-  
 
-###### Total alcalinity :  
-  
-  
+###### Total alcalinity :
 
 ```{r alcalinity - point b - autocorr - 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -1441,12 +1369,8 @@ FFta_50 <- kendallSeasonalTrendTest(impute_ta ~ month(datetime) + year(datetime)
 FFta_50$estimate
 
 ```
-  
-  
 
-###### Total carbon :  
-  
-  
+###### Total carbon :
 
 ```{r dic - point b - autocorr - 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -1500,12 +1424,8 @@ FFdic_50 <- kendallSeasonalTrendTest(impute_dic ~ month(datetime) + year(datetim
 FFdic_50$estimate
 
 ```
-  
-  
 
-###### Seawater pCO~2~  
-  
-  
+###### Seawater pCO~2~
 
 ```{r pco2 water - point b - autocorr - 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -1559,23 +1479,57 @@ FFpCO2w_50 <- kendallSeasonalTrendTest(impute_pco2_w ~ month(datetime) + year(da
 FFpCO2w_50$estimate
 
 ```
+
+## Seasonal Mann Kendall slopes :  
   
+For temperature and *p*CO~2~ seawater at Point B (2007-2022)  
   
 
-```{r seasonal_slopes, echo=FALSE, warning=FALSE, message=FALSE}
+```{r seasonal_slopes, echo=FALSE, warning=FALSE, message=FALSE, fig.width=5,fig.height=6}
 
-seasonal_slopes <- as.data.frame(FFpCO2w_50$seasonal.estimates)
+seasonal_slopes_pco2w_surf <- as.data.frame(FFpCO2_w$seasonal.estimates) %>% 
+  dplyr::select(slope) %>% 
+  rename(pco2_slope = slope)
 
-seasonal_slopes %>% 
-  ggplot() + 
-  aes(x=c(1:12), y=slope) +
-  geom_point(shape=1, size=3) +
-  geom_line(linetype="dashed") +
-  scale_x_discrete(name="", limits = c(1:12)) + 
-  scale_y_continuous(name = "slope value", n.breaks = 10)
+seasonal_slopes_temp_surf <- as.data.frame(FFtemp$seasonal.estimates) %>% 
+  dplyr::select(slope) %>% 
+  rename(temp_slope = slope)
+
+seasonal_slopes <- data.frame(ID = c(1:12), Months = c("Jan", "Fev", "Mar", "Avr", "Mai", "Juin", 
+                                         "Juil", "Août", "Sept", "Oct", "Nov", "Dec"), 
+                              pco2_slope = seasonal_slopes_pco2w_surf$pco2_slope,
+                              temp_slope = seasonal_slopes_temp_surf$temp_slope)
+
+seasonal_slopes[,c(2:4)]
+
+# seasonal_slopes_pco2w_surf %>% 
+#   ggplot() + 
+#   aes(x=c(1:12), y=slope) +
+#   geom_point(shape=1, size=3) +
+#   geom_line(linetype="dashed") +
+#   scale_x_discrete(name="", limits = c(1:12)) + 
+#   scale_y_continuous(name = "slope value", n.breaks = 10)
+
+
+
+plot1 <- seasonal_slopes %>% 
+  ggplot() +
+  aes(x=ID, y=temp_slope) +
+  geom_bar(stat="identity", fill="lightgrey", color="red", width=0.8) +
+  scale_y_continuous(name=expression(paste("Valeur de la pente (°C.", an^-1,")")), n.breaks = 10) +
+  geom_hline(col = "#303030", yintercept = 0, linetype=1) +
+  scale_x_continuous(name="", n.breaks = 12, labels =NULL)
+
+plot2 <- seasonal_slopes %>% 
+  ggplot() +
+  aes(x=reorder(Months, ID), y=pco2_slope) +
+  geom_bar(stat="identity", fill="lightgrey", color="#357AB7", width=0.8) +
+  scale_y_continuous(name=expression(paste("Valeur de la pente (", mu, "atm.", an^-1,")")), n.breaks = 10) +
+  geom_hline(col = "#303030", yintercept = 0, linetype=1) +
+  scale_x_discrete(name="")
+
+
+plot_grid(plot1, plot2, align='vh', ncol=1)
+
 
 ```
-
-
-
-
