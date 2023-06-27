@@ -66,7 +66,7 @@ Mytheme <- function(size_labs = 6, face_font="plain", ...) {
 
 ```{r import data somlit, echo=FALSE, warning=FALSE, message=FALSE}
 
-data_somlit_surf <- read_delim("../../Data/DATA_SOMLIT_07-22_impute_0m.csv", 
+data_somlit_surf <- read_delim("../../Data/data_PointB/DATA_SOMLIT_07-22_impute_0m.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
 
@@ -154,7 +154,7 @@ scale_colour_manual(values=c("Data"="grey50","26-MA"="red","52-MA"="blue"),
 *Quick overview of the components of the series*\
 *increasing trend more visible*
 
-```{r decompose function, echo=FALSE, warning=FALSE, message=FALSE}
+```{r decompose function, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7,fig.height=4}
 
 #type = additive because the seasonal pattern doesn't seem to increase in variation, seasonal pattern looks constant
 ts_temp_decomp <- decompose(ts_temp, type = "additive") #pareil qu'en rajoutant : filter = rep(1/52,52)
@@ -178,7 +178,7 @@ OR\
 slope : 0.058 ± 0.009\
 Int. : -98.07 ± 18.57
 
-```{r remove seasonal pattern, echo=FALSE, warning=FALSE, message=FALSE}
+```{r remove seasonal pattern, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7,fig.height=4}
 
 #2 ways :
 # 1 : measured values - seasonal pattern
@@ -204,9 +204,9 @@ summary(model_less_season) #pour voir les erreurs des coef + la significativité
 #plot with slope value :
 plot_ts_temp_less_season <- autoplot(ts_temp_less_season) + 
   xlab("") + ylab("Temp. (°C)") +
-  ggtitle("Sea surface temperature time series (without seasonality)") +
-  geom_smooth(method=lm) +
-  annotate(geom="text", x=2015, y=23, label="slope : 0.058 ± 0.009 *", color="black")
+  ggtitle("Sea surface temperature time series (without seasonality)") 
+#  geom_smooth(method=lm) +
+#  annotate(geom="text", x=2015, y=23, label="slope : 0.058 ± 0.009 *", color="black")
 
 plot_ts_temp_less_season
 
@@ -271,98 +271,40 @@ model_less_season %>%
 
 ```
 
-## pCO2 bio : Point B (2007-Dec.2021)
+## pCO2 therm & non-therm : Point B (2007-2022)  
+  
+### SURFACE  
+  
+#### By residuals (Bates et al. 2014)  
+  
 
-#### By residuals (Bates et al. 2014)
-
-```{r pCO2 bio - bates regression, echo=FALSE, warning=FALSE, message=FALSE}
+```{r pCO2 bio - bates regression - surface, echo=FALSE, warning=FALSE, message=FALSE}
 
 
 ## Import data DELTA PCO2 BIO :
-data_pco2 <- read_delim("../../Data/DATA_SOMLIT_07-22_impute_0m_deltas_pCO2.csv", 
+data_pco2 <- read_delim("../../Data/data_PointB/DATA_SOMLIT_07-22_impute_0m_deltas_pCO2.csv", 
                         delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
-  dplyr::filter(datetime <= "2021-12-28")
-
-## Amplitude :
-data_pco2 <- data_pco2 %>% 
-  group_by(Year) %>% 
-  mutate(ampli_bio = max(delta_pCO2_bio) - min(delta_pCO2_bio))
+  dplyr::filter(datetime <= "2022-09-28")
 
 ## Monthly means
 
 monthly_means <- ungroup(data_pco2) %>% 
   group_by(Month) %>%
-  summarise(bio_pco2_month = mean(delta_pCO2_bio, na.rm = TRUE))
+  summarise(pco2_therm_month = mean(TpCO2, na.rm = TRUE),
+            pco2_nontherm_month = mean(NpCO2, na.rm = TRUE))
 
 ##
 
 ## Parameters
 
 anomalies <- left_join(ungroup(data_pco2), monthly_means, by = "Month") %>%
-  mutate(bio_pco2_ano = delta_pCO2_bio - bio_pco2_month)
+  mutate(pco2_therm_ano = TpCO2 - pco2_therm_month,
+         pco2_nontherm_ano = NpCO2 - pco2_nontherm_month)
 
 
-
-# Regressions and tables of key parameters
-var_list <- "delta_pCO2_bio"
-
-lm.test <- vector("list", length(var_list))
-
-for(i in seq_along(var_list)){
-  lm.test[[i]] <- lm(reformulate(var_list[i], "datetime"), data = anomalies)
-}
-
-
-
-lms <- lapply(var_list, function(x) {
-  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
-             data = anomalies))
-})
-
-reg <- NULL
-for (i in 1:length(var_list)) {
-  #one loops through all anomalies
-  # calculate probability of fstatistic because it cannot be extracted from lms above
-  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
-  # slope returned by lm is per second
-  prob <-
-    pf(lms[[i]]$fstatistic[1],
-       lms[[i]]$fstatistic[2],
-       lms[[i]]$fstatistic[3],
-       lower.tail = FALSE)
-  reg <-
-    rbind(reg, as.numeric(
-      c(
-        lms[[i]]$coefficients[2, 1],
-        lms[[i]]$coefficients[2, 2],
-        lms[[i]]$coefficients[2, 4],
-        lms[[i]]$coefficients[1, 1],
-        lms[[i]]$coefficients[1, 2],
-        lms[[i]]$coefficients[1, 4],
-        lms[[i]]$fstatistic[1],
-        lms[[i]]$fstatistic[3],
-        lms[[i]]$r.squared,
-        prob
-      )
-    ))
-}
-
-colnames(reg) <-
-  c("Slope",
-    "SE Slope",
-    "P Slope",
-    "Intercept",
-    "SE int.",
-    "P int.",
-    "F",
-    "df",
-    "R2",
-    "P value")
-row.names(reg) <- var_list
-reg_ano <- reg
 
 # Regression and table anomalies
-var_list <- "bio_pco2_ano"
+var_list <- c("pco2_therm_ano", "pco2_nontherm_ano")
 
 lms <- lapply(var_list, function(x) {
   summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), data = anomalies))
@@ -411,107 +353,337 @@ reg_ano <- reg
 
 reg_ano
 
-FF2 <- kendallSeasonalTrendTest(delta_pCO2_bio ~ month(datetime) + year(datetime), data = data_pco2)
-FF2$estimate
-#ts(variable)
-#smk.test(ts, continuity=TRUE)
-```
+FF_pco2_therm <- kendallSeasonalTrendTest(TpCO2 ~ month(datetime) + year(datetime), data = data_pco2)
+FF_pco2_nontherm <- kendallSeasonalTrendTest(NpCO2 ~ month(datetime) + year(datetime), data = data_pco2)
 
-```{r pCO2 bio - bates plots, echo=FALSE, warning=FALSE, message=FALSE, fig.width=12,fig.height=4}
+```
+  
+  
+
+```{r pCO2 therm - bates plots, echo=FALSE, warning=FALSE, message=FALSE, fig.width=9,fig.height=4}
 
 ## Plot anomalies :
 
-plot_ano_pCO2bio <- ggplot(data = anomalies, aes(x = datetime, y = bio_pco2_ano), na.rm=TRUE) +
+plot_ano_pCO2therm <- ggplot(data = anomalies, aes(x = datetime, y = pco2_therm_ano), na.rm=TRUE) +
+  scale_x_date(date_breaks="2 year", date_minor_breaks="1 years", labels = NULL) +
+  geom_point(colour="#22427C", na.rm=TRUE, size = 0.7) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title="",x="", y=expression(paste(italic(p), CO[2], " therm (µatm)"))) 
+#  annotate(geom="text", x=as.Date("2010-03-02"), y=80, label="slope : 1.19 ± 0.18 *", color="black")
+
+plot_ano_pCO2nontherm <- ggplot(data = anomalies, aes(x = datetime, y = pco2_nontherm_ano), na.rm=TRUE) +
   scale_x_date(date_breaks="2 year", date_minor_breaks="1 years", date_labels = "%Y") +
   geom_point(colour="#22427C", na.rm=TRUE, size = 0.7) + 
   geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
-  labs(title="",x="", y="ΔpCO2 (bio)  (µatm)") +
-  annotate(geom="text", x=as.Date("2010-03-02"), y=80, label="slope : 3.58 ± 0.15 *", color="black")
+  labs(title="",x="", y=expression(paste(italic(p), CO[2], " non-therm (µatm)"))) 
+#  annotate(geom="text", x=as.Date("2010-03-02"), y=80, label="slope : 3.64 ± 0.14 *", color="black")
 
-plot_delta_bio <- data_pco2 %>% 
+
+plot_pco2_therm <- data_pco2 %>% 
   ggplot() +
-  aes(x=datetime, y=delta_pCO2_bio) + 
-  geom_line(size=0.8, col = "#096A09", linewidth = 0.5) +
-  geom_hline(yintercept = 0, linetype = "dashed") +
+  aes(x=datetime, y=TpCO2) +
+  geom_line(size=0.8, col = "black", linewidth = 0.5) +
+  scale_x_date(name="", date_breaks="2 year", date_minor_breaks="1 years", labels = NULL) +
+  scale_y_continuous(name=expression(paste(italic(p), CO[2], " therm (µatm)")))
+
+plot_pco2_nontherm <- data_pco2 %>% 
+  ggplot() +
+  aes(x=datetime, y=NpCO2) +
+  geom_line(size=0.8, col = "black", linewidth = 0.5) +
   scale_x_date(name="", date_breaks="2 year", date_minor_breaks="1 years", date_labels = "%Y") +
-  scale_y_continuous(name="ΔpCO2 (bio)  (µatm)")
-#  ggtitle("Surface delta pCO2 bio variations (2007-sept.2022)")
+  scale_y_continuous(name=expression(paste(italic(p), CO[2], " non-therm (µatm)")))
 
-
-
-plot_grid_delta_bio <- plot_grid(plot_delta_bio, plot_ano_pCO2bio, align='vh', ncol=2)
-
-plot_grid_delta_bio
-
- # ggsave(filename = "delta_bio_07-21.jpg", # Nommez le fichier dans lequel vous voulez enregistrer, ajoutez l'extension du format de fichier que vous voulez utiliser (ex. pdf).
- #         plot = plot_grid_delta_bio, # Fournir le nom de l'objet plot dans R
- #         height = 4, # Fournir les dimensions voulues
- #         width = 12, 
- #         units = "in") 
+plot_grid(plot_pco2_therm, plot_ano_pCO2therm, 
+          plot_pco2_nontherm, plot_ano_pCO2nontherm, align='vh', ncol=2)
 
 
 ```
+  
+  
 
-#### By autocorrelation (decompose function)
+#### By autocorrelation (decompose function)  
+  
 
-```{r pCO2 bio - autocorrelation, echo=FALSE, warning=FALSE, message=FALSE}
+```{r pCO2 therm & non-therm - autocorrelation, echo=FALSE, warning=FALSE, message=FALSE}
 
-
-#creation ts object : DELTA PCO2 BIO
 #frequency : 365.25/7 = 52.17857
 #la serie se termine le 28 sept.2022 : la 39e semaine
-ts_pco2_bio <- ts(data_pco2$delta_pCO2_bio, start = c(2007,1), end = c(2022,39), freq = 52)
-
-#seasonal plot :
-seasonal_plot_ts_pco2_bio <- ggseasonplot(ts_pco2_bio, year.labels = F, year.labels.left = F, col=terrain.colors(16))
-
-seasonal_plot_ts_pco2_bio
-
-
-#correlograms :
-# correlogram1 <- acf(ts_pco2_bio, type = "cor", lag.max = 600, plot = T)
-# correlogram2 <- acf(ts_pco2_bio, type = "cor", lag.max = 55, plot = T)
+ts_pco2_therm <- ts(data_pco2$TpCO2, start = c(2007,1), end = c(2022,39), freq = 52)
+ts_pco2_nontherm <- ts(data_pco2$NpCO2, start = c(2007,1), end = c(2022,39), freq = 52)
 
 
 #type = multiplicative because the seasonal pattern seems to increase in variation according to time
-ts_pco2_bio_decomp <- decompose(ts_pco2_bio, type = "multiplicative") 
+ts_decomp_pco2_therm <- decompose(ts_pco2_therm, type = "multiplicative") 
 
-autoplot(ts_pco2_bio_decomp) +
-  xlab(' ')
+autoplot(ts_decomp_pco2_therm) +
+  xlab("")
+
+ts_decomp_pco2_nontherm <- decompose(ts_pco2_nontherm, type = "multiplicative") 
+
+autoplot(ts_decomp_pco2_nontherm) +
+  xlab("")
 
 ```
+  
+  
+→ remove seasonality :  
+  
 
-→ remove seasonality :
 
-```{r delta pco2 bio - remove seasonality, echo=FALSE, warning=FALSE, message=FALSE}
+```{r pco2 therm & non-therm - remove seasonality, echo=FALSE, warning=FALSE, message=FALSE}
 
-ts_pco2_bio_less_season <- ts_pco2_bio_decomp$x - ts_pco2_bio_decomp$seasonal
+ts_pco2_therm_less_season <- ts_decomp_pco2_therm$x - ts_decomp_pco2_therm$seasonal
+ts_pco2_nontherm_less_season <- ts_decomp_pco2_nontherm$x - ts_decomp_pco2_nontherm$seasonal
 
-plot_ts_pco2_bio_less_season <- autoplot(ts_pco2_bio_less_season) + 
-  xlab("") + ylab("delta pCO2 (µatm)") +
-  ggtitle("Surface delta pCO2 bio variations (without seasonality)") +
+plot_ts_pco2_therm_less_season <- autoplot(ts_pco2_therm_less_season) + 
+  xlab("") + ylab(expression(paste(italic(p), CO[2], " therm (µatm)"))) +
+  ggtitle("Surface pCO2 therm variations (without seasonality)") +
+  geom_smooth(method=lm)
+
+plot_ts_pco2_nontherm_less_season <- autoplot(ts_pco2_nontherm_less_season) + 
+  xlab("") + ylab(expression(paste(italic(p), CO[2], " non-therm (µatm)"))) +
+  ggtitle("Surface pCO2 non-therm variations (without seasonality)") +
   geom_smooth(method=lm)
 
 #regression values :
-reg_val_ts_pco2_bio_less_season <- as.data.frame(plot_ts_pco2_bio_less_season$data)
+reg_val_ts_pco2_therm_less_season <- as.data.frame(plot_ts_pco2_therm_less_season$data)
+reg_val_ts_pco2_nontherm_less_season <- as.data.frame(plot_ts_pco2_nontherm_less_season$data)
 
-model_ts_pco2_bio_less_season <- lm(formula=y~x, data=reg_val_ts_pco2_bio_less_season)
-summary(model_ts_pco2_bio_less_season) #pour voir les erreurs des coef + la significativité
-
+model_ts_pco2_therm_less_season <- lm(formula=y~x, data=reg_val_ts_pco2_therm_less_season)
+summary(model_ts_pco2_therm_less_season) 
+model_ts_pco2_nontherm_less_season <- lm(formula=y~x, data=reg_val_ts_pco2_nontherm_less_season)
+summary(model_ts_pco2_nontherm_less_season)
 
 #plot with slope value :
-plot_ts_pco2_bio_less_season <- autoplot(ts_pco2_bio_less_season) + 
-  xlab("") + ylab("delta pCO2 (µatm)") +
-  ggtitle("Surface delta pCO2 bio variations (without seasonality)") +
+plot_ts_pco2_therm_less_season <- autoplot(ts_pco2_therm_less_season) + 
+  xlab("") + ylab(expression(paste(italic(p), CO[2], " therm (µatm)"))) +
+  ggtitle("Surface pCO2 therm variations (without seasonality)") +
   geom_smooth(method=lm) +
-  annotate(geom="text", x=2010, y=100, label="slope : 2.50 ± 0.26 *", color="black")
+  annotate(geom="text", x=2010, y=600, label="slope : 1.73 ± 0.6 *", color="black")
 
-plot_ts_pco2_bio_less_season
+plot_ts_pco2_nontherm_less_season <- autoplot(ts_pco2_nontherm_less_season) + 
+  xlab("") + ylab(expression(paste(italic(p), CO[2], " non-therm (µatm)"))) +
+  ggtitle("Surface pCO2 non-therm variations (without seasonality)") +
+  geom_smooth(method=lm) +
+  annotate(geom="text", x=2010, y=490, label="slope : 3.49 ± 0.24 *", color="black")
 
-FFpco2bio <- kendallSeasonalTrendTest(delta_pCO2_bio ~ month(datetime) + year(datetime), data = data_pco2)
-FFpco2bio$estimate
+
+plot_ts_pco2_therm_less_season
+plot_ts_pco2_nontherm_less_season
+
 
 ```
+  
+  
+### DEPTH 50  
+  
+#### By residuals (Bates et al. 2014)  
+  
+
+```{r pCO2 bio - bates regression - 50m, echo=FALSE, warning=FALSE, message=FALSE}
+
+
+## Import data DELTA PCO2 BIO :
+data_pco2_prof <- read_delim("../../Data/data_PointB/DATA_SOMLIT_07-22_impute_50m.csv", 
+                        delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
+  dplyr::filter(datetime <= "2022-09-28")
+
+data_pco2_prof <- data_pco2_prof %>% 
+  mutate(Tmean = mean(impute_temp, na.rm=T),
+         pCO2_w_mean = mean(impute_pco2_w, na.rm = TRUE),
+         NpCO2 = impute_pco2_w * exp(0.0423*(Tmean-impute_temp)),
+         TpCO2 = pCO2_w_mean * exp(0.0423*(impute_temp-Tmean)))
+
+## Monthly means
+
+monthly_means2 <- ungroup(data_pco2_prof) %>% 
+  group_by(Month) %>%
+  summarise(pco2_therm_month = mean(TpCO2, na.rm = TRUE),
+            pco2_nontherm_month = mean(NpCO2, na.rm = TRUE))
+
+##
+
+## Parameters
+
+anomalies2 <- left_join(ungroup(data_pco2_prof), monthly_means2, by = "Month") %>%
+  mutate(pco2_therm_ano = TpCO2 - pco2_therm_month,
+         pco2_nontherm_ano = NpCO2 - pco2_nontherm_month)
+
+
+
+# Regression and table anomalies
+var_list <- c("pco2_therm_ano", "pco2_nontherm_ano")
+
+lms <- lapply(var_list, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), data = anomalies2))
+})
+
+reg <- NULL
+for (i in 1:length(var_list)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob <-
+    pf(lms[[i]]$fstatistic[1],
+       lms[[i]]$fstatistic[2],
+       lms[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg <-
+    rbind(reg, as.numeric(
+      c(
+        lms[[i]]$coefficients[2, 1],
+        lms[[i]]$coefficients[2, 2],
+        lms[[i]]$coefficients[2, 4],
+        lms[[i]]$coefficients[1, 1],
+        lms[[i]]$coefficients[1, 2],
+        lms[[i]]$coefficients[1, 4],
+        lms[[i]]$fstatistic[1],
+        lms[[i]]$fstatistic[3],
+        lms[[i]]$r.squared,
+        prob
+      )
+    ))
+}
+colnames(reg) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+row.names(reg) <- var_list
+reg_ano_prof <- reg
+
+reg_ano_prof
+
+FF_pco2_therm_prof <- kendallSeasonalTrendTest(TpCO2 ~ month(datetime) + year(datetime), data = data_pco2_prof)
+FF_pco2_nontherm_prof <- kendallSeasonalTrendTest(NpCO2 ~ month(datetime) + year(datetime), data = data_pco2_prof)
+
+```
+  
+  
+
+```{r pCO2 therm - bates plots 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=9,fig.height=4}
+
+## Plot anomalies :
+
+plot_ano_pCO2therm_prof <- ggplot(data = anomalies2, aes(x = datetime, y = pco2_therm_ano), na.rm=TRUE) +
+  scale_x_date(date_breaks="2 year", date_minor_breaks="1 years", labels = NULL) +
+  geom_point(colour="#22427C", na.rm=TRUE, size = 0.7) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title="",x="", y=expression(paste(italic(p), CO[2], " therm (µatm)"))) 
+#  annotate(geom="text", x=as.Date("2010-03-02"), y=80, label="slope : 1.19 ± 0.18 *", color="black")
+
+plot_ano_pCO2nontherm_prof <- ggplot(data = anomalies2, aes(x = datetime, y = pco2_nontherm_ano), na.rm=TRUE) +
+  scale_x_date(date_breaks="2 year", date_minor_breaks="1 years", date_labels = "%Y") +
+  geom_point(colour="#22427C", na.rm=TRUE, size = 0.7) + 
+  geom_smooth(method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
+  labs(title="",x="", y=expression(paste(italic(p), CO[2], " non-therm (µatm)"))) 
+#  annotate(geom="text", x=as.Date("2010-03-02"), y=80, label="slope : 3.64 ± 0.14 *", color="black")
+
+
+plot_pco2_therm_prof <- data_pco2_prof %>% 
+  ggplot() +
+  aes(x=datetime, y=TpCO2) +
+  geom_line(size=0.5, col = "black") +
+  scale_x_date(name="", date_breaks="2 year", date_minor_breaks="1 years", labels = NULL) +
+  scale_y_continuous(name=expression(paste(italic(p), CO[2], " therm (µatm)")))
+
+plot_pco2_nontherm_prof <- data_pco2_prof %>% 
+  ggplot() +
+  aes(x=datetime, y=NpCO2) +
+  geom_line(size=0.5, col = "black") +
+  scale_x_date(name="", date_breaks="2 year", date_minor_breaks="1 years", date_labels = "%Y") +
+  scale_y_continuous(name=expression(paste(italic(p), CO[2], " non-therm (µatm)")))
+
+plot_grid(plot_pco2_therm_prof, plot_ano_pCO2therm_prof, 
+          plot_pco2_nontherm_prof, plot_ano_pCO2nontherm_prof, align='vh', ncol=2)
+
+
+```
+  
+  
+
+#### By autocorrelation (decompose function)  
+  
+
+```{r pCO2 therm & non-therm - autocorrelation - 50m, echo=FALSE, warning=FALSE, message=FALSE}
+
+#frequency : 365.25/7 = 52.17857
+#la serie se termine le 28 sept.2022 : la 39e semaine
+ts_pco2_therm_prof <- ts(data_pco2_prof$TpCO2, start = c(2007,1), end = c(2022,39), freq = 52)
+ts_pco2_nontherm_prof <- ts(data_pco2_prof$NpCO2, start = c(2007,1), end = c(2022,39), freq = 52)
+
+
+#type = multiplicative because the seasonal pattern seems to increase in variation according to time
+ts_decomp_pco2_therm_prof <- decompose(ts_pco2_therm_prof, type = "multiplicative") 
+
+autoplot(ts_decomp_pco2_therm_prof) +
+  xlab("")
+
+ts_decomp_pco2_nontherm_prof <- decompose(ts_pco2_nontherm_prof, type = "multiplicative") 
+
+autoplot(ts_decomp_pco2_nontherm_prof) +
+  xlab("")
+
+```
+  
+  
+
+→ remove seasonality :  
+  
+
+
+```{r pco2 therm & non-therm - remove seasonality - 50m, echo=FALSE, warning=FALSE, message=FALSE}
+
+ts_pco2_therm_less_season_prof <- ts_decomp_pco2_therm_prof$x - ts_decomp_pco2_therm_prof$seasonal
+ts_pco2_nontherm_less_season_prof <- ts_decomp_pco2_nontherm_prof$x - ts_decomp_pco2_nontherm_prof$seasonal
+
+plot_ts_pco2_therm_less_season_prof <- autoplot(ts_pco2_therm_less_season_prof) + 
+  xlab("") + ylab(expression(paste(italic(p), CO[2], " therm (µatm)"))) +
+  ggtitle("pCO2 therm variations at 50 m (without seasonality)") +
+  geom_smooth(method=lm)
+
+plot_ts_pco2_nontherm_less_season_prof <- autoplot(ts_pco2_nontherm_less_season_prof) + 
+  xlab("") + ylab(expression(paste(italic(p), CO[2], " non-therm (µatm)"))) +
+  ggtitle("pCO2 non-therm variations at 50 m (without seasonality)") +
+  geom_smooth(method=lm)
+
+#regression values :
+reg_val_ts_pco2_therm_less_season_prof <- as.data.frame(plot_ts_pco2_therm_less_season_prof$data)
+reg_val_ts_pco2_nontherm_less_season_prof <- as.data.frame(plot_ts_pco2_nontherm_less_season_prof$data)
+
+model_ts_pco2_therm_less_season_prof <- lm(formula=y~x, data=reg_val_ts_pco2_therm_less_season_prof)
+summary(model_ts_pco2_therm_less_season_prof) 
+model_ts_pco2_nontherm_less_season_prof <- lm(formula=y~x, data=reg_val_ts_pco2_nontherm_less_season_prof)
+summary(model_ts_pco2_nontherm_less_season_prof)
+
+#plot with slope value :
+plot_ts_pco2_therm_less_season_prof <- autoplot(ts_pco2_therm_less_season_prof) + 
+  xlab("") + ylab(expression(paste(italic(p), CO[2], " therm (µatm)"))) +
+  ggtitle("pCO2 therm variations at 50 m (without seasonality)") +
+  geom_smooth(method=lm) +
+  annotate(geom="text", x=2010, y=600, label="slope : 0.40 ± 0.22 *", color="black")
+
+plot_ts_pco2_nontherm_less_season_prof <- autoplot(ts_pco2_nontherm_less_season_prof) + 
+  xlab("") + ylab(expression(paste(italic(p), CO[2], " non-therm (µatm)"))) +
+  ggtitle("pCO2 non-therm variations at 50 m (without seasonality)") +
+  geom_smooth(method=lm) +
+  annotate(geom="text", x=2010, y=490, label="slope : 3.10 ± 0.18 *", color="black")
+
+
+plot_ts_pco2_therm_less_season_prof
+plot_ts_pco2_nontherm_less_season_prof
+
+
+```
+
+
 
 ## CO2 fluxes : Point B (2009-2021)
 
@@ -652,7 +824,7 @@ reg_ano_fluxes <- reg
 
 reg_ano_fluxes
 
-FF3 <- kendallSeasonalTrendTest(Flux_wan_92 ~ month(datetime) + year(datetime), data = data_fluxes)
+FF3 <- kendallSeasonalTrendTest(Flux_CO2_2014 ~ month(datetime) + year(datetime), data = data_fluxes)
 FF3$estimate
 
 ```
@@ -1092,7 +1264,21 @@ plot_ts_pco2w_less_season <- autoplot(ts_pco2w_less_season) +
 plot_ts_pco2w_less_season
 
 FFpCO2_w <- kendallSeasonalTrendTest(impute_pCO2_w ~ month(datetime) + year(datetime), data = data_somlit_surf)
-FFpCO2_w$estimate
+
+# pour pCO2 therm et non-therm :
+
+pco2_bio <- read_delim("../../Data/data_PointB/DATA_SOMLIT_07-22_impute_0m.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+pco2_bio <- pco2_bio %>% 
+  mutate(Tmean = mean(impute_temp),
+         pCO2_w_mean = mean(impute_pCO2_w, na.rm = TRUE),
+         NpCO2 = impute_pCO2_w * exp(0.0423*(Tmean-impute_temp)),
+         TpCO2 = pCO2_w_mean * exp(0.0423*(impute_temp-Tmean)))
+
+FFpCO2_wtherm <- kendallSeasonalTrendTest(TpCO2 ~ month(datetime) + year(datetime), data = pco2_bio)
+
+FFpCO2_wnontherm <- kendallSeasonalTrendTest(NpCO2 ~ month(datetime) + year(datetime), data = pco2_bio)
 
 ```
 
@@ -1127,6 +1313,34 @@ ylab('Temp. (°C')
 #creation data frame de ts_temp :
 df_ts_temp_50 <- as.data.frame(autoplot_ts_temp_50$data) %>% 
   rename(DATE = x, TEMP = y)
+
+ts_temp_decomp_50 <- decompose(ts_temp_50, type = "additive") 
+autoplot(ts_sal_decomp_50) +
+  xlab(' ')
+
+#remove seasonality :
+ts_temp_less_season_50 <- ts_temp_decomp_50$x - ts_temp_decomp_50$seasonal
+
+plot_ts_temp_less_season_50 <- autoplot(ts_temp_less_season_50) + 
+  xlab("") + ylab("Temp. (°C)") +
+  ggtitle("Temperature time series at 50 m (without seasonality)") +
+  geom_smooth(method=lm)
+
+#regression values :
+reg_val_ts_temp_less_season_50 <- as.data.frame(plot_ts_temp_less_season_50$data)
+
+model_ts_temp_less_season_50 <- lm(formula=y~x, data=reg_val_ts_temp_less_season_50)
+summary(model_ts_temp_less_season_50) #pour voir les erreurs des coef + la significativité
+
+
+#plot with slope value :
+plot_ts_temp_less_season_50 <- autoplot(ts_temp_less_season_50) + 
+  xlab("") + ylab("Temp. (°C)") +
+  ggtitle("Temperature time series - 50m (without seasonality)") +
+  geom_smooth(method=lm) +
+  annotate(geom="text", x=2010, y=25, label="slope : 0.026 ± 0.007 *", color="black")
+
+plot_ts_temp_less_season_50
 
 #seasonal plot :
 seasonal_plot_ts_temp_50 <- ggseasonplot(ts_temp_50, year.labels = F, year.labels.left = F)
@@ -1479,28 +1693,278 @@ FFpCO2w_50 <- kendallSeasonalTrendTest(impute_pco2_w ~ month(datetime) + year(da
 FFpCO2w_50$estimate
 
 ```
+  
+  
+
+## Point B - period 1995-2022  
+  
+  
+### SURFACE  
+  
+###### Temperature :  
+  
+
+```{r Point B - period 1995-2022 - surface - temp, echo=FALSE, warning=FALSE, message=FALSE}
+
+PointB_9522_surf <- read_delim("../../Data/data_PointB/PointB_T_S_1995-2022_CLEAN_impute_0m.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+#frequency : 365.25/7 = 52.17857
+ts_temp_9522_surf <- ts(PointB_9522_surf$impute_temp, start = c(1995,1), end = c(2022,52), freq = 52)
+
+#autoplot :
+autoplot_ts_temp_9522_surf <- autoplot(ts_temp_9522_surf) +
+ggtitle('Temperature at surface (°C) at Point B - 1995-2022') +
+xlab('') +
+ylab('Temp. (°C')
+
+
+ts_temp_decomp_9522_surf <- decompose(ts_temp_9522_surf, type = "multiplicative") 
+autoplot(ts_temp_decomp_9522_surf) +
+  xlab(' ')
+
+#remove seasonality :
+ts_temp_less_season_9522_surf <- ts_temp_decomp_9522_surf$x - ts_temp_decomp_9522_surf$seasonal
+
+plot_ts_temp_less_season_9522_surf <- autoplot(ts_temp_less_season_9522_surf) + 
+  xlab("") + ylab("Temp. (°C)") +
+  ggtitle("Temperature time series at surface (without seasonality)") +
+  geom_smooth(method=lm)
+
+#regression values :
+reg_val_ts_temp_less_season_9522_surf <- as.data.frame(plot_ts_temp_less_season_9522_surf$data)
+
+model_ts_temp_less_season_9522_surf <- lm(formula=y~x, data=reg_val_ts_temp_less_season_9522_surf)
+summary(model_ts_temp_less_season_9522_surf) #pour voir les erreurs des coef + la significativité
+
+
+#plot with slope value :
+plot_ts_temp_less_season_9522_surf <- autoplot(ts_temp_less_season_9522_surf) + 
+  xlab("") + ylab("Temp. (°C)") +
+  ggtitle("Temperature time series at surface (without seasonality)") +
+  geom_smooth(method=lm) +
+  annotate(geom="text", x=2010, y=28, label="slope : 0.032 ± 0.01 *", color="black")
+
+plot_ts_temp_less_season_9522_surf
+
+#seasonal plot :
+seasonal_plot_ts_temp_9522_surf <- ggseasonplot(ts_temp_9522_surf, year.labels = F, year.labels.left = F)
+
+#polar plot :
+polar_plot_9522_surf <- ggseasonplot(ts_temp_9522_surf, polar = TRUE)
+
+
+autoplot_ts_temp_9522_surf
+seasonal_plot_ts_temp_9522_surf
+polar_plot_9522_surf
+
+FFtemp_9522_surf <- kendallSeasonalTrendTest(impute_temp ~ month(datetime) + year(datetime), data = PointB_9522_surf)
+
+
+```
+  
+  
+
+  
+
+###### Salinity :  
+  
+
+```{r Point B - period 1995-2022 - surface - sal, echo=FALSE, warning=FALSE, message=FALSE}
+
+#frequency : 365.25/7 = 52.17857
+ts_sal_9522_surf <- ts(PointB_9522_surf$impute_sal, start = c(1995,1), end = c(2022,52), freq = 52)
+
+#autoplot :
+autoplot_ts_sal_9522_surf <- autoplot(ts_sal_9522_surf) +
+ggtitle('Salinity at surface at Point B - 1995-2022') +
+xlab('') +
+ylab('Salinity')
+
+
+ts_sal_decomp_9522_surf <- decompose(ts_sal_9522_surf, type = "additive") 
+autoplot(ts_sal_decomp_9522_surf) +
+  xlab(' ')
+
+#remove seasonality :
+ts_sal_less_season_9522_surf <- ts_sal_decomp_9522_surf$x - ts_sal_decomp_9522_surf$seasonal
+
+plot_ts_sal_less_season_9522_surf <- autoplot(ts_sal_less_season_9522_surf) + 
+  xlab("") + ylab("Salinity") +
+  ggtitle("Salinity time series at surface (without seasonality)") +
+  geom_smooth(method=lm)
+
+#regression values :
+reg_val_ts_sal_less_season_9522_surf <- as.data.frame(plot_ts_sal_less_season_9522_surf$data)
+
+model_ts_sal_less_season_9522_surf <- lm(formula=y~x, data=reg_val_ts_sal_less_season_9522_surf)
+summary(model_ts_sal_less_season_9522_surf) #pour voir les erreurs des coef + la significativité
+
+
+#plot with slope value :
+plot_ts_sal_less_season_9522_surf <- autoplot(ts_sal_less_season_9522_surf) + 
+  xlab("") + ylab("Salinity") +
+  ggtitle("Salinity time series at surface (without seasonality)") +
+  geom_smooth(method=lm) +
+  annotate(geom="text", x=2010, y=35, label="slope : -0.001 ± 0.0009 (non-significative)", color="black")
+
+plot_ts_sal_less_season_9522_surf
+
+
+FFsal_9522_surf <- kendallSeasonalTrendTest(impute_sal ~ month(datetime) + year(datetime), data = PointB_9522_surf)
+
+```
+  
+  
+
+### DEPTH 50  
+  
+###### Temperature :  
+  
+
+```{r Point B - period 1995-2022 - 50m - temp, echo=FALSE, warning=FALSE, message=FALSE}
+
+PointB_9522_prof <- read_delim("../../Data/data_PointB/PointB_T_S_1995-2022_CLEAN_impute_50m.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+#frequency : 365.25/7 = 52.17857
+ts_temp_9522_prof <- ts(PointB_9522_prof$impute_temp, start = c(1995,1), end = c(2022,52), freq = 52)
+
+#autoplot :
+autoplot_ts_temp_9522_prof <- autoplot(ts_temp_9522_prof) +
+ggtitle('Temperature at 50 m (°C) at Point B - 1995-2022') +
+xlab('') +
+ylab('Temp. (°C')
+
+
+ts_temp_decomp_9522_prof <- decompose(ts_temp_9522_prof, type = "multiplicative") 
+autoplot(ts_temp_decomp_9522_prof) +
+  xlab(' ')
+
+#remove seasonality :
+ts_temp_less_season_9522_prof <- ts_temp_decomp_9522_prof$x - ts_temp_decomp_9522_prof$seasonal
+
+plot_ts_temp_less_season_9522_prof <- autoplot(ts_temp_less_season_9522_prof) + 
+  xlab("") + ylab("Temp. (°C)") +
+  ggtitle("Temperature time series at 50 m (without seasonality)") +
+  geom_smooth(method=lm)
+
+#regression values :
+reg_val_ts_temp_less_season_9522_prof <- as.data.frame(plot_ts_temp_less_season_9522_prof$data)
+
+model_ts_temp_less_season_9522_prof <- lm(formula=y~x, data=reg_val_ts_temp_less_season_9522_prof)
+summary(model_ts_temp_less_season_9522_prof) #pour voir les erreurs des coef + la significativité
+
+
+#plot with slope value :
+plot_ts_temp_less_season_9522_prof <- autoplot(ts_temp_less_season_9522_prof) + 
+  xlab("") + ylab("Temp. (°C)") +
+  ggtitle("Temperature time series at 50 m (without seasonality)") +
+  geom_smooth(method=lm) +
+  annotate(geom="text", x=2010, y=24, label="slope : 0.015 ± 0.006 *", color="black")
+
+plot_ts_temp_less_season_9522_prof
+
+#seasonal plot :
+seasonal_plot_ts_temp_9522_prof <- ggseasonplot(ts_temp_9522_prof, year.labels = F, year.labels.left = F)
+
+#polar plot :
+polar_plot_9522_prof <- ggseasonplot(ts_temp_9522_prof, polar = TRUE)
+
+
+autoplot_ts_temp_9522_prof
+seasonal_plot_ts_temp_9522_prof
+polar_plot_9522_prof
+
+FFtemp_9522_prof <- kendallSeasonalTrendTest(impute_temp ~ month(datetime) + year(datetime), data = PointB_9522_prof)
+
+```
+  
+  
+
+###### Salinity :  
+  
+
+```{r Point B - period 1995-2022 - 50m - sal, echo=FALSE, warning=FALSE, message=FALSE}
+
+#frequency : 365.25/7 = 52.17857
+ts_sal_9522_prof <- ts(PointB_9522_prof$impute_sal, start = c(1995,1), end = c(2022,52), freq = 52)
+
+#autoplot :
+autoplot_ts_sal_9522_prof <- autoplot(ts_sal_9522_prof) +
+  ggtitle("Salinity at 50 m at Point B - 1995-2022") + 
+  xlab("") + 
+  ylab("Salinity")
+
+
+ts_sal_decomp_9522_prof <- decompose(ts_sal_9522_prof, type = "additive") 
+autoplot(ts_sal_decomp_9522_prof) +
+  xlab("")
+
+#remove seasonality :
+ts_sal_less_season_9522_prof <- ts_sal_decomp_9522_prof$x - ts_sal_decomp_9522_prof$seasonal
+
+plot_ts_sal_less_season_9522_prof <- autoplot(ts_sal_less_season_9522_prof) + 
+  xlab("") + ylab("Salinity") +
+  ggtitle("Salinity time series at 50 m (without seasonality)") +
+  geom_smooth(method=lm)
+
+#regression values :
+reg_val_ts_sal_less_season_9522_prof <- as.data.frame(plot_ts_sal_less_season_9522_prof$data)
+
+model_ts_sal_less_season_9522_prof <- lm(formula=y~x, data=reg_val_ts_sal_less_season_9522_prof)
+summary(model_ts_sal_less_season_9522_prof) #pour voir les erreurs des coef + la significativité
+
+
+#plot with slope value :
+plot_ts_sal_less_season_9522_prof <- autoplot(ts_sal_less_season_9522_prof) + 
+  xlab("") + ylab("Salinity") +
+  ggtitle("Salinity time series at 50 m (without seasonality)") +
+  geom_smooth(method=lm) +
+  annotate(geom="text", x=2010, y=35, label="slope : 0.00 ± 0.0005 *", color="black")
+
+plot_ts_sal_less_season_9522_prof
+
+
+FFsal_9522_prof <- kendallSeasonalTrendTest(impute_sal ~ month(datetime) + year(datetime), data = PointB_9522_prof)
+
+```
+  
+  
 
 ## Seasonal Mann Kendall slopes :  
   
 For temperature and *p*CO~2~ seawater at Point B (2007-2022)  
   
 
-```{r seasonal_slopes, echo=FALSE, warning=FALSE, message=FALSE, fig.width=5,fig.height=6}
+```{r seasonal_slopes, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=6}
 
 seasonal_slopes_pco2w_surf <- as.data.frame(FFpCO2_w$seasonal.estimates) %>% 
   dplyr::select(slope) %>% 
   rename(pco2_slope = slope)
 
-seasonal_slopes_temp_surf <- as.data.frame(FFtemp$seasonal.estimates) %>% 
+seasonal_slopes_temp_surf_9522 <- as.data.frame(FFtemp_9522$seasonal.estimates) %>% 
   dplyr::select(slope) %>% 
   rename(temp_slope = slope)
 
-seasonal_slopes <- data.frame(ID = c(1:12), Months = c("Jan", "Fev", "Mar", "Avr", "Mai", "Juin", 
+seasonal_slopes_pco2_therm <- as.data.frame(FFpCO2_wtherm$seasonal.estimates) %>% 
+  dplyr::select(slope) %>% 
+  rename(pCO2_therm_slope = slope)
+
+seasonal_slopes_pco2_nontherm <- as.data.frame(FFpCO2_wnontherm$seasonal.estimates) %>% 
+  dplyr::select(slope) %>% 
+  rename(pCO2_nontherm_slope = slope)
+
+
+seasonal_slopes <- data.frame(ID = c(1:12), 
+                              Months = c("Jan", "Fev", "Mar", "Avr", "Mai", "Juin", 
                                          "Juil", "Août", "Sept", "Oct", "Nov", "Dec"), 
                               pco2_slope = seasonal_slopes_pco2w_surf$pco2_slope,
-                              temp_slope = seasonal_slopes_temp_surf$temp_slope)
+                              temp_slope = seasonal_slopes_temp_surf_9522$temp_slope,
+                              pCO2_therm_slope = seasonal_slopes_pco2_therm$pCO2_therm_slope,
+                              pCO2_nontherm_slope = seasonal_slopes_pco2_nontherm$pCO2_nontherm_slope)
 
-seasonal_slopes[,c(2:4)]
+seasonal_slopes[,c(2:6)]
 
 # seasonal_slopes_pco2w_surf %>% 
 #   ggplot() + 
@@ -1514,22 +1978,38 @@ seasonal_slopes[,c(2:4)]
 
 plot1 <- seasonal_slopes %>% 
   ggplot() +
-  aes(x=ID, y=temp_slope) +
+  aes(x=reorder(Months, ID), y=temp_slope) +
   geom_bar(stat="identity", fill="lightgrey", color="red", width=0.8) +
-  scale_y_continuous(name=expression(paste("Valeur de la pente (°C.", an^-1,")")), n.breaks = 10) +
+  scale_y_continuous(name=expression(paste("Valeur de la pente (°C ", an^-1,")")), n.breaks = 10) +
   geom_hline(col = "#303030", yintercept = 0, linetype=1) +
-  scale_x_continuous(name="", n.breaks = 12, labels =NULL)
+  scale_x_discrete(name="")
 
 plot2 <- seasonal_slopes %>% 
   ggplot() +
   aes(x=reorder(Months, ID), y=pco2_slope) +
   geom_bar(stat="identity", fill="lightgrey", color="#357AB7", width=0.8) +
-  scale_y_continuous(name=expression(paste("Valeur de la pente (", mu, "atm.", an^-1,")")), n.breaks = 10) +
+  scale_y_continuous(name=expression(paste("Valeur de la pente (", mu, "atm ", an^-1,")")), n.breaks = 10) +
+  geom_hline(col = "#303030", yintercept = 0, linetype=1) +
+  scale_x_discrete(name="")
+
+plot3 <- seasonal_slopes %>% 
+  ggplot() +
+  aes(x=reorder(Months, ID), y=pCO2_therm_slope) +
+  geom_bar(stat="identity", fill="lightgrey", color="#CC5500", width=0.8) +
+  scale_y_continuous(name=expression(paste("Valeur de la pente (", mu, "atm ", an^-1,")")), n.breaks = 10) +
+  geom_hline(col = "#303030", yintercept = 0, linetype=1) +
+  scale_x_discrete(name="")
+
+plot4 <- seasonal_slopes %>% 
+  ggplot() +
+  aes(x=reorder(Months, ID), y=pCO2_nontherm_slope) +
+  geom_bar(stat="identity", fill="lightgrey", color="#660099", width=0.8) +
+  scale_y_continuous(name=expression(paste("Valeur de la pente (", mu, "atm ", an^-1,")")), n.breaks = 10) +
   geom_hline(col = "#303030", yintercept = 0, linetype=1) +
   scale_x_discrete(name="")
 
 
-plot_grid(plot1, plot2, align='vh', ncol=1)
+plot_grid(plot1, plot3, plot2, plot4, align='vh', ncol=2)
 
 
 ```

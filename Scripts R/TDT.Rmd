@@ -49,19 +49,24 @@ library("rMR")
 
 ```{r importation data somlit - surface, echo=FALSE, warning=FALSE, message=FALSE}
 
-data_somlit_surf <- read_delim("../Data/DATA_SOMLIT_07-22_impute_0m.csv", 
+data_PtB_surf_0722 <- read_delim("../Data/data_PointB/DATA_SOMLIT_07-22_impute_0m.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+data_PtB_surf_9522 <- read_delim("../Data/data_PointB/PointB_T_S_1995-2022_CLEAN_impute_0m.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+
 
 ## creation ts object :
 #frequency : 365.25/7 = 52.17857
-ts_temp <- ts(data_somlit_surf$impute_temp, start = c(2007,1), end = c(2022,52), freq = 52)
+ts_temp_0722 <- ts(data_PtB_surf_0722$impute_temp, start = c(2007,1), end = c(2022,52), freq = 52)
 
 
 ## decompose function :
 #type = additive because the seasonal pattern doesn't seem to increase in variation, seasonal pattern looks constant
-ts_temp_decomp <- decompose(ts_temp, type = "additive")
+ts_temp_0722_decomp <- decompose(ts_temp_0722, type = "additive")
 
-autoplot(ts_temp_decomp) +
+autoplot(ts_temp_0722_decomp) +
   xlab(' ')
 
 ```
@@ -70,32 +75,29 @@ autoplot(ts_temp_decomp) +
 
 ```{r remove seasonality, echo=FALSE, warning=FALSE, message=FALSE}
 
-ts_temp_less_season <- ts_temp_decomp$x - ts_temp_decomp$seasonal
+ts_temp_0722_less_season <- ts_temp_0722_decomp$x - ts_temp_0722_decomp$seasonal
 
 
-plot_ts_temp_less_season <- autoplot(ts_temp_less_season) + 
+plot_ts_temp_0722_less_season <- autoplot(ts_temp_0722_less_season) + 
   xlab("") + ylab("Temp. (°C)") +
   ggtitle("Sea surface temperature time series (without seasonality)") +
   geom_smooth(method=lm)
 
-#regression values : 
-reg_val_less_season <- as.data.frame(plot_ts_temp_less_season$data)
 
-#simple regression :
-model_less_season <- lm(formula=y~x, data=reg_val_less_season)
+reg_val_less_season_0722 <- as.data.frame(plot_ts_temp_0722_less_season$data)
 
-#summary(model_less_season) # slope : 0.058022
+model_less_season_0722 <- lm(formula=y~x, data=reg_val_less_season_0722)
+summary(model_less_season_0722) # slope : 0.058
 
-#WLS regression :
 
-#define weights to use
-weight <- 1 / lm(abs(model_less_season$residuals) ~ model_less_season$fitted.values)$fitted.values^2
+#plot with slope value :
+plot_ts_temp_0722_less_season <- autoplot(ts_temp_0722_less_season) + 
+  xlab("") + ylab("Temp. (°C)") +
+  ggtitle("Sea surface temperature time series (without seasonality)") +
+  geom_smooth(method=lm) +
+  annotate(geom="text", x=2015, y=23, label="slope : 0.058 ± 0.009 *", color="black")
 
-#perform weighted least squares regression
-wls_model <- lm(reg_val_less_season$y ~ reg_val_less_season$x, data = reg_val_less_season, weights = weight)
-
-#view summary of model
-summary(wls_model) # slope : 0.057757
+plot_ts_temp_0722_less_season
 ##
 
 ```
@@ -104,15 +106,17 @@ summary(wls_model) # slope : 0.057757
 ```{r calcul TDT parameters, echo=FALSE, warning=FALSE, message=FALSE}
 
 ## σN calculation : 
-sd(ts_temp_decomp$random[27:806]) # 1.134308
+TDT_sd <- sd(ts_temp_0722_decomp$random[27:806]) #1.134
 
 ## Φ calculation (lag 1) :
-acf(ts_temp_decomp$random[27:806], lag.max = 60, type = "cor", plot = F) # 0.674
+acf(ts_temp_0722_decomp$random[27:806], lag.max = 60, type = "cor", plot = F) # 0.674
+TDT_acf <- 0.674
 
 ## ω0 :
-# 0.057757
+TDT_slope <- 0.058
 
 ```
+
 
 
 ```{r TDT calculation, echo=FALSE, warning=FALSE, message=FALSE}
@@ -128,14 +132,14 @@ acf(ts_temp_decomp$random[27:806], lag.max = 60, type = "cor", plot = F) # 0.674
 #with :
 
 # σN :  sd(noise) → decompose function
-# ω0 : WLS slope
+# ω0 : trend slope
 # Φ : autocorr(noise) at lag 1
 
 
-Fac1 <- (3.3 * 1.134308)/abs(0.057757)
-Fac2 <- sqrt((1 + 0.674)/(1 - 0.674))
+Fac1 <- (3.3 * TDT_sd)/abs(TDT_slope)
+Fac2 <- sqrt((1 + TDT_acf)/(1 - TDT_acf))
 
-TDT <- (Fac1 * Fac2)^(2/3) # 27.84 years
+TDT <- (Fac1 * Fac2)^(2/3) # 27.8 years
 
 
 
@@ -148,10 +152,34 @@ B <- (4/(3*sqrt(192))) * Fac2
 uTDT_neg <- TDT * exp(-B)
 uTDT <- TDT * exp(B)
 
-#interval of years : (18.39 years to 28.44 years) or 23 ± 5 years
+#interval of years : (22.32 years to 34.52 years)
 ```
   
   
+
+```{r TDT simplifié}
+
+# ToE = (2*N)/S
+# with 
+# S : linear trend (per year)
+# N : sd of the variable on the entire period, detrended
+
+ts_temp_0722_less_trend <- ts_temp_0722_decomp$x - ts_temp_0722_decomp$trend
+
+
+N <- sd(ts_temp_0722_less_trend, na.rm=TRUE) # 4.28
+S <- 0.058 
+
+ToE <- (2*N)/S # 147.5
+
+```
+
+
+
+
+
+
+
 ###### EOL : 2014-2022  
   
 

@@ -135,7 +135,7 @@ Unity : µatm
 #period : jan. 2007 - dec. 2022
 #measurements every tuesday at 09h AM
 
-SOMLIT_pcO2 <- read_delim("../../Data/DATA_SOMLIT_07-22_impute_0m.csv", 
+SOMLIT_pcO2 <- read_delim("../../Data/data_PointB/DATA_SOMLIT_07-22_impute_0m.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
 # delta pCO2 = pCO2 seawater - pCO2 air 
@@ -313,7 +313,7 @@ Method used : Wanninkhof (2014)
 
 ```{r calcul flux, echo=FALSE, warning=FALSE, message=FALSE, fig.width=10,fig.height=6}
 
-tab_flux <- read_delim("../../Data/DATA_SOMLIT_07-22_impute_0m_deltas_pCO2.csv", 
+tab_flux <- read_delim("../../Data/data_PointB/DATA_SOMLIT_07-22_impute_0m_deltas_pCO2.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
 
@@ -424,7 +424,7 @@ fluxes_co2_plot <- tab_flux_long %>%
   ggplot() +
   ggtitle("") +
   geom_line(aes(x=datetime, y=value, color= Legend), size=0.5) +
-  scale_y_continuous(name="Fluxes (mol of C/m²/h)", labels = label_scientific(), n.breaks=8) + 
+  scale_y_continuous(name=expression(paste("Flux (mol de C ", m^-2, " ", h^-1, ")")), labels = label_scientific(), n.breaks=8) + 
   scale_x_date(name="", date_breaks = "2 year", date_minor_breaks = "1 year", date_labels = "%Y") +
   scale_colour_discrete(type=c("#BF3030", "#677179")) + 
   geom_hline(col = "black", yintercept = 0, linetype="dashed")
@@ -446,7 +446,7 @@ fluxes_co2_plot
 ### Annual fluxes (Wanninkhof, 1992)  
   
 
-```{r flux annuels, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7,fig.height=5}
+```{r flux annuels, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=5}
 
 annual_fluxes <- tab_flux %>% 
   group_by(Year) %>% 
@@ -458,8 +458,8 @@ annual_fluxes %>%
   aes(x=Year, y=moy_flux) + 
   geom_bar(stat = "identity", width=0.9, fill="#303030") + 
   scale_x_discrete(name="", limits=c("2009" : "2022")) + 
-  scale_y_continuous(name="Fluxes (mol of C/m²/h)", labels = label_scientific(), n.breaks = 10) +
-  ggtitle("") 
+  scale_y_continuous(name=expression(paste("Flux (mol de C ", m^-2, " ", h^-1, ")")), labels = label_scientific(), n.breaks = 10) +
+  geom_hline(col = "black", yintercept = 0)
 
 
 ## save flux

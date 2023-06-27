@@ -40,16 +40,41 @@ Utilisation of : na_seadec() function
 ### Temperature & salinity :  
   
 
-```{r interpolation temp & salinity, echo=FALSE, warning=FALSE, message=FALSE}
+```{r interpolation temp & salinity, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4}
 
-SOMLIT_pcO2 <- read_delim("../Data/DATA_SOMLIT_07-22_impute_0m.csv", 
+SOMLIT_pcO2 <- read_delim("../../Data/Data_PointB/DATA_SOMLIT_07-22_impute_0m.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
 # impute_temp <- na_seadec(SOMLIT_pcO2$temperature, algorithm = "interpolation", find_frequency = F)
 # impute_sal <- na_seadec(SOMLIT_pcO2$salinity, algorithm = "interpolation", find_frequency = F)
 
 
-ggplot_na_imputations(SOMLIT_pcO2$temperature, SOMLIT_pcO2$impute_temp, x_axis_labels = SOMLIT_pcO2$datetime, xlab = "", ylab="Temp. (°C)", title="Point B - Temperature time series (°C) - period 2007-2022")
+SOMLIT_pcO2$temperature[is.na(SOMLIT_pcO2$temperature)] <- "NA"
+
+SOMLIT_pcO2 %>% 
+  dplyr::filter(temperature == "NA") %>% 
+  dplyr::group_by(Year) %>% 
+  dplyr::summarise(number_of_NA = n()) %>% 
+  ggplot(aes(x = Year, y = number_of_NA))  +
+  geom_segment(aes(x = Year, xend = Year, y = 0, yend = number_of_NA), 
+               color = "grey", linewidth = 2) +
+  geom_point(size = 5, fill = "#689D71", shape = 21, color = "black") +
+  coord_flip() +
+  scale_y_continuous(name = "Nombre de données manquantes", limits = c(0,15), breaks = seq(0, 15, 1)) + 
+  scale_x_discrete(name="", limits=c("2007":"2022"))
+
+SOMLIT_pcO2 <- SOMLIT_pcO2 %>% 
+  mutate(temperature = as.numeric(temperature))
+
+
+# ggplot_na_gapsize(SOMLIT_pcO2$temperature)
+
+
+ggplot_na_imputations(SOMLIT_pcO2$temperature, SOMLIT_pcO2$impute_temp, x_axis_labels = SOMLIT_pcO2$datetime, xlab = "", ylab="Temp. (°C)", 
+                      title="Point B - Temperature time series (°C) - period 2007-2022", color_lines = "lightslategray",
+                      color_points = "steelblue", size_points = 1.2, size_imputations = 1.7) +
+  scale_x_date(date_breaks = "2 years", date_labels = "%Y") 
+  
 ggplot_na_imputations(SOMLIT_pcO2$salinity, SOMLIT_pcO2$impute_sal, x_axis_labels = SOMLIT_pcO2$datetime, xlab = "", ylab="Salinity", title="Point B - Salinity time series - period 2007-2022")
 
 
@@ -107,16 +132,37 @@ Unity : µatm
 → Plateau Rosa (10m) - 2007-2022  
 → Lampedusa (10m) - 2006-2022  
   
-```{r importation pCO2 air, echo=FALSE, warning=FALSE, message=FALSE}
+```{r importation pCO2 air, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7,fig.height=4}
 
-# pCO2_air <- read_delim("../Data/DATA_pCO2_atmos_06-22.csv", 
-#     delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
-#   dplyr::filter(datetime >= "2007-01-01" & datetime <= "2021-12-31") %>% 
-#   dplyr::select(-c(CO2_LAMP, CO2_CORSE, CO2_PR, CO2_HP, CO2_MC, pCO2_MC, pCO2_HP))
-# 
-# 
+ pCO2_air <- read_delim("../../Data/atmospheric_pco2_icos/DATA_pCO2_atmos_06-22.csv", 
+     delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
+   dplyr::filter(datetime >= "2007-01-01" & datetime <= "2021-12-31") %>% 
+   dplyr::select(-c(CO2_LAMP, CO2_CORSE, CO2_PR, CO2_HP, CO2_MC, pCO2_MC, pCO2_HP))
+ 
+ 
 # merge1 <- left_join(SOMLIT_pcO2, pCO2_air, by="datetime")
 
+##RAPPORT
+
+reg1 <- summary(lm(pCO2_air$pCO2_LAMP ~ pCO2_air$pCO2_CORSE)) #0.86
+reg2 <- summary(lm(pCO2_air$pCO2_PR ~ pCO2_air$pCO2_CORSE)) #0.85
+
+
+ pCO2_air %>% 
+   ggplot() + 
+   geom_point(aes(x=datetime, y=pCO2_CORSE), col = "#960018", size=0.6) +
+   geom_point(aes(x=datetime, y=pCO2_LAMP), col = "#1FA055", size=0.5) +
+   scale_x_date(name="", date_breaks = "2 years", date_minor_breaks = "1 year", date_labels = "%Y") +
+   scale_y_continuous(name=expression(paste(italic(p), CO[2], " (",mu, "atm)"))) +
+   annotate(geom="text", x=as.Date("2015-02-03"), y=420, label="R² = 0.85 *", color="black")
+
+pCO2_air %>% 
+  ggplot() + 
+  geom_point(aes(x=datetime, y=pCO2_CORSE), col = "#960018", size=0.6) +
+  geom_point(aes(x=datetime, y=pCO2_PR), col = "#357AB7", size=0.5) +
+  scale_x_date(name="", date_breaks = "2 years", date_minor_breaks = "1 year", date_labels = "%Y") +
+  scale_y_continuous(name=expression(paste(italic(p), CO[2], " (",mu, "atm)"))) +
+  annotate(geom="text", x=as.Date("2015-02-03"), y=420, label="R² = 0.83 *", color="black")
 
 
 ```
