@@ -40,16 +40,17 @@ Utilisation of : na_seadec() function
 ### Temperature & salinity :  
   
 
-```{r interpolation temp & salinity, echo=FALSE, warning=FALSE, message=FALSE, fig.width=6,fig.height=4}
+```{r interpolation temp & salinity, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7,fig.height=5}
 
 SOMLIT_pcO2 <- read_delim("../../Data/Data_PointB/DATA_SOMLIT_07-22_impute_0m.csv", 
-    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+    delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
+  dplyr::filter(datetime <= "2021-11-09")
 
 # impute_temp <- na_seadec(SOMLIT_pcO2$temperature, algorithm = "interpolation", find_frequency = F)
 # impute_sal <- na_seadec(SOMLIT_pcO2$salinity, algorithm = "interpolation", find_frequency = F)
 
 
-SOMLIT_pcO2$temperature[is.na(SOMLIT_pcO2$temperature)] <- "NA"
+SOMLIT_pcO2$temperature[is.na(SOMLIT_pcO2$pCO2_atmos)] <- "NA"
 
 SOMLIT_pcO2 %>% 
   dplyr::filter(temperature == "NA") %>% 
@@ -61,21 +62,22 @@ SOMLIT_pcO2 %>%
   geom_point(size = 5, fill = "#689D71", shape = 21, color = "black") +
   coord_flip() +
   scale_y_continuous(name = "Nombre de données manquantes", limits = c(0,15), breaks = seq(0, 15, 1)) + 
-  scale_x_discrete(name="", limits=c("2007":"2022"))
+  scale_x_discrete(name="", limits=c("2007":"2021"))
 
 SOMLIT_pcO2 <- SOMLIT_pcO2 %>% 
-  mutate(temperature = as.numeric(temperature))
+  mutate(pCO2_atmos = as.numeric(pCO2_atmos))
 
 
-# ggplot_na_gapsize(SOMLIT_pcO2$temperature)
+# ggplot_na_gapsize(SOMLIT_pcO2$pCO2_atmos)
 
 
-ggplot_na_imputations(SOMLIT_pcO2$temperature, SOMLIT_pcO2$impute_temp, x_axis_labels = SOMLIT_pcO2$datetime, xlab = "", ylab="Temp. (°C)", 
-                      title="Point B - Temperature time series (°C) - period 2007-2022", color_lines = "lightslategray",
+ggplot_na_imputations(SOMLIT_pcO2$pCO2_atmos, SOMLIT_pcO2$impute_pCO2_atmos, x_axis_labels = SOMLIT_pcO2$datetime, xlab = "", 
+                      ylab=expression(paste(italic(p), CO[2], " atmosphérique ", "(atm)")), 
+                      title="", color_lines = "lightslategray",
                       color_points = "steelblue", size_points = 1.2, size_imputations = 1.7) +
   scale_x_date(date_breaks = "2 years", date_labels = "%Y") 
   
-ggplot_na_imputations(SOMLIT_pcO2$salinity, SOMLIT_pcO2$impute_sal, x_axis_labels = SOMLIT_pcO2$datetime, xlab = "", ylab="Salinity", title="Point B - Salinity time series - period 2007-2022")
+
 
 
 ```

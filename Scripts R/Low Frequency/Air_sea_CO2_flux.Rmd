@@ -55,7 +55,7 @@ Wind_Azur <- Wind_Azur[319:121962,] #jan.2009 to dec.2022
 ##
 
 #importation data wind speed (model) of EOL buoy (fin 2011-2022) :
-Wind_EOL <- read_csv("../../Data/model_wind_speed_EOL.csv") %>% arrange(date)
+Wind_EOL <- read_csv("../../Data/wind_cap_ferrat_model_EOL/model_wind_speed_EOL.csv") %>% arrange(date)
 
 #delete december 2008 :
 Wind_EOL <- Wind_EOL[319:121962,] #jan.2009 to dec.2022
@@ -107,16 +107,25 @@ graph_wind_eol <- Wind_EOL_9AM %>%
   group_by(year) %>% 
   mutate(mean = mean(speed_ms))
 
-graph_wind_eol %>%  
+wind_mean <- graph_wind_eol %>% distinct(mean)
+
+wind_mean %>%  
   ggplot() + 
-  ggtitle("Annual means of wind speed (EOL)") +
+  ggtitle("") +
   aes(x=year, y=mean) +
-  geom_point(shape=1, col="black", size=3) +
-  geom_line() +
-  scale_y_continuous(name="Speed (m/s)") +
+  geom_point(col="black", size=0.7) +
+  geom_line(group=1) +
+  scale_y_continuous(name=expression(paste("Moyennes annuelles (m ", s^-1,")"))) +
   scale_x_discrete(name="") 
 
-
+# wind_mean %>%  
+#   ggplot() + 
+#   ggtitle("Annual means of wind speed (EOL)") +
+#   aes(x=year, y=mean) +
+#   geom_col(col="black", fill="#357AB7", size=0.7) +
+#   geom_line() +
+#   scale_y_continuous(name="Speed (m/s)") +
+#   scale_x_discrete(name="") 
 
 ```
   
@@ -200,12 +209,12 @@ TpCO~2~ = only temperature effects on pCO~2~ water variations
 -   delta pCO~2~(bio) : biological effects = pCO~2~ water - TpCO~2~  
   
 
-```{r NpCO2 & TpCO2 & deltas calculations, echo=FALSE, warning=FALSE, message=FALSE, fig.width=9,fig.height=6}
+```{r NpCO2 & TpCO2 & deltas calculations, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=5}
 
 #formula NpCO2 : pCO2w obs * e(0.0423*Tmean-Tobs)
 #formula TpCO2 : pCO2mean * exp[0.0423(Tobs - Tmean)]
 
-pco2_bio <- read_delim("../../Data/DATA_SOMLIT_07-22_impute_0m.csv", 
+pco2_bio <- read_delim("../../Data/data_PointB/DATA_SOMLIT_07-22_impute_0m.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
 pco2_bio <- pco2_bio %>% 
@@ -238,20 +247,20 @@ pCO2bio_pCO2T_plot <- pCO2bio_pCO2T_plot_long %>%
   scale_x_date(name="", date_breaks="2 year", date_minor_breaks="1 years", labels = date_format("%Y")) + 
   scale_colour_discrete(type=c("#096A09", "#E9383F"))
 
-pCO2bio_pCO2T_plot
+#pCO2bio_pCO2T_plot
 ##
 
 ##RAPPORT##
 pco2_bio_plot_rapport <- pco2_bio %>% 
   ggplot() +
-  geom_line(aes(x=datetime, y=delta_pCO2_T), col = "#BF3030", size = 0.4) +
-  geom_line(aes(x=datetime, y=delta_pCO2_bio), col = "#096A09", size = 0.6) +
-  scale_y_continuous(name="ΔpCO2 (µatm)") + 
+  geom_line(aes(x=datetime, y=delta_pCO2_T), col = "#BF3030", size = 0.5) +
+  geom_line(aes(x=datetime, y=delta_pCO2_bio), col = "#096A09", size = 0.5) +
+  scale_y_continuous(name=expression(paste(Delta, italic(p), CO[2], " (", mu, "atm)"))) + 
   scale_x_date(name="", date_breaks="2 year", date_minor_breaks="1 years", labels = date_format("%Y")) +
   geom_hline(col = "black", yintercept = 0, linetype="dashed")
 #  theme(panel.background = element_rect(fill = "#CCCCCC", size = 0.3, linetype="solid"))
 
-
+pco2_bio_plot_rapport
 
 #save
  # ggsave(filename = "pCO2bio_pCO2T_plot.jpg", # Nommez le fichier dans lequel vous voulez enregistrer, ajoutez l'extension du format de fichier que vous voulez utiliser (ex. pdf).
@@ -268,7 +277,7 @@ pco2_bio_plot_rapport <- pco2_bio %>%
 ## Atmospheric and seawater pCO~2~ (µatm) according to time (2007-2022) :  
   
 
-```{r atmospheric & water pCO2 plot, echo=FALSE, warning=FALSE, message=FALSE, fig.width=10,fig.height=6}
+```{r atmospheric & water pCO2 plot, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=6}
 
 atmos_water_pCO2_plot_long <- pco2_bio %>% 
   rename(`pCO2 ocean` = impute_pCO2_w, `pCO2 atmosphere` = impute_pCO2_atmos, NpCO2 = NpCO2) %>% 
@@ -278,8 +287,8 @@ atmos_water_pCO2_plot_long <- pco2_bio %>%
 atmos_water_pCO2_plot <- atmos_water_pCO2_plot_long %>% 
   ggplot() +
   ggtitle("") +
-  geom_line(aes(x=datetime, y=value, color= Legend), size=0.7) +
-  scale_y_continuous(name="pCO2 (µatm)") + 
+  geom_line(aes(x=datetime, y=value, color= Legend), size=0.5) +
+  scale_y_continuous(name=expression(paste(italic(p), CO[2], " (", mu, "atm)"))) + 
   scale_x_date(name="", date_breaks="2 year", date_minor_breaks="1 years", labels = date_format("%Y")) + 
   scale_colour_discrete(type=c("#708D23", "#CC5500", "#56739A"))
 
@@ -311,7 +320,7 @@ atmos_water_pCO2_plot
 Method used : Wanninkhof (2014)  
   
 
-```{r calcul flux, echo=FALSE, warning=FALSE, message=FALSE, fig.width=10,fig.height=6}
+```{r calcul flux, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=5}
 
 tab_flux <- read_delim("../../Data/data_PointB/DATA_SOMLIT_07-22_impute_0m_deltas_pCO2.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
@@ -319,7 +328,8 @@ tab_flux <- read_delim("../../Data/data_PointB/DATA_SOMLIT_07-22_impute_0m_delta
 
 #Calcul of F
 tab_flux <- tab_flux %>% dplyr::filter(datetime >= "2009-01-06") %>% 
-    mutate(Flux_CO2_2014 = (0.00077 * speed_ms^2 * delta_pCO2)/(24*365)) #to have a flux per hour
+    mutate(Flux_CO2_2014 = (0.00077 * speed_ms^2 * delta_pCO2)/ 365, #per day
+           Flux_CO2_2014 = Flux_CO2_2014/24) #to have a flux per hour
 
 
 #plot Flux Wanninkhof 2014 :
@@ -328,8 +338,17 @@ tab_flux %>%
   aes(x=datetime, y=Flux_CO2_2014) + 
   geom_line(col="#967C5C") +
   scale_x_date(name="", date_breaks = "2 year", date_minor_breaks = "1 year", date_labels = "%Y") +
-  scale_y_continuous(name="Fluxes (mol of C/m²/y)", labels = label_scientific(), n.breaks=8) +
-  ggtitle("CO2 fluxes ocean-atmosphere (Wanninkhof 2014)") #mettre les valeurs y en notation scientifique 
+  scale_y_continuous(name="Fluxes (mol of CO2/m²/y)", labels = label_scientific(digits=1), n.breaks=8) +
+  ggtitle("CO2 fluxes ocean-atmosphere (Wanninkhof 2014)") 
+
+
+# tab_flux %>% 
+#   ggplot() +
+#   aes(x=datetime, y=impute_pCO2_atmos) +
+#   geom_line() +
+#   scale_x_date(name="", date_breaks = "2 years", date_minor_breaks = "1 year", date_label="%Y") +
+#   scale_y_continuous(name=expression(paste(italic(p), CO[2], " atmosphérique (μatm)"))) +
+#   geom_smooth(formula = y~x, col="steelblue")
 
 
 ```
@@ -362,7 +381,7 @@ tab_flux <- tab_flux %>%
          rho = rho(S=impute_sal, T=impute_temp, P=0)/1000,
          K0 = (K0(S=impute_sal, T=impute_temp, P=0, Patm=1, warn="n")),
          K0 = (K0 * rho)/1000000, 
-         Flux_wan_92 = (k * K0 * delta_pCO2)*10)
+         Flux_wan_92 = (k * K0 * delta_pCO2)*10) # *24*365 to have in mol/m²/y
 ##
 
 
@@ -385,7 +404,7 @@ tab_flux %>%
   aes(x=datetime, y=Flux_wan_92) + 
   geom_line(col="#677179") +
   scale_x_date(name="", date_breaks = "2 year", date_minor_breaks = "1 year", date_labels = "%Y") +
-  scale_y_continuous(name="Fluxes (mol C/m²/h)") +
+  scale_y_continuous(name="Fluxes (mol CO2/m²/h)", labels = label_scientific(digits=1), n.breaks=8) +
   ggtitle("CO2 fluxes ocean-atmosphere (Wanninkhof 1992)")
 
 
@@ -393,22 +412,6 @@ tab_flux %>%
   
   
 
-  
-### Summary table of 2 calculation methods results (Wanninkhof 1992 & 2014) :  
-  
-
-```{r 2 methods comparison table, echo=FALSE, warning=FALSE, message=FALSE}
-
-summary_table <- data.frame(tab_flux$datetime, tab_flux$Flux_wan_92, tab_flux$Flux_CO2_2014)
-
-colnames(summary_table) <- c("Datetime", "Flux_wan_92", "Flux_wan_2014")
-
-#summary_table <- summary_table %>% dplyr::filter(Datetime <= "2021-12-28")
-
-
-```
-  
-  
 ### Plot comparing the 2 CO~2~ fluxes :  
   
 
@@ -424,7 +427,7 @@ fluxes_co2_plot <- tab_flux_long %>%
   ggplot() +
   ggtitle("") +
   geom_line(aes(x=datetime, y=value, color= Legend), size=0.5) +
-  scale_y_continuous(name=expression(paste("Flux (mol de C ", m^-2, " ", h^-1, ")")), labels = label_scientific(), n.breaks=8) + 
+  scale_y_continuous(name=expression(paste("Flux (mol ", m^-2, " ", h^-1, ")")), labels = label_scientific(digits=1), n.breaks=8) + 
   scale_x_date(name="", date_breaks = "2 year", date_minor_breaks = "1 year", date_labels = "%Y") +
   scale_colour_discrete(type=c("#BF3030", "#677179")) + 
   geom_hline(col = "black", yintercept = 0, linetype="dashed")
@@ -443,22 +446,37 @@ fluxes_co2_plot
 ```
   
   
-### Annual fluxes (Wanninkhof, 1992)  
+### Annual fluxes (Wanninkhof, 2014)  
   
 
 ```{r flux annuels, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=5}
 
-annual_fluxes <- tab_flux %>% 
-  group_by(Year) %>% 
-  mutate(moy_flux = mean(Flux_wan_92, na.rm=T)) %>% 
-  mutate(yyy = format(datetime, format = "%Y"))
+#calculation of annual means of flux in hour :
+# annual_fluxes <- tab_flux %>% 
+#   group_by(Year) %>% 
+#   mutate(moy_flux = mean(Flux_wan_92, na.rm=T)) %>% 
+#   mutate(yyy = format(datetime, format = "%Y"))
 
-annual_fluxes %>% 
+
+# annual fluxes (W 2014) : change of unity (per year and not per hour)
+tab_flux <- tab_flux %>% 
+  mutate(flux_annual_2014 = (0.00077 * speed_ms^2 * delta_pCO2)) %>% 
+  group_by(Year) %>% 
+  mutate(mean_flux_annual = mean(flux_annual_2014, na.rm=TRUE))
+
+#selection of only years and mean of fluxes 2014 :
+y <- tab_flux %>% distinct(mean_flux_annual)
+
+#only year 2009 :
+y_2009 <- tab_flux %>% dplyr::filter(Year == "2009")
+mean(y_2009$flux_annual_2014, na.rm=TRUE) # 0.14
+
+y %>% 
   ggplot() + 
-  aes(x=Year, y=moy_flux) + 
-  geom_bar(stat = "identity", width=0.9, fill="#303030") + 
+  aes(x=Year, y=mean_flux_annual) + 
+  geom_col(fill="#303030") + 
   scale_x_discrete(name="", limits=c("2009" : "2022")) + 
-  scale_y_continuous(name=expression(paste("Flux (mol de C ", m^-2, " ", h^-1, ")")), labels = label_scientific(), n.breaks = 10) +
+  scale_y_continuous(name=expression(paste("Flux (mol ", m^-2, " ", an^-1, ")")), n.breaks = 10) +
   geom_hline(col = "black", yintercept = 0)
 
 
@@ -493,7 +511,7 @@ de_carlo <- de_carlo %>%
          max_flux_h = max(Flux_CO2_2014, na.rm=T),
          min_flux_h = min(Flux_CO2_2014, na.rm=T))
 
-
+mean(de_carlo$Flux_CO2_2014, na.rm=TRUE)
 
 ```
   
@@ -501,7 +519,7 @@ de_carlo <- de_carlo %>%
   
 De Carlo (2007-2011) :  
 - average hourly flux : -2.19e-05  
-- annualized flux (by year) : 1.91e-01  
+- annualized flux (by year) : -1.91e-01  
 - maximum hourly flux (winter) : -4.57e-04  
 - minimum hourly flux (summer): 4.29e-04  
   
@@ -518,21 +536,5 @@ Point B (01/06/2009 - 10/04/2011) :
 - maximum hourly flux (winter) : -3.23e-04  
 - minimum hourly flux (summer) : 5.70e-04  
   
-  
-  
-
-
-## Comparison CO~2~ fluxes at Point B vs offshore (Carioca)  
-  
-  
-
-```{r comparison Pt B - Carioca, echo=FALSE, warning=FALSE, message=FALSE}
-
-Carioca <- read_delim("../../Data/pCO2_carioca/pco2_AT_CT_98_19_Cathy2022.csv", 
-    delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% dplyr::filter(PRESS == 5) %>% 
-  mutate(Date = as.character(Date),
-         Date = as.POSIXct(Date))
-
-```
 
 

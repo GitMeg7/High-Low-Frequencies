@@ -1704,7 +1704,7 @@ FFpCO2w_50$estimate
 ###### Temperature :  
   
 
-```{r Point B - period 1995-2022 - surface - temp, echo=FALSE, warning=FALSE, message=FALSE}
+```{r Point B - period 1995-2022 - surface - temp, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8, fig.height=4}
 
 PointB_9522_surf <- read_delim("../../Data/data_PointB/PointB_T_S_1995-2022_CLEAN_impute_0m.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
@@ -1719,7 +1719,7 @@ xlab('') +
 ylab('Temp. (°C')
 
 
-ts_temp_decomp_9522_surf <- decompose(ts_temp_9522_surf, type = "multiplicative") 
+ts_temp_decomp_9522_surf <- decompose(ts_temp_9522_surf, type = "additive") 
 autoplot(ts_temp_decomp_9522_surf) +
   xlab(' ')
 
@@ -1763,8 +1763,6 @@ FFtemp_9522_surf <- kendallSeasonalTrendTest(impute_temp ~ month(datetime) + yea
 
 ```
   
-  
-
   
 
 ###### Salinity :  
@@ -1837,7 +1835,7 @@ xlab('') +
 ylab('Temp. (°C')
 
 
-ts_temp_decomp_9522_prof <- decompose(ts_temp_9522_prof, type = "multiplicative") 
+ts_temp_decomp_9522_prof <- decompose(ts_temp_9522_prof, type = "additive") 
 autoplot(ts_temp_decomp_9522_prof) +
   xlab(' ')
 

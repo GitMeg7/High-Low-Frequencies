@@ -51,103 +51,103 @@ library("berryFunctions")
 ```{r importation data pco2 air, echo=FALSE, warning=FALSE, message=FALSE}
 #unity (umol/mol, ppm)
 
-### MONTE CIMONE
-atmospheric_co2_MONTE_CIMONE <- read_delim("../Data/atmospheric_co2_MONTE_CIMONE_fev_2011_2022.CO2", 
-    delim = ";", escape_double = FALSE, trim_ws = TRUE)
-
-#selection of 09:00 AM data :
-atmospheric_co2_MONTE_CIMONE <- atmospheric_co2_MONTE_CIMONE %>% 
-  unite(col='datetime', c('Year', 'Month', 'Day'), sep='-') %>%
-  unite(col='time', c('Hour', 'Minute'), sep=':') %>% 
-  dplyr::filter(time == "09:00")
-
-#data sorting :
-atmospheric_co2_MONTE_CIMONE <- atmospheric_co2_MONTE_CIMONE %>% 
-  mutate(datetime = format(datetime, format="%Y-%m-%d")) %>% 
-  mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>%
-  rename(CO2_MC = co2) %>% 
-  mutate(CO2_MC = case_when(CO2_MC == -999.990 ~ NA_real_ , TRUE ~ CO2_MC)) %>%
-  select(datetime, CO2_MC)
-
-####################
-
-### PLATEAU ROSA
-atmospheric_co2_PLATEAU_ROSA <- read_delim("../Data/atmospheric_co2_PLATEAU_ROSA_2007_2022.CO2", 
-    delim = ";", escape_double = FALSE, trim_ws = TRUE)
-
-#selection of 09:00 AM data :
-atmospheric_co2_PLATEAU_ROSA <- atmospheric_co2_PLATEAU_ROSA %>% 
-  unite(col='datetime', c('Year', 'Month', 'Day'), sep='-') %>% 
-  unite(col='time', c('Hour', 'Minute'), sep=':') %>% 
-  dplyr::filter(time == "09:00")
-
-#data sorting :
-atmospheric_co2_PLATEAU_ROSA <- atmospheric_co2_PLATEAU_ROSA %>% 
-  mutate(datetime = format(datetime, format="%Y-%m-%d")) %>% 
-  mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>%
-  rename(CO2_PR = co2) %>% 
-  mutate(CO2_PR = case_when(CO2_PR == -999.990 ~ NA_real_ , TRUE ~ CO2_PR)) %>% 
-  select(datetime, CO2_PR)
-
-####################
-
-#CORSE ERSA
-atmospheric_co2_CORSE <- read_delim("../Data/atmospheric_co2_CORSE_RAW_2013_2020.CO2", 
-    delim = ";", escape_double = FALSE, trim_ws = TRUE)
-
-#selection of 09:00 AM data :
-atmospheric_co2_CORSE <- atmospheric_co2_CORSE %>% 
-  unite(col='datetime', c('Year', 'Month', 'Day'), sep='-') %>% 
-  unite(col='time', c('Hour', 'Minute'), sep=':') %>% 
-  dplyr::filter(time == "09:00")
-
-#data sorting :
-atmospheric_co2_CORSE <- atmospheric_co2_CORSE %>% 
-  mutate(datetime = format(datetime, format="%Y-%m-%d")) %>% 
-  mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>%
-  rename(CO2_CORSE = co2) %>% 
-  mutate(CO2_CORSE = case_when(CO2_CORSE == -999.990 ~ NA_real_ , TRUE ~ CO2_CORSE)) %>% 
-  select(datetime, CO2_CORSE)
-
-####################
-
-#OBSERVATOIRE HAUTE PROVENCE
-atmospheric_co2_HAUTE_PROV <- read_delim("../Data/atmospheric_co2_HAUTE_PROVENCE_RAW_2014_2020.CO2", 
-    delim = ";", escape_double = FALSE, trim_ws = TRUE)
-
-#selection of 09:00 AM data :
-atmospheric_co2_HAUTE_PROV <- atmospheric_co2_HAUTE_PROV %>% 
-  unite(col='datetime', c('Year', 'Month', 'Day'), sep='-') %>% 
-  unite(col='time', c('Hour', 'Minute'), sep=':') %>% 
-  dplyr::filter(time == "09:00")
-
-#data sorting :
-atmospheric_co2_HAUTE_PROV <- atmospheric_co2_HAUTE_PROV %>% 
-  mutate(datetime = format(datetime, format="%Y-%m-%d")) %>% 
-  mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>%
-  rename(CO2_HP = co2) %>% 
-  mutate(CO2_HP = case_when(CO2_HP == -999.990 ~ NA_real_ , TRUE ~ CO2_HP)) %>% 
-  select(datetime, CO2_HP)
-
-####################
-
-#LAMPEDUSA
-atmospheric_co2_LAMPEDUSA <- read_delim("../Data/atmospheric_co2_LAMPEDUSA_2006_2022.CO2", 
-    delim = ";", escape_double = FALSE, trim_ws = TRUE)
-
-#selection of 09:00 AM data :
-atmospheric_co2_LAMPEDUSA <- atmospheric_co2_LAMPEDUSA %>% 
-  unite(col='datetime', c('Year', 'Month', 'Day'), sep='-') %>% 
-  unite(col='time', c('Hour', 'Minute'), sep=':') %>% 
-  dplyr::filter(time == "09:00")
-
-#data sorting :
-atmospheric_co2_LAMPEDUSA <- atmospheric_co2_LAMPEDUSA %>% 
-  mutate(datetime = format(datetime, format="%Y-%m-%d")) %>% 
-  mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>%
-  rename(CO2_LAMP = co2) %>% 
-  mutate(CO2_LAMP = case_when(CO2_LAMP == -999.990 ~ NA_real_ , TRUE ~ CO2_LAMP)) %>% 
-  select(datetime, CO2_LAMP)
+# ### MONTE CIMONE
+# atmospheric_co2_MONTE_CIMONE <- read_delim("../Data/atmospheric_pco2_icos/atmospheric_co2_MONTE_CIMONE_fev_2011_2022.CO2", 
+#     delim = ";", escape_double = FALSE, trim_ws = TRUE)
+# 
+# #selection of 09:00 AM data :
+# atmospheric_co2_MONTE_CIMONE <- atmospheric_co2_MONTE_CIMONE %>% 
+#   unite(col='datetime', c('Year', 'Month', 'Day'), sep='-') %>%
+#   unite(col='time', c('Hour', 'Minute'), sep=':') %>% 
+#   dplyr::filter(time == "09:00")
+# 
+# #data sorting :
+# atmospheric_co2_MONTE_CIMONE <- atmospheric_co2_MONTE_CIMONE %>% 
+#   mutate(datetime = format(datetime, format="%Y-%m-%d")) %>% 
+#   mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>%
+#   rename(CO2_MC = co2) %>% 
+#   mutate(CO2_MC = case_when(CO2_MC == -999.990 ~ NA_real_ , TRUE ~ CO2_MC)) %>%
+#   select(datetime, CO2_MC)
+# 
+# ####################
+# 
+# ### PLATEAU ROSA
+# atmospheric_co2_PLATEAU_ROSA <- read_delim("../Data/atmospheric_co2_PLATEAU_ROSA_2007_2022.CO2", 
+#     delim = ";", escape_double = FALSE, trim_ws = TRUE)
+# 
+# #selection of 09:00 AM data :
+# atmospheric_co2_PLATEAU_ROSA <- atmospheric_co2_PLATEAU_ROSA %>% 
+#   unite(col='datetime', c('Year', 'Month', 'Day'), sep='-') %>% 
+#   unite(col='time', c('Hour', 'Minute'), sep=':') %>% 
+#   dplyr::filter(time == "09:00")
+# 
+# #data sorting :
+# atmospheric_co2_PLATEAU_ROSA <- atmospheric_co2_PLATEAU_ROSA %>% 
+#   mutate(datetime = format(datetime, format="%Y-%m-%d")) %>% 
+#   mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>%
+#   rename(CO2_PR = co2) %>% 
+#   mutate(CO2_PR = case_when(CO2_PR == -999.990 ~ NA_real_ , TRUE ~ CO2_PR)) %>% 
+#   select(datetime, CO2_PR)
+# 
+# ####################
+# 
+# #CORSE ERSA
+# atmospheric_co2_CORSE <- read_delim("../Data/atmospheric_co2_CORSE_RAW_2013_2020.CO2", 
+#     delim = ";", escape_double = FALSE, trim_ws = TRUE)
+# 
+# #selection of 09:00 AM data :
+# atmospheric_co2_CORSE <- atmospheric_co2_CORSE %>% 
+#   unite(col='datetime', c('Year', 'Month', 'Day'), sep='-') %>% 
+#   unite(col='time', c('Hour', 'Minute'), sep=':') %>% 
+#   dplyr::filter(time == "09:00")
+# 
+# #data sorting :
+# atmospheric_co2_CORSE <- atmospheric_co2_CORSE %>% 
+#   mutate(datetime = format(datetime, format="%Y-%m-%d")) %>% 
+#   mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>%
+#   rename(CO2_CORSE = co2) %>% 
+#   mutate(CO2_CORSE = case_when(CO2_CORSE == -999.990 ~ NA_real_ , TRUE ~ CO2_CORSE)) %>% 
+#   select(datetime, CO2_CORSE)
+# 
+# ####################
+# 
+# #OBSERVATOIRE HAUTE PROVENCE
+# atmospheric_co2_HAUTE_PROV <- read_delim("../Data/atmospheric_co2_HAUTE_PROVENCE_RAW_2014_2020.CO2", 
+#     delim = ";", escape_double = FALSE, trim_ws = TRUE)
+# 
+# #selection of 09:00 AM data :
+# atmospheric_co2_HAUTE_PROV <- atmospheric_co2_HAUTE_PROV %>% 
+#   unite(col='datetime', c('Year', 'Month', 'Day'), sep='-') %>% 
+#   unite(col='time', c('Hour', 'Minute'), sep=':') %>% 
+#   dplyr::filter(time == "09:00")
+# 
+# #data sorting :
+# atmospheric_co2_HAUTE_PROV <- atmospheric_co2_HAUTE_PROV %>% 
+#   mutate(datetime = format(datetime, format="%Y-%m-%d")) %>% 
+#   mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>%
+#   rename(CO2_HP = co2) %>% 
+#   mutate(CO2_HP = case_when(CO2_HP == -999.990 ~ NA_real_ , TRUE ~ CO2_HP)) %>% 
+#   select(datetime, CO2_HP)
+# 
+# ####################
+# 
+# #LAMPEDUSA
+# atmospheric_co2_LAMPEDUSA <- read_delim("../Data/atmospheric_co2_LAMPEDUSA_2006_2022.CO2", 
+#     delim = ";", escape_double = FALSE, trim_ws = TRUE)
+# 
+# #selection of 09:00 AM data :
+# atmospheric_co2_LAMPEDUSA <- atmospheric_co2_LAMPEDUSA %>% 
+#   unite(col='datetime', c('Year', 'Month', 'Day'), sep='-') %>% 
+#   unite(col='time', c('Hour', 'Minute'), sep=':') %>% 
+#   dplyr::filter(time == "09:00")
+# 
+# #data sorting :
+# atmospheric_co2_LAMPEDUSA <- atmospheric_co2_LAMPEDUSA %>% 
+#   mutate(datetime = format(datetime, format="%Y-%m-%d")) %>% 
+#   mutate(datetime = as.POSIXct(datetime, format="%Y-%m-%d")) %>%
+#   rename(CO2_LAMP = co2) %>% 
+#   mutate(CO2_LAMP = case_when(CO2_LAMP == -999.990 ~ NA_real_ , TRUE ~ CO2_LAMP)) %>% 
+#   select(datetime, CO2_LAMP)
 
 ##
 ```
@@ -156,22 +156,22 @@ atmospheric_co2_LAMPEDUSA <- atmospheric_co2_LAMPEDUSA %>%
 
 ```{r summary 5 sites atmospheric pCO2 NA values, echo=FALSE, warning=FALSE, message=FALSE}
 
-#merge of 5 sites data : pCO2_air
-pCO2_atmos <- left_join(atmospheric_co2_LAMPEDUSA, atmospheric_co2_MONTE_CIMONE, by="datetime")
-pCO2_atmos <- left_join(pCO2_atmos, atmospheric_co2_PLATEAU_ROSA, by="datetime") 
-pCO2_atmos <- left_join(pCO2_atmos, atmospheric_co2_CORSE, by="datetime")
-pCO2_atmos <- left_join(pCO2_atmos, atmospheric_co2_HAUTE_PROV, by="datetime")
-
-#conversion dry mol fraction of CO2 into partial pressure of CO2(µatm) :
-pCO2_atmos <- pCO2_atmos %>% 
-  mutate(pCO2_LAMP = x2pCO2(S=35, T=25, Patm=1.0, xCO2=CO2_LAMP),
-         pCO2_MC = x2pCO2(S=35, T=25, Patm=1.0, xCO2=CO2_MC),
-         pCO2_PR = x2pCO2(S=35, T=25, Patm=1.0, xCO2=CO2_PR),
-         pCO2_CORSE = x2pCO2(S=35, T=25, Patm=1.0, xCO2=CO2_CORSE),
-         pCO2_HP = x2pCO2(S=35, T=25, Patm=1.0, xCO2=CO2_HP))
-
-#summary :
-summary(pCO2_atmos[,c(7:11)])
+# #merge of 5 sites data : pCO2_air
+# pCO2_atmos <- left_join(atmospheric_co2_LAMPEDUSA, atmospheric_co2_MONTE_CIMONE, by="datetime")
+# pCO2_atmos <- left_join(pCO2_atmos, atmospheric_co2_PLATEAU_ROSA, by="datetime") 
+# pCO2_atmos <- left_join(pCO2_atmos, atmospheric_co2_CORSE, by="datetime")
+# pCO2_atmos <- left_join(pCO2_atmos, atmospheric_co2_HAUTE_PROV, by="datetime")
+# 
+# #conversion dry mol fraction of CO2 into partial pressure of CO2(µatm) :
+# pCO2_atmos <- pCO2_atmos %>% 
+#   mutate(pCO2_LAMP = x2pCO2(S=35, T=25, Patm=1.0, xCO2=CO2_LAMP),
+#          pCO2_MC = x2pCO2(S=35, T=25, Patm=1.0, xCO2=CO2_MC),
+#          pCO2_PR = x2pCO2(S=35, T=25, Patm=1.0, xCO2=CO2_PR),
+#          pCO2_CORSE = x2pCO2(S=35, T=25, Patm=1.0, xCO2=CO2_CORSE),
+#          pCO2_HP = x2pCO2(S=35, T=25, Patm=1.0, xCO2=CO2_HP))
+# 
+# #summary :
+# summary(pCO2_atmos[,c(7:11)])
 
 #save :
 #write.table(pCO2_atmos, "DATA_pCO2_atmos_06-22.csv", sep=";", col.names = TRUE, row.names = FALSE)
@@ -184,6 +184,9 @@ summary(pCO2_atmos[,c(7:11)])
   
 
 ```{r Visualisation 5 sites atmospheric pCO2, echo=FALSE, warning=FALSE, message=FALSE, fig.width=9,fig.height=4}
+
+pCO2_atmos <- read_delim("../../Data/atmospheric_pco2_icos/DATA_pCO2_atmos_06-22.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
 
 #creation column for legend
@@ -199,9 +202,8 @@ pCO2_atmos_long %>%
   ggtitle("Atmospheric pCO2 of the 5 sites according to time") +
   geom_point(aes(x=datetime, y=value, color= Legend), size=0.5) +
   scale_y_continuous(name="pCO2 (µatm)") + 
-  scale_x_datetime(name="", date_breaks="2 year", date_minor_breaks="1 years", date_labels = "%Y") +
+  scale_x_date(name="", date_breaks="2 year", date_minor_breaks="1 years", date_labels = "%Y") +
   scale_colour_discrete(type=c("#0000FF", "#568203", "#048B9A", "#E9383F", "#C4698F"))
-
 
 
 ```

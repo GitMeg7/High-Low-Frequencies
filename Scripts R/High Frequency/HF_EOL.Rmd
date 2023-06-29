@@ -56,6 +56,9 @@ EOL_RAW <- EOL_RAW %>%
          Year.Month.Day = format(datetime, format="%Y-%m-%d"),
          Month = format(datetime, format="%m"))
 
+EOL_RAW <- EOL_RAW %>% 
+  dplyr::filter(datetime >= "2014-01-07 01:00:00" & datetime <= "2022-12-31 01:00:00")
+
 
 ```
 
@@ -99,8 +102,8 @@ merge_EOL_SOMLIT %>%
   scale_y_continuous(name="Temperature EOL (°C)")
 
 reg_EOL_SOM_T <- lm(data = merge_EOL_SOMLIT, temperature ~ temp_SOM)
-slope_EOL_SOM_T <- reg_EOL_SOM_T$coefficients[[2]]
-intercept_EOL_SOM_T <- reg_EOL_SOM_T$coefficients[[1]]
+#slope_EOL_SOM_T <- reg_EOL_SOM_T$coefficients[[2]]
+#intercept_EOL_SOM_T <- reg_EOL_SOM_T$coefficients[[1]]
 
 ```
   
@@ -110,8 +113,6 @@ intercept_EOL_SOM_T <- reg_EOL_SOM_T$coefficients[[1]]
 
 ```{r visualisation data EOL, echo=TRUE, warning=FALSE, message=FALSE, fig.width=9,fig.height=5}
 
-EOL_RAW <- EOL_RAW %>% 
-  dplyr::filter(datetime >= "2014-01-07 01:00:00" & datetime <= "2022-12-31 01:00:00")
 
 ##calcul AOU
 T1 <- (EOL_RAW$temperature + 273.15) / 100
@@ -123,9 +124,11 @@ OSAT = exp(OSAT)
 
 #calculate AOU in umol/kg
 AOU_EOL = OSAT - EOL_RAW$oxygen
+neg_AOU_EOL = EOL_RAW$oxygen - OSAT
 
 EOL_RAW <- EOL_RAW %>% 
-  mutate(AOU = AOU_EOL)
+  mutate(AOU = AOU_EOL,
+         neg_AOU = neg_AOU_EOL)
 
 plot_EOL_RAW_temp <- EOL_RAW %>% 
   ggplot() +
@@ -143,15 +146,15 @@ plot_EOL_RAW_sal <- EOL_RAW %>%
 
 plot_EOL_RAW_AOU <- EOL_RAW %>% 
   ggplot() +
-  aes(x=datetime, y=AOU) +
+  aes(x=datetime, y=neg_AOU) +
   geom_line() +
   scale_x_date(name="") +
-  scale_y_continuous(name=expression(paste("AOU (μmol ", kg^-1, ")")))
+  scale_y_continuous(name=expression(paste("-AOU (μmol ", kg^-1, ")")))
 
-# plot_grid(plot_EOL_RAW_temp, plot_ano_temp_EOL_raw,
-#           plot_EOL_RAW_sal, plot_ano_sal_EOL_raw, 
-#           plot_EOL_RAW_AOU, plot_ano_AOU_EOL_raw,
-#           align='vh', ncol=2)
+ # plot_grid(plot_EOL_RAW_temp, plot_ano_temp_EOL_raw,
+ #           plot_EOL_RAW_sal, plot_ano_sal_EOL_raw, 
+ #           plot_EOL_RAW_AOU, plot_ano_AOU_EOL_raw,
+ #           align='vh', ncol=2)
 
 ```
 
@@ -174,7 +177,9 @@ monthly_means <- ungroup(EOL_RAW) %>%
     Temperature_month = mean(temperature, na.rm = TRUE),
     SD_temp = sd(temperature, na.rm = TRUE),
     AOU_month = mean(AOU, na.rm = TRUE),
-    SD_AOU = sd(AOU, na.rm= TRUE))
+    SD_AOU = sd(AOU, na.rm= TRUE),
+    neg_AOU_month = mean(neg_AOU, na.rm = TRUE),
+    SD_neg_AOU = sd(neg_AOU, na.rm= TRUE))
 
 
 ```
@@ -188,11 +193,12 @@ monthly_means <- ungroup(EOL_RAW) %>%
 anomalies <- left_join(ungroup(EOL_RAW), monthly_means, by = "Month") %>%
   mutate(Salinity_ano = salinity - Salinity_month,
          Temperature_ano = temperature - Temperature_month,
-         AOU_ano = AOU - AOU_month)
+         AOU_ano = AOU - AOU_month,
+         neg_AOU_ano = neg_AOU - neg_AOU_month)
 
 
 # Regression and table anomalies
-var_list <- c("Salinity_ano", "Temperature_ano", "AOU_ano")
+var_list <- c("Salinity_ano", "Temperature_ano", "AOU_ano", "neg_AOU_ano")
 
 lms <- lapply(var_list, function(x) {
   summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
@@ -298,15 +304,15 @@ plot_ano_sal_EOL_raw
   
   
 
-**Plot of anomalies : AOU (2018-2022) - EOL**  
+**Plot of anomalies : -AOU (2018-2022) - EOL**  
   
 ```{r plot anomalies + trends - salinity, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=6}
 
-plot_ano_AOU_EOL_raw <- ggplot(data = anomalies, aes(x = datetime, y = AOU_ano), na.rm=TRUE) +
+plot_ano_AOU_EOL_raw <- ggplot(data = anomalies, aes(x = datetime, y = neg_AOU_ano), na.rm=TRUE) +
   scale_x_date(date_minor_breaks="2 years", labels = date_format("%Y")) +
   geom_point(colour="#22427C", na.rm=TRUE, size=0.7) + 
   geom_smooth(data=anomalies[c(4667 : 47184),], method=lm, colour="black", fill="grey", linewidth=0.6, na.rm=TRUE) +
-  labs(title="",x="", y=expression(paste("AOU (μmol ", kg^-1, ")")))
+  labs(title="",x="", y=expression(paste("-AOU (μmol ", kg^-1, ")")))
 
 
 plot_EOL_RAW_AOU
@@ -474,6 +480,86 @@ plot_ano_sal_EOL_1
 ```
   
   
+
+### Study of minima and maxima (daily) of temperature :  
+  
+  
+
+```{r minima and maxima temperature, echo=FALSE, warning=FALSE, message=FALSE}
+
+min_max_EOL <- EOL_RAW %>% 
+  group_by(Year.Month.Day) %>% 
+  mutate(maxima = max(temperature, na.rm=T),
+         minima = min(temperature, na.rm=T),
+         delta = maxima - minima)
+
+monthly_means_min_max <- ungroup(min_max_EOL) %>% 
+  group_by(Month) %>%
+  summarise(maxima_month = mean(maxima, na.rm = TRUE),
+            minima_month = mean(minima, na.rm = TRUE),
+            delta_month = mean(delta, na.rm = TRUE))
+
+anomalies_min_max <- left_join(ungroup(min_max_EOL), monthly_means_min_max, by = "Month") %>%
+  mutate(maxima_ano = maxima - maxima_month,
+         minima_ano = minima - minima_month,
+         delta_ano = delta - delta_month)
+
+
+# Regression and table anomalies
+var_list <- c("maxima_ano","minima_ano", "delta_ano")
+
+lms <- lapply(var_list, function(x) {
+  summary(lm(substitute(i ~ decimal_date(datetime), list(i = as.name(x))), 
+             data = anomalies_min_max))
+})
+reg <- NULL
+for (i in 1:length(var_list)) {
+  #one loops through all anomalies
+  # calculate probability of fstatistic because it cannot be extracted from lms above
+  # see http://stats.stackexchange.com/questions/92824/extracting-the-model-p-value-for-a-multiple-regression-in-r
+  # slope returned by lm is per second
+  prob <-
+    pf(lms[[i]]$fstatistic[1],
+       lms[[i]]$fstatistic[2],
+       lms[[i]]$fstatistic[3],
+       lower.tail = FALSE)
+  reg <-
+    rbind(reg, as.numeric(
+      c(
+        lms[[i]]$coefficients[2, 1],
+        lms[[i]]$coefficients[2, 2],
+        lms[[i]]$coefficients[2, 4],
+        lms[[i]]$coefficients[1, 1],
+        lms[[i]]$coefficients[1, 2],
+        lms[[i]]$coefficients[1, 4],
+        lms[[i]]$fstatistic[1],
+        lms[[i]]$fstatistic[3],
+        lms[[i]]$r.squared,
+        prob
+      )
+    ))
+}
+colnames(reg) <-
+  c("Slope",
+    "SE Slope",
+    "P Slope",
+    "Intercept",
+    "SE int.",
+    "P int.",
+    "F",
+    "df",
+    "R2",
+    "P value")
+
+row.names(reg) <- var_list
+reg_anomalies_min_max <- reg
+
+reg_anomalies_min_max
+
+```
+  
+  
+
 #### Part 3 : Trend analysis by residuals : hourly dataset jan.2018 - dec.2022  
   
   
@@ -1135,9 +1221,10 @@ Wind_CapF <- read_delim("../../Data/wind_cap_ferrat_model_EOL/DATA_CAP_FERRAT_12
  Wind_EOL %>% 
    ggplot(aes(x=speed_ms)) +
    geom_histogram(fill="#69b3a2", color="#e9ecef", alpha=0.8) +
-   ggtitle("Wind speed distribution - EOL buoy (2009-2022)") + 
-   scale_y_continuous(name="Distribution") +
-   scale_x_continuous(name="", breaks = c(0, 5, 10, 15, 20))
+   ggtitle("Distribution des données de vitesses des vents - 2009-2022") + 
+   scale_y_continuous(name="Nombre de données") +
+   scale_x_continuous(name=expression(paste("Vitesse (m ", s^-1, ")")), 
+                                            breaks = c(0, 5, 10, 15, 20))
 
 
 #plot Cap-Ferrat

@@ -1010,12 +1010,13 @@ anomalies_AOU_surf <- anomalies_AOU_surf %>%
   group_by(year) %>% 
   mutate(mean_neg_AOU_ano = mean(neg_AOU_ano, na.rm=TRUE),
          mean_OSAT_ano = mean(OSAT_ano, na.rm=TRUE),
-         mean_DO_ano = mean(DO_ano, na.rm=TRUE))
+         mean_DO_ano = mean(DO_ano, na.rm=TRUE),
+         mean_AOU_ano = mean(AOU_ano, na.rm = TRUE))
 
 plot_AOU_rap1 <- anomalies_AOU_surf %>%
 ggplot() + 
-  geom_point(aes(x=year, y=mean_neg_AOU_ano), col="black") +
-  geom_line(aes(x=year, y=mean_neg_AOU_ano), col="black") +
+  geom_point(aes(x=year, y=mean_AOU_ano), col="black") +
+  geom_line(aes(x=year, y=mean_AOU_ano), col="black") +
   geom_point(aes(x=year, y=mean_OSAT_ano), col="darkred") +
   geom_line(aes(x=year, y=mean_OSAT_ano), col="darkred") +
   geom_point(aes(x=year, y=mean_DO_ano), col="#1E7FCB") + 
@@ -1195,7 +1196,7 @@ AOU : negative trend, but less than in surface
 Inverse relation between AOU and observed O~2~  
 *slope : -0.37 ± 0.07 µmol/kg par année* 
 
-```{r trend analysis AOU - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4}
+```{r trend analysis AOU - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=1.5}
 
 ## Monthly means AOU surface :
 monthly_means_AOU_prof <- ungroup(data_somlit_prof) %>% 
@@ -1279,7 +1280,6 @@ plot_AOU_prof <- data_somlit_prof %>%
   ggplot() + 
   aes(x=datetime, y=AOU_som_prof) + 
   geom_line(col = "black", size = 0.5) + 
-#  ggtitle("AOU in µmol/kg at 50 m depth - Point B (2002-2022)") +
   scale_x_datetime(name="", date_breaks = "4 years", date_minor_breaks = "1 year", date_labels = "%Y") + 
   scale_y_continuous(name=expression(paste("AOU (", mu, "mol ", kg^-1, ")")))
 
@@ -1288,7 +1288,7 @@ plot_AOU_prof
 plot_ano_AOU_prof
 
 
-#plot_grid( plot_AOU_rap1, plot_AOU_rap, ncol=1)
+plot_grid(plot_AOU_prof, plot_ano_AOU_prof, ncol=2)
 
 ```
   
@@ -1302,18 +1302,19 @@ DO and O~2~sat are similar in magnitude only for 2002-2004
 → thus, the solubility changes have a secondary role in the observed dissolved oxygen variations  
   
 
-```{r plot mean annual O2, O2 sat & AOU monthly means - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=5}
+```{r plot mean annual O2, O2 sat & AOU monthly means - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=6}
 
 anomalies_AOU_prof <- anomalies_AOU_prof %>% 
   group_by(year) %>% 
   mutate(mean_neg_AOU_ano = mean(neg_AOU_ano, na.rm=TRUE),
          mean_OSAT_ano = mean(OSAT_ano, na.rm=TRUE),
-         mean_DO_ano = mean(DO_ano, na.rm=TRUE))
+         mean_DO_ano = mean(DO_ano, na.rm=TRUE),
+         mean_AOU_ano = mean(AOU_ano, na.rm = TRUE))
 
 plot_AOU_rap <- anomalies_AOU_prof %>%
 ggplot() + 
-  geom_point(aes(x=year, y=mean_neg_AOU_ano), col="black") +
-  geom_line(aes(x=year, y=mean_neg_AOU_ano), col="black") +
+  geom_point(aes(x=year, y=mean_AOU_ano), col="black") +
+  geom_line(aes(x=year, y=mean_AOU_ano), col="black") +
   geom_point(aes(x=year, y=mean_OSAT_ano), col="darkred") +
   geom_line(aes(x=year, y=mean_OSAT_ano), col="darkred") +
   geom_point(aes(x=year, y=mean_DO_ano), col="#1E7FCB") + 

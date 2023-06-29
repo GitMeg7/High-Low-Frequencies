@@ -743,24 +743,24 @@ monthly_means_0m_0722 <- ungroup(data_0722) %>%
     SD_pCO2 = sd(impute_pCO2_w, na.rm = TRUE))
 
 
-##RAPPORT##
-
-monthly_means_0m_0722_rapport <- monthly_means_0m_0722 %>% 
-  mutate(`T (°C)` = paste(round(Temperature_month, digits=2), "±", round(SD_temp, digits=2)),
-         S = paste(round(Salinity_month, digits=2), "±", round(SD_sal, digits=2)),
-        `pH (18)` = paste(round(pH18_month, digits=2), "±", round(SD_PH18, digits=2)),
-        `*A*~T~ (μmol.kg^-1^)` = paste(round(ta_month, digits=2), "±", round(SD_ta, digits=2)),
-        `*C*~T~ (μmol.kg^-1^)` = paste(round(dic_month, digits=2), "±", round(SD_dic, digits=2)),
-        `*p*CO~2~ (μatm)` = paste(round(pCO2_month, digits=2), "±", round(SD_pCO2, digits=2)))
-
-monthly_means_0m_0722_rapport <- monthly_means_0m_0722_rapport %>% 
-  dplyr::select(Month, `T (°C)`, S, `pH (18)`, `*A*~T~ (μmol.kg^-1^)`, 
-                `*C*~T~ (μmol.kg^-1^)`, `*p*CO~2~ (μatm)`) %>% 
-  rename(Mois = Month)
-        
-        
-kable(monthly_means_0m_0722_rapport, caption="Moyennes mensuelles au Point B (surface)",
-      format = "pipe", align='l')
+# ##RAPPORT##
+# 
+# monthly_means_0m_0722_rapport <- monthly_means_0m_0722 %>% 
+#   mutate(`T (°C)` = paste(round(Temperature_month, digits=2), "±", round(SD_temp, digits=2)),
+#          S = paste(round(Salinity_month, digits=2), "±", round(SD_sal, digits=2)),
+#         `pH (18)` = paste(round(pH18_month, digits=2), "±", round(SD_PH18, digits=2)),
+#         `*A*~T~ (μmol.kg^-1^)` = paste(round(ta_month, digits=2), "±", round(SD_ta, digits=2)),
+#         `*C*~T~ (μmol.kg^-1^)` = paste(round(dic_month, digits=2), "±", round(SD_dic, digits=2)),
+#         `*p*CO~2~ (μatm)` = paste(round(pCO2_month, digits=2), "±", round(SD_pCO2, digits=2)))
+# 
+# monthly_means_0m_0722_rapport <- monthly_means_0m_0722_rapport %>% 
+#   dplyr::select(Month, `T (°C)`, S, `pH (18)`, `*A*~T~ (μmol.kg^-1^)`, 
+#                 `*C*~T~ (μmol.kg^-1^)`, `*p*CO~2~ (μatm)`) %>% 
+#   rename(Mois = Month)
+#         
+#         
+# kable(monthly_means_0m_0722_rapport, caption="Moyennes mensuelles au Point B (surface)",
+#       format = "pipe", align='l')
 
 
 ```
@@ -834,25 +834,26 @@ colnames(reg2) <-
 row.names(reg2) <- var_list2
 reg_ano_surf2 <- reg2
 
+reg_ano_surf2
 
-reg_ano_surf2_rapport <- as.data.frame(reg_ano_surf2)
-reg_ano_surf2_rapport <- reg_ano_surf2_rapport %>% 
-  mutate(Variables = c("T (°C)", "S", "pH~calc~", "pH~(18)~", "*A*~T~ (μmol.kg^-1^)",
-                       "*C*~T~ (μmol.kg^-1^)", "*p*CO~2~ (μatm)"))
-
-reg_ano_surf2_rapport <- reg_ano_surf2_rapport %>% 
-  mutate( 
-  `Pente ± sd` = paste(round(reg_ano_surf2_rapport$Slope, digits=3), "±", round(reg_ano_surf2_rapport$`SE Slope`, digits=4)), 
-  `P pente` = format(reg_ano_surf2_rapport$`P Slope`, scientific=TRUE),
-  `Int. ± sd` = paste(round(reg_ano_surf2_rapport$Intercept, digits=2), "±", round(reg_ano_surf2_rapport$`SE int.`, digits=2)),
-  `P Int.` = format(reg_ano_surf2_rapport$`P int.`,scientific=TRUE), 
-  `R^2^` = round(reg_ano_surf2_rapport$R2, digits=4))
-
-
-reg_ano_surf2_rapport <- reg_ano_surf2_rapport[,c(11:16)]
-
-kable(reg_ano_surf2_rapport, caption="Time series anomaly regression analyses (Point B surface)", 
-      format = "pipe", align='l')
+# reg_ano_surf2_rapport <- as.data.frame(reg_ano_surf2)
+# reg_ano_surf2_rapport <- reg_ano_surf2_rapport %>% 
+#   mutate(Variables = c("T (°C)", "S", "pH~calc~", "pH~(18)~", "*A*~T~ (μmol.kg^-1^)",
+#                        "*C*~T~ (μmol.kg^-1^)", "*p*CO~2~ (μatm)"))
+# 
+# reg_ano_surf2_rapport <- reg_ano_surf2_rapport %>% 
+#   mutate( 
+#   `Pente ± sd` = paste(round(reg_ano_surf2_rapport$Slope, digits=3), "±", round(reg_ano_surf2_rapport$`SE Slope`, digits=4)), 
+#   `P pente` = format(reg_ano_surf2_rapport$`P Slope`, scientific=TRUE),
+#   `Int. ± sd` = paste(round(reg_ano_surf2_rapport$Intercept, digits=2), "±", round(reg_ano_surf2_rapport$`SE int.`, digits=2)),
+#   `P Int.` = format(reg_ano_surf2_rapport$`P int.`,scientific=TRUE), 
+#   `R^2^` = round(reg_ano_surf2_rapport$R2, digits=4))
+# 
+# 
+# reg_ano_surf2_rapport <- reg_ano_surf2_rapport[,c(11:16)]
+# 
+# kable(reg_ano_surf2_rapport, caption="Time series anomaly regression analyses (Point B surface)", 
+#       format = "pipe", align='l')
 
 ```
 
@@ -1048,25 +1049,27 @@ monthly_means_50m_0722 <- ungroup(data_0722_50m) %>%
     pCO2_month = mean(impute_pco2_w, na.rm = TRUE),
     SD_pCO2 = sd(impute_pco2_w, na.rm = TRUE))
 
+monthly_means_50m_0722
+
 
 ##RAPPORT##
 
-monthly_means_50m_0722_rapport <- monthly_means_50m_0722 %>% 
-  mutate(`T (°C)` = paste(round(Temperature_month, digits=2), "±", round(SD_temp, digits=2)),
-         S = paste(round(Salinity_month, digits=2), "±", round(SD_sal, digits=2)),
-        `pH (18)` = paste(round(pH18_month, digits=2), "±", round(SD_PH18, digits=2)),
-        `*A*~T~ (μmol.kg^-1^)` = paste(round(ta_month, digits=2), "±", round(SD_ta, digits=2)),
-        `*C*~T~ (μmol.kg^-1^)` = paste(round(dic_month, digits=2), "±", round(SD_dic, digits=2)),
-        `*p*CO~2~ (μatm)` = paste(round(pCO2_month, digits=2), "±", round(SD_pCO2, digits=2)))
-
-monthly_means_50m_0722_rapport <- monthly_means_50m_0722_rapport %>% 
-  dplyr::select(Month, `T (°C)`, S, `pH (18)`, `*A*~T~ (μmol.kg^-1^)`, 
-                `*C*~T~ (μmol.kg^-1^)`, `*p*CO~2~ (μatm)`) %>% 
-  rename(Mois = Month)
-        
-        
-kable(monthly_means_50m_0722_rapport, caption="Moyennes mensuelles au Point B (50 m)",
-      format = "pipe", align='l')
+# monthly_means_50m_0722_rapport <- monthly_means_50m_0722 %>% 
+#   mutate(`T (°C)` = paste(round(Temperature_month, digits=2), "±", round(SD_temp, digits=2)),
+#          S = paste(round(Salinity_month, digits=2), "±", round(SD_sal, digits=2)),
+#         `pH (18)` = paste(round(pH18_month, digits=2), "±", round(SD_PH18, digits=2)),
+#         `*A*~T~ (μmol.kg^-1^)` = paste(round(ta_month, digits=2), "±", round(SD_ta, digits=2)),
+#         `*C*~T~ (μmol.kg^-1^)` = paste(round(dic_month, digits=2), "±", round(SD_dic, digits=2)),
+#         `*p*CO~2~ (μatm)` = paste(round(pCO2_month, digits=2), "±", round(SD_pCO2, digits=2)))
+# 
+# monthly_means_50m_0722_rapport <- monthly_means_50m_0722_rapport %>% 
+#   dplyr::select(Month, `T (°C)`, S, `pH (18)`, `*A*~T~ (μmol.kg^-1^)`, 
+#                 `*C*~T~ (μmol.kg^-1^)`, `*p*CO~2~ (μatm)`) %>% 
+#   rename(Mois = Month)
+#         
+#         
+# kable(monthly_means_50m_0722_rapport, caption="Moyennes mensuelles au Point B (50 m)",
+#       format = "pipe", align='l')
 
 ```
 
@@ -1139,27 +1142,28 @@ colnames(reg) <-
 row.names(reg) <- var_list
 reg_ano_50m <- reg
 
+reg_ano_50m
 
 ##RAPPORT##
 
-reg_ano_50m_rapport <- as.data.frame(reg_ano_50m)
-reg_ano_50m_rapport <- reg_ano_50m_rapport %>% 
-  mutate(Variables = c("T (°C)", "S", "pH~calc~", "pH~(18)~", "*A*~T~ (μmol.kg^-1^)",
-                       "*C*~T~ (μmol.kg^-1^)", "*p*CO~2~ (μatm)"))
-
-reg_ano_50m_rapport <- reg_ano_50m_rapport %>% 
-  mutate( 
-  `Pente ± sd` = paste(round(reg_ano_50m_rapport$Slope, digits=3), "±", round(reg_ano_50m_rapport$`SE Slope`, digits=4)), 
-  `P pente` = format(reg_ano_50m_rapport$`P Slope`, scientific=TRUE),
-  `Int. ± sd` = paste(round(reg_ano_50m_rapport$Intercept, digits=2), "±", round(reg_ano_50m_rapport$`SE int.`, digits=2)),
-  `P Int.` = format(reg_ano_50m_rapport$`P int.`,scientific=TRUE), 
-  `R^2^` = round(reg_ano_50m_rapport$R2, digits=4))
-
-
-reg_ano_50m_rapport <- reg_ano_50m_rapport[,c(11:16)]
-
-kable(reg_ano_50m_rapport, caption="Time series anomaly regression analyses (Point B 50 m)", 
-      format = "pipe", align='l')
+# reg_ano_50m_rapport <- as.data.frame(reg_ano_50m)
+# reg_ano_50m_rapport <- reg_ano_50m_rapport %>% 
+#   mutate(Variables = c("T (°C)", "S", "pH~calc~", "pH~(18)~", "*A*~T~ (μmol.kg^-1^)",
+#                        "*C*~T~ (μmol.kg^-1^)", "*p*CO~2~ (μatm)"))
+# 
+# reg_ano_50m_rapport <- reg_ano_50m_rapport %>% 
+#   mutate( 
+#   `Pente ± sd` = paste(round(reg_ano_50m_rapport$Slope, digits=3), "±", round(reg_ano_50m_rapport$`SE Slope`, digits=4)), 
+#   `P pente` = format(reg_ano_50m_rapport$`P Slope`, scientific=TRUE),
+#   `Int. ± sd` = paste(round(reg_ano_50m_rapport$Intercept, digits=2), "±", round(reg_ano_50m_rapport$`SE int.`, digits=2)),
+#   `P Int.` = format(reg_ano_50m_rapport$`P int.`,scientific=TRUE), 
+#   `R^2^` = round(reg_ano_50m_rapport$R2, digits=4))
+# 
+# 
+# reg_ano_50m_rapport <- reg_ano_50m_rapport[,c(11:16)]
+# 
+# kable(reg_ano_50m_rapport, caption="Time series anomaly regression analyses (Point B 50 m)", 
+#       format = "pipe", align='l')
 
 ```
 
@@ -1475,12 +1479,12 @@ plot_sal_9522 <- TS_9522_surf %>%
 plot_sal_9522
 plot_ano_sal_9522
 
-# plot_grid(plot_temp_9522, plot_ano_temp_9522, 
-#           plot_sal_9522, plot_ano_sal_9522, plot_AOU_surf, plot_ano_AOU_surf,
-#           plot_ph_0722, plot_ano_ph2, plot_ph_18_0722, plot_ano_ph_18_2, 
-#           plot_ta_0722, plot_ano_ta_0722, plot_dic_0722, plot_ano_dic_0722,
-#           plot_pco2_therm, plot_ano_pCO2therm, plot_pco2_nontherm, plot_ano_pCO2nontherm,
-#           align='vh', ncol=2)
+ # plot_grid(plot_temp_9522, plot_ano_temp_9522, 
+ #           plot_sal_9522, plot_ano_sal_9522, plot_AOU_surf, plot_ano_AOU_surf,
+ #           plot_ph_0722, plot_ano_ph2, plot_ph_18_0722, plot_ano_ph_18_2, 
+ #           plot_ta_0722, plot_ano_ta_0722, plot_dic_0722, plot_ano_dic_0722,
+ #           plot_pco2_therm, plot_ano_pCO2therm, plot_pco2_nontherm, plot_ano_pCO2nontherm,
+ #           align='vh', ncol=2)
 
 ```
 
@@ -1615,12 +1619,12 @@ plot_sal_9522_prof <- TS_9522_prof %>%
 plot_sal_9522_prof
 plot_ano_sal_9522_prof
 
-# plot_grid(plot_temp_9522_50m, plot_ano_temp_9522_50m, plot_sal_9522_prof, plot_ano_sal_9522_prof,
-#           plot_AOU_prof, plot_ano_AOU_prof, plot_ph_0722_50m, plot_ano_ph2_50m, 
-#           plot_ph_18_0722_50m, plot_ano_ph_18_2_50m, plot_ta_0722_50m, plot_ano_ta_0722_50m,
-#           plot_dic_0722_50m, plot_ano_dic_0722_50m, plot_pco2_therm_prof, plot_ano_pCO2therm_prof, 
-#           plot_pco2_nontherm_prof, plot_ano_pCO2nontherm_prof,
-#           align='vh', ncol=2)
+ # plot_grid(plot_temp_9522_50m, plot_ano_temp_9522_50m, plot_sal_9522_prof, plot_ano_sal_9522_prof,
+ #           plot_AOU_prof, plot_ano_AOU_prof, plot_ph_0722_50m, plot_ano_ph2_50m, 
+ #           plot_ph_18_0722_50m, plot_ano_ph_18_2_50m, plot_ta_0722_50m, plot_ano_ta_0722_50m,
+ #           plot_dic_0722_50m, plot_ano_dic_0722_50m, plot_pco2_therm_prof, plot_ano_pCO2therm_prof, 
+ #           plot_pco2_nontherm_prof, plot_ano_pCO2nontherm_prof,
+ #           align='vh', ncol=2)
 
 ```
 
