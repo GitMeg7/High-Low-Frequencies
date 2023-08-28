@@ -1,8 +1,17 @@
 ---
-title: "HF EOL"
-author: "Mégane"
-date: "2023-03-28"
-output: html_document
+title: EOL HF
+author: |
+   | M&eacute;gane Ballin
+   
+date: '`r format(Sys.time(), "%d %B %Y %H:%M")`'
+
+output:
+    rmdformats::robobook:
+     self_contained: true
+     thumbnails: false
+     lightbox: true
+     gallery: true
+     highlight: pygments
 ---
 
 ```{r libraries, echo=FALSE, warning=FALSE, message=FALSE}
@@ -306,7 +315,7 @@ plot_ano_sal_EOL_raw
 
 **Plot of anomalies : -AOU (2018-2022) - EOL**  
   
-```{r plot anomalies + trends - salinity, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=6}
+```{r plot anomalies + trends - AOU, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=6}
 
 plot_ano_AOU_EOL_raw <- ggplot(data = anomalies, aes(x = datetime, y = neg_AOU_ano), na.rm=TRUE) +
   scale_x_date(date_minor_breaks="2 years", labels = date_format("%Y")) +
