@@ -1,7 +1,7 @@
 ---
 title: "Autocorrelation"
 author: "Mégane"
-date: "2023-05-11"
+date: '`r format(Sys.time(), "%d %B %Y %H:%M")`'
 output: html_document
 ---
 
@@ -693,7 +693,7 @@ plot_ts_pco2_nontherm_less_season_prof
 
 ## Import data :
 #filter values from 2009 until 2021, because no pCO2 air data for 2022 and no wind data before 2009
-data_fluxes <- read_delim("../../Data/DATA_SOMLIT_07-22_impute_0m_deltas_pCO2_and_fluxes_CO2.csv", 
+data_fluxes <- read_delim("../../Data/data_PointB/DATA_SOMLIT_07-22_impute_0m_deltas_pCO2_and_fluxes_CO2.csv", 
                           delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
   dplyr::filter(datetime >= "2009-01-06" & datetime <= "2021-12-28")
   
@@ -1298,7 +1298,7 @@ FFpCO2_wnontherm <- kendallSeasonalTrendTest(NpCO2 ~ month(datetime) + year(date
 
 ```{r temperature - point b - autocorr - 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
-data_somlit_prof <- read_delim("../../Data/DATA_SOMLIT_07-22_impute_50m.csv", 
+data_somlit_prof <- read_delim("../../Data/data_PointB/DATA_SOMLIT_07-22_impute_50m.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
 #frequency : 365.25/7 = 52.17857
@@ -1315,7 +1315,7 @@ df_ts_temp_50 <- as.data.frame(autoplot_ts_temp_50$data) %>%
   rename(DATE = x, TEMP = y)
 
 ts_temp_decomp_50 <- decompose(ts_temp_50, type = "additive") 
-autoplot(ts_sal_decomp_50) +
+autoplot(ts_temp_decomp_50) +
   xlab(' ')
 
 #remove seasonality :
@@ -1941,7 +1941,7 @@ seasonal_slopes_pco2w_surf <- as.data.frame(FFpCO2_w$seasonal.estimates) %>%
   dplyr::select(slope) %>% 
   rename(pco2_slope = slope)
 
-seasonal_slopes_temp_surf_9522 <- as.data.frame(FFtemp_9522$seasonal.estimates) %>% 
+seasonal_slopes_temp_surf_9522 <- as.data.frame(FFtemp_9522_surf$seasonal.estimates) %>% 
   dplyr::select(slope) %>% 
   rename(temp_slope = slope)
 
