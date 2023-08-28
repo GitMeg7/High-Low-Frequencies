@@ -1,10 +1,18 @@
 ---
-title: "Atmospheric pCO~2~"
-author: "Mégane"
+title: Atmospheric pCO~2~
+author: |
+   | M&eacute;gane Ballin
+   
 date: '`r format(Sys.time(), "%d %B %Y %H:%M")`'
-output: html_document
----
 
+output:
+    rmdformats::robobook:
+     self_contained: true
+     thumbnails: false
+     lightbox: true
+     gallery: true
+     highlight: pygments
+---
 
 ```{r libraries, echo=FALSE, warning=FALSE, message=FALSE}
 library("readr")
@@ -36,10 +44,10 @@ library("stringr")
 library("berryFunctions")
 ```
 
+# Description
 
 → 5 sites\
 → Frequency : hourly\
-→ Selection of data taken at 09:00 AM  
 → Converts xCO2 (mole fraction of CO2) into pCO2 (partial pressure of CO2)   
   
 1 : Monte Cimone (8m) - 2011-2023\
@@ -151,7 +159,7 @@ atmospheric_co2_LAMPEDUSA <- atmospheric_co2_LAMPEDUSA %>%
  select(datetime, CO2_LAMP)
 ```
 
-#### Summary 5 sites (µatm)
+# Summary 5 sites (µatm)
 
 ```{r summary 5 sites atmospheric pCO2 NA values, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -178,8 +186,7 @@ write.table(pCO2_atmos, "../../Data/atmospheric_pco2_icos/DATA_pCO2_atmos_06-23.
 ```
   
   
-
-## Visualisation 5 sites atmospheric pCO~2~ (µatm)  
+# Visualisation of atmospheric pCO~2~ (µatm) in the 5 sites
   
 
 ```{r Visualisation 5 sites atmospheric pCO2, echo=FALSE, warning=FALSE, message=FALSE, fig.width=9,fig.height=4}
@@ -208,8 +215,9 @@ pCO2_atmos_long %>%
 ```
   
   
+# Comparison of the 5 sites 
 
-#### Corsica vs Haute Provence
+## Corsica vs Haute Provence
 
 *Haute Provence = land site (variations explained by other variables like vegetation)*
 
@@ -254,7 +262,7 @@ summary(reg_corse_HP)
 
 
 
-### Corsica vs Plateau Rosa
+## Corsica vs Plateau Rosa
 
 *Better fit*
 *Necessity to take Plateau Rosa data to fill in the series before 2013 and after 2020*
@@ -299,7 +307,7 @@ summary(reg_corse_PR)
 ```
 
 
-### Corsica vs Lampedusa
+## Corsica vs Lampedusa
 
 *Good fit*
 *Necessity to take Lampedusa data to fill in the series before 2013 and after 2020*
@@ -344,7 +352,7 @@ summary(reg_corse_LAMP)
 ```
 
 
-### Plateau Rosa vs Lampedusa
+## Plateau Rosa vs Lampedusa
 
 *Best fit*
 *Necessity to take Lampedusa data to fill in the series before 2013 and after 2020*
@@ -390,9 +398,9 @@ summary(reg_PR_LAMP)
 
   
   
-## NA values  
+# NA values  
   
-#### Lampedusa site (2006-2023)  
+## Lampedusa site (2006-2023)  
   
 Number of NA : 1805  
   
@@ -425,7 +433,7 @@ atmospheric_co2_LAMPEDUSA_NA_plot %>%
 ```
   
   
-#### Plateau Rosa site (2007-2023)  
+## Plateau Rosa site (2007-2023)  
   
 Number of NA : 1354
   
@@ -458,7 +466,7 @@ atmospheric_co2_PLATEAU_ROSA_NA_plot %>%
 ```
   
   
-#### Corsica site (2013-2023)
+## Corsica site (2013-2023)
 
 Number of NA : 3398
 
