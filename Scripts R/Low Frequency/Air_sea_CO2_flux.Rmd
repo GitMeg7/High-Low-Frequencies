@@ -1,8 +1,17 @@
 ---
-title: "Air-Sea CO2 fluxes"
-author: "Mégane"
+title: Air-Sea CO~2~ fluxes
+author: |
+   | M&eacute;gane Ballin
+   
 date: '`r format(Sys.time(), "%d %B %Y %H:%M")`'
-output: html_document
+
+output:
+    rmdformats::robobook:
+     self_contained: true
+     thumbnails: false
+     lightbox: true
+     gallery: true
+     highlight: pygments
 ---
 
 ```{r libraries, echo=FALSE, warning=FALSE, message=FALSE}
@@ -35,6 +44,7 @@ library("stringr")
 library("berryFunctions")
 ```
 
+# Description 
 
 Data wind speed 10m (m/s):  
   
@@ -42,7 +52,7 @@ Data wind speed 10m (m/s):
 → EOL buoy (model) - 2009-2022  
   
 Frequency : Hourly  
-Unity : m/s
+Unit : m/s
 
 ```{r Importation data wind speed, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -64,7 +74,7 @@ Wind_EOL <- Wind_EOL[319:121962,] #jan.2009 to dec.2022
 ```
 
 
-## Histogram of wind speed distribution : pelagic (Azur buoy) vs coastal (EOL buoy)  
+# Histogram of wind speed distribution : pelagic (Azur buoy) vs coastal (EOL buoy)  
 
 ```{r Histogram of wind speed distribution, echo=FALSE, warning=FALSE, message=FALSE, fig.width=5, fig.height=3, fig.fullwidth=TRUE}
 
@@ -89,7 +99,7 @@ Wind_EOL <- Wind_EOL[319:121962,] #jan.2009 to dec.2022
 ```
   
   
-## Annual means of wind speed (2009-2022) : EOL buoy  
+# Annual means of wind speed (2009-2022) : EOL buoy  
   
 
 ```{r Wind graph, echo=FALSE, warning=FALSE, message=FALSE}
@@ -130,7 +140,7 @@ wind_mean %>%
 ```
   
   
-## Data pCO2 water Point B (µatm):  
+# Data *p*CO~2~ water Point B (µatm):  
   
 period : jan.2007 - dec.2022 
   
@@ -152,7 +162,7 @@ SOMLIT_pcO2 <- read_delim("../../Data/data_PointB/DATA_SOMLIT_07-22_impute_0m.cs
 
   
 
-## Annual cycle of seawater pCO~2~ at Point B (2007-2022) :  
+# Annual cycle of seawater *p*CO~2~ at Point B (2007-2022) :  
   
 
 ```{r annual cycle of pCO2 (2007-2021), echo=FALSE, warning=FALSE, message=FALSE, fig.width=7,fig.height=5}
@@ -195,7 +205,7 @@ polar_plot_pco2w
 ```
   
   
-## Calculation of NpCO~2~ & TpCO~2~ and deltas :  
+# Calculation of N*p*CO~2~ & T*p*CO~2~ and deltas :  
   
 NpCO~2~ = non-temperature effects on pCO~2~ water variations  
   
@@ -274,7 +284,7 @@ pco2_bio_plot_rapport
   
   
 
-## Atmospheric and seawater pCO~2~ (µatm) according to time (2007-2022) :  
+# Atmospheric and seawater *p*CO~2~ (µatm) according to time (2007-2022) :  
   
 
 ```{r atmospheric & water pCO2 plot, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=6}
@@ -309,10 +319,10 @@ atmos_water_pCO2_plot
   
   
 
-## Air-sea CO~2~ fluxes  
+# Air-sea CO~2~ fluxes  
   
   
-### Flux calculation  
+## Flux calculation  
   
 → **negative values = flux into the ocean**  
   
@@ -412,7 +422,7 @@ tab_flux %>%
   
   
 
-### Plot comparing the 2 CO~2~ fluxes :  
+## Plot comparing the 2 CO~2~ fluxes :  
   
 
 ```{r 2 methods comparison - plot, echo=FALSE, warning=FALSE, message=FALSE, fig.width=10,fig.height=6}
@@ -446,7 +456,7 @@ fluxes_co2_plot
 ```
   
   
-### Annual fluxes (Wanninkhof, 2014)  
+## Annual fluxes (Wanninkhof, 2014)  
   
 
 ```{r flux annuels, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=5}
