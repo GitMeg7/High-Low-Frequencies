@@ -1,7 +1,7 @@
 ---
 title: "Atmospheric pCO~2~"
 author: "Mégane"
-date: "2023-04-17"
+date: '`r format(Sys.time(), "%d %B %Y %H:%M")`'
 output: html_document
 ---
 
@@ -42,11 +42,11 @@ library("berryFunctions")
 → Selection of data taken at 09:00 AM  
 → Converts xCO2 (mole fraction of CO2) into pCO2 (partial pressure of CO2)   
   
-1 : Monte Cimone (8m) - 2011-2022\
-2 : Plateau Rosa (10m) - 2007-2022\
-3 : Corse Ersa (40m) - 2013-2020\
-4 : Observatoire Haute Provence (10m) - 2014-2020\
-5 : Lampedusa (10) - 2006-2022
+1 : Monte Cimone (8m) - 2011-2023\
+2 : Plateau Rosa (10m) - 2007-2023\
+3 : Corse Ersa (40m) - 2013-2023\
+4 : Observatoire Haute Provence (10m) - 2014-2023\
+5 : Lampedusa (10) - 2006-2023
 
 ```{r import data pco2 air, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -173,7 +173,7 @@ pCO2_atmos <- pCO2_atmos %>%
 summary(pCO2_atmos[,c(7:11)])
 
 #save :
-write.table(pCO2_atmos, "../../Data/atmospheric_pco2_icos/DATA_pCO2_atmos_06-22.csv", sep=";", col.names = TRUE, row.names = FALSE)
+write.table(pCO2_atmos, "../../Data/atmospheric_pco2_icos/DATA_pCO2_atmos_06-23.csv", sep=";", col.names = TRUE, row.names = FALSE)
 
 ```
   
@@ -184,7 +184,7 @@ write.table(pCO2_atmos, "../../Data/atmospheric_pco2_icos/DATA_pCO2_atmos_06-22.
 
 ```{r Visualisation 5 sites atmospheric pCO2, echo=FALSE, warning=FALSE, message=FALSE, fig.width=9,fig.height=4}
 
-pCO2_atmos <- read_delim("../../Data/atmospheric_pco2_icos/DATA_pCO2_atmos_06-22.csv", 
+pCO2_atmos <- read_delim("../../Data/atmospheric_pco2_icos/DATA_pCO2_atmos_06-23.csv", 
     delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
 
@@ -209,33 +209,33 @@ pCO2_atmos_long %>%
   
   
 
-#### Corsica vs Haute Provence  
-  
-*Haute Provence = land site (variations explained by other variables like vegetation)*  
-  
+#### Corsica vs Haute Provence
+
+*Haute Provence = land site (variations explained by other variables like vegetation)*
+
 
 ```{r Corsica vs Haute Provence , echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center', fig.show='hold'}
 
 #creation column for legend
-corse_HP <- pCO2_atmos %>% 
+corse_HP <- pCO2_atmos %>%
   select(datetime, pCO2_CORSE, pCO2_HP)
 
-corse_HP_long <- corse_HP %>% 
-  rename(Corsica = pCO2_CORSE, `Haute Provence` = pCO2_HP) %>% 
+corse_HP_long <- corse_HP %>%
+  rename(Corsica = pCO2_CORSE, `Haute Provence` = pCO2_HP) %>%
   pivot_longer(cols=Corsica :`Haute Provence`, names_to = "Legend", values_to = "value")
 
 #plot
-corse_HP_long[4798: 11260,] %>% 
-  ggplot() +
-  ggtitle("Atmospheric pCO2 of Corsica vs Haute Provence according to time") +
-  geom_point(aes(x=datetime, y=value, color= Legend), size=0.5) +
-  scale_y_continuous(name="pCO2 (µatm)") + 
-  scale_x_datetime(name="") +
-  scale_colour_discrete(type=c("#0000FF", "#568203"))
+#corse_HP_long[4798: 11260,] %>%
+# ggplot() +
+#  ggtitle("Atmospheric pCO2 of Corsica vs Haute Provence according to time") +
+#  geom_point(aes(x=datetime, y=value, color= Legend), size=0.5) +
+#  scale_y_continuous(name="pCO2 (µatm)") +
+#  scale_x_datetime(name="") +
+#  scale_colour_discrete(type=c("#0000FF", "#568203"))
 ##
 
 #scatter plot :
-corse_HP[4798: 11260,] %>% 
+corse_HP[4798: 11260,] %>%
   ggplot() +
   aes(x=pCO2_HP, y=pCO2_CORSE) +
   geom_point(size=0.85) +
@@ -243,45 +243,45 @@ corse_HP[4798: 11260,] %>%
   scale_x_continuous(name="Haute Provence Observatory") +
   scale_y_continuous(name="Corsica") +
   ggtitle("Relationship between Corsica and HP observatory sites") +
-  annotate(geom="text", x=420, y=430, label="slope : 0.73 ± 0.01 *  R-adj : 0.73", color="black")
+  annotate(geom="text", x=420, y=430, label="slope : 0.79 ± 0.009 *  R-adj : 0.78", color="black")
 
 #slope + intercept
 
 reg_corse_HP <- lm(data = corse_HP, pCO2_CORSE ~ pCO2_HP)
-#summary(reg_corse_HP)
+summary(reg_corse_HP)
 
 ```
-  
-  
 
-### Corsica vs Plateau Rosa  
-  
-*Better fit*  
-*Necessity to take Plateau Rosa data to fill in the series before 2013 and after 2020*  
-  
+
+
+### Corsica vs Plateau Rosa
+
+*Better fit*
+*Necessity to take Plateau Rosa data to fill in the series before 2013 and after 2020*
+
 
 ```{r Corsica vs Plateau Rosa, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center', fig.show='hold'}
 
 #creation column for legend
-corse_PR <- pCO2_atmos %>% 
+corse_PR <- pCO2_atmos %>%
   select(datetime, pCO2_CORSE, pCO2_PR)
 
-corse_PR_long <- corse_PR %>% 
-  rename(Corsica = pCO2_CORSE, `Plateau Rosa` = pCO2_PR) %>% 
+corse_PR_long <- corse_PR %>%
+  rename(Corsica = pCO2_CORSE, `Plateau Rosa` = pCO2_PR) %>%
   pivot_longer(cols=Corsica :`Plateau Rosa`, names_to = "Legend", values_to = "value")
 
 #plot
-corse_PR_long %>% 
-  ggplot() +
-  ggtitle("Atmospheric pCO2 of Corsica vs Plateau Rosa according to time") +
-  geom_point(aes(x=datetime, y=value, color= Legend), size=0.5) +
-  scale_y_continuous(name="pCO2 (µatm)") + 
-  scale_x_datetime(name="", date_breaks="2 year", date_minor_breaks="1 years", date_labels = "%Y") +
-  scale_colour_discrete(type=c("#0000FF", "#C4698F"))
+#corse_PR_long %>%
+#  ggplot() +
+#  ggtitle("Atmospheric pCO2 of Corsica vs Plateau Rosa according to time") +
+#  geom_point(aes(x=datetime, y=value, color= Legend), size=0.5) +
+#  scale_y_continuous(name="pCO2 (µatm)") +
+#  scale_x_datetime(name="", date_breaks="2 year", date_minor_breaks="1 years", date_labels = "%Y") +
+#  scale_colour_discrete(type=c("#0000FF", "#C4698F"))
 ##
 
 #scatter plot :
-corse_PR %>% 
+corse_PR %>%
   ggplot() +
   aes(x=pCO2_PR, y=pCO2_CORSE) +
   geom_point(size=0.85) +
@@ -289,44 +289,44 @@ corse_PR %>%
   scale_x_continuous(name="Plateau Rosa") +
   scale_y_continuous(name="Corsica") +
   ggtitle("Relationship between Corsica and Plateau Rosa sites") +
-  annotate(geom="text", x=390, y=420, label="slope : 0.99 ± 0.01 *  R-adj : 0.84", color="black")
+  annotate(geom="text", x=390, y=420, label="slope : 0.99 ± 0.009 *  R-adj : 0.87", color="black")
 
 #slope + intercept
 
 reg_corse_PR <- lm(data = corse_PR, pCO2_CORSE ~ pCO2_PR)
-#summary(reg_corse_PR)
+summary(reg_corse_PR)
 
 ```
-  
-  
-### Corsica vs Lampedusa  
-  
-*Good fit*  
-*Necessity to take Lampedusa data to fill in the series before 2013 and after 2020*  
-  
+
+
+### Corsica vs Lampedusa
+
+*Good fit*
+*Necessity to take Lampedusa data to fill in the series before 2013 and after 2020*
+
 
 ```{r Corsica vs Lampedusa, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center', fig.show='hold'}
 
 #creation column for legend
-corse_LAMP <- pCO2_atmos %>% 
+corse_LAMP <- pCO2_atmos %>%
   select(datetime, pCO2_CORSE, pCO2_LAMP)
 
-corse_LAMP_long <- corse_LAMP %>% 
-  rename(Corsica = pCO2_CORSE, Lampedusa = pCO2_LAMP) %>% 
+corse_LAMP_long <- corse_LAMP %>%
+  rename(Corsica = pCO2_CORSE, Lampedusa = pCO2_LAMP) %>%
   pivot_longer(cols=Corsica :Lampedusa, names_to = "Legend", values_to = "value")
 
 #plot
-corse_LAMP_long %>% 
-  ggplot() +
-  ggtitle("Atmospheric pCO2 of Corsica vs Lampedusa according to time") +
-  geom_point(aes(x=datetime, y=value, color= Legend), size=0.5) +
-  scale_y_continuous(name="pCO2 (µatm)") + 
-  scale_x_datetime(name="", date_breaks="2 year", date_minor_breaks="1 years", date_labels = "%Y") + 
-  scale_colour_discrete(type=c("#0000FF", "#048B9A"))
+#corse_LAMP_long %>%
+#  ggplot() +
+#  ggtitle("Atmospheric pCO2 of Corsica vs Lampedusa according to time") +
+#  geom_point(aes(x=datetime, y=value, color= Legend), size=0.5) +
+#  scale_y_continuous(name="pCO2 (µatm)") +
+#  scale_x_datetime(name="", date_breaks="2 year", date_minor_breaks="1 years", date_labels = "%Y") +
+#  scale_colour_discrete(type=c("#0000FF", "#048B9A"))
 ##
 
 #scatter plot :
-corse_LAMP %>% 
+corse_LAMP %>%
   ggplot() +
   aes(x=pCO2_LAMP, y=pCO2_CORSE) +
   geom_point(size=0.85) +
@@ -334,44 +334,44 @@ corse_LAMP %>%
   scale_x_continuous(name="Lampedusa") +
   scale_y_continuous(name="Corsica") +
   ggtitle("Relationship between Corsica and Lampedusa sites") +
-  annotate(geom="text", x=390, y=420, label="slope : 0.99 ± 0.009 *  R-adj : 0.86", color="black")
+  annotate(geom="text", x=390, y=420, label="slope : 0.99 ± 0.008 *  R-adj : 0.89", color="black")
 
 #slope + intercept
 
 reg_corse_LAMP <- lm(data = corse_LAMP, pCO2_CORSE ~ pCO2_LAMP)
-#summary(reg_corse_LAMP)
+summary(reg_corse_LAMP)
 
 ```
-  
-  
-### Plateau Rosa vs Lampedusa  
-  
-*Best fit*  
-*Necessity to take Lampedusa data to fill in the series before 2013 and after 2020*  
-  
+
+
+### Plateau Rosa vs Lampedusa
+
+*Best fit*
+*Necessity to take Lampedusa data to fill in the series before 2013 and after 2020*
+
 
 ```{r Plateau vs Lampedusa, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center', fig.show='hold'}
 
 #creation column for legend
-PR_LAMP <- pCO2_atmos %>% 
+PR_LAMP <- pCO2_atmos %>%
   select(datetime, pCO2_PR, pCO2_LAMP)
 
-PR_LAMP_long <- PR_LAMP %>% 
-  rename(`Plateau Rosa` = pCO2_PR, Lampedusa = pCO2_LAMP) %>% 
+PR_LAMP_long <- PR_LAMP %>%
+  rename(`Plateau Rosa` = pCO2_PR, Lampedusa = pCO2_LAMP) %>%
   pivot_longer(cols=c(`Plateau Rosa`, Lampedusa), names_to = "Legend", values_to = "value")
 
 #plot
-PR_LAMP_long %>% 
-  ggplot() +
-  ggtitle("Atmospheric pCO2 of Plateau Rosa vs Lampedusa according to time") +
-  geom_point(aes(x=datetime, y=value, color= Legend), size=0.5) +
-  scale_y_continuous(name="pCO2 (µatm)") + 
-  scale_x_datetime(name="", date_breaks="2 year", date_minor_breaks="1 years", date_labels = "%Y") + 
-  scale_colour_discrete(type=c("#C4698F", "#048B9A"))
+#PR_LAMP_long %>%
+#  ggplot() +
+#  ggtitle("Atmospheric pCO2 of Plateau Rosa vs Lampedusa according to time") +
+#  geom_point(aes(x=datetime, y=value, color= Legend), size=0.5) +
+#  scale_y_continuous(name="pCO2 (µatm)") +
+#  scale_x_datetime(name="", date_breaks="2 year", date_minor_breaks="1 years", date_labels = "%Y") +
+#  scale_colour_discrete(type=c("#C4698F", "#048B9A"))
 ##
 
 #scatter plot :
-PR_LAMP %>% 
+PR_LAMP %>%
   ggplot() +
   aes(x=pCO2_LAMP, y=pCO2_PR) +
   geom_point(size=0.85) +
@@ -379,20 +379,20 @@ PR_LAMP %>%
   scale_x_continuous(name="Lampedusa") +
   scale_y_continuous(name="Plateau Rosa") +
   ggtitle("Relationship between Plateau Rosa and Lampedusa sites") +
-  annotate(geom="text", x=390, y=420, label="slope : 0.98 ± 0.005 *  R-adj : 0.93", color="black")
+  annotate(geom="text", x=390, y=420, label="slope : 0.98 ± 0.004 *  R-adj : 0.94", color="black")
 
 #slope + intercept
 
 reg_PR_LAMP <- lm(data = PR_LAMP, pCO2_PR ~ pCO2_LAMP)
-#summary(reg_PR_LAMP)
+summary(reg_PR_LAMP)
 
 ```
-  
+
   
   
 ## NA values  
   
-#### Lampedusa site (2006-2022)  
+#### Lampedusa site (2006-2023)  
   
 Number of NA : 1805  
   
@@ -425,7 +425,7 @@ atmospheric_co2_LAMPEDUSA_NA_plot %>%
 ```
   
   
-#### Plateau Rosa site (2007-2022)  
+#### Plateau Rosa site (2007-2023)  
   
 Number of NA : 1354
   
@@ -458,7 +458,7 @@ atmospheric_co2_PLATEAU_ROSA_NA_plot %>%
 ```
   
   
-#### Corsica site (2013-2022)
+#### Corsica site (2013-2023)
 
 Number of NA : 3398
 
