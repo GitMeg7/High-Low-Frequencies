@@ -1,8 +1,17 @@
 ---
-title: "Interpolations"
-author: "Mégane"
-date: "2023-03-27"
-output: html_document
+title: Interpolations
+author: |
+   | M&eacute;gane Ballin
+   
+date: '`r format(Sys.time(), "%d %B %Y %H:%M")`'
+
+output:
+    rmdformats::robobook:
+     self_contained: true
+     thumbnails: false
+     lightbox: true
+     gallery: true
+     highlight: pygments
 ---
 
 
@@ -31,13 +40,13 @@ library("stringr")
 ```
   
 
-## Point B : surface (2007-2022) :  
+# Point B : surface (2007-2022) 
   
 Utilisation of : na_seadec() function  
 = Removes the seasonal component from the time series, performs imputation on the deseasonalized series and afterwards adds the seasonal component again.  
   
   
-### Temperature & salinity :  
+## Temperature & salinity
   
 
 ```{r interpolation temp & salinity, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7,fig.height=5}
@@ -46,8 +55,8 @@ SOMLIT_pcO2 <- read_delim("../../Data/Data_PointB/DATA_SOMLIT_07-22_impute_0m.cs
     delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
   dplyr::filter(datetime <= "2021-11-09")
 
-# impute_temp <- na_seadec(SOMLIT_pcO2$temperature, algorithm = "interpolation", find_frequency = F)
-# impute_sal <- na_seadec(SOMLIT_pcO2$salinity, algorithm = "interpolation", find_frequency = F)
+impute_temp <- na_seadec(SOMLIT_pcO2$temperature, algorithm = "interpolation", find_frequency = F)
+impute_sal <- na_seadec(SOMLIT_pcO2$salinity, algorithm = "interpolation", find_frequency = F)
 
 
 SOMLIT_pcO2$temperature[is.na(SOMLIT_pcO2$pCO2_atmos)] <- "NA"
@@ -68,27 +77,28 @@ SOMLIT_pcO2 <- SOMLIT_pcO2 %>%
   mutate(pCO2_atmos = as.numeric(pCO2_atmos))
 
 
-# ggplot_na_gapsize(SOMLIT_pcO2$pCO2_atmos)
+#ggplot_na_gapsize(SOMLIT_pcO2$pCO2_atmos)
 
 
-ggplot_na_imputations(SOMLIT_pcO2$pCO2_atmos, SOMLIT_pcO2$impute_pCO2_atmos, x_axis_labels = SOMLIT_pcO2$datetime, xlab = "", 
-                      ylab=expression(paste(italic(p), CO[2], " atmosphérique ", "(atm)")), 
-                      title="", color_lines = "lightslategray",
-                      color_points = "steelblue", size_points = 1.2, size_imputations = 1.7) +
-  scale_x_date(date_breaks = "2 years", date_labels = "%Y") 
-  
+# ggplot_na_imputations(SOMLIT_pcO2$pCO2_atmos, SOMLIT_pcO2$impute_pCO2_atmos, x_axis_labels = SOMLIT_pcO2$datetime, xlab = "", 
+#                       ylab=expression(paste(italic(p), CO[2], " atmosphérique ", "(atm)")), 
+#                       title="", color_lines = "lightslategray",
+#                       color_points = "steelblue", size_points = 1.2, size_imputations = 1.7) +
+#   scale_x_date(date_breaks = "2 years", date_labels = "%Y") 
+#   
 
 
 
 ```
 
-### pCO~2~ water :  
+## *p*CO~2~ water
   
 
 ```{r interpolation pCO2_w, echo=FALSE, warning=FALSE, message=FALSE}
 
 #interpolation pCO2_w : - NAs at the end
-#impute_pCO2_w <- na_seadec(SOMLIT_pcO2$pCO2_w, algorithm = "interpolation", find_frequency = F)
+
+impute_pCO2_w <- na_seadec(SOMLIT_pcO2$pCO2_w, algorithm = "interpolation", find_frequency = F)
 
 
 ggplot_na_imputations(SOMLIT_pcO2$pCO2_w, SOMLIT_pcO2$impute_pCO2_w, x_axis_labels = SOMLIT_pcO2$datetime,
@@ -99,36 +109,33 @@ ggplot_na_imputations(SOMLIT_pcO2$pCO2_w, SOMLIT_pcO2$impute_pCO2_w, x_axis_labe
 
 ```
 
-### AT & CT :  
+<!-- ## *A*~T~ & *C*~T~ -->
   
 ```{r interpolation AT & CT, echo=FALSE, warning=FALSE, message=FALSE}
-
-#interpolation alcalinity : - NAs at the end
-#impute_ta <- na_seadec(SOMLIT_pcO2$ta, algorithm = "interpolation", find_frequency = T)
-
-ggplot_na_imputations(SOMLIT_pcO2$ta, SOMLIT_pcO2$impute_ta, x_axis_labels = SOMLIT_pcO2$datetime, xlab = "", 
-                      ylab="AT (µmol/kg)", 
-                      title="Point B - Total alkalinity time series (µmol/kg) - period 2007-2022")
-
-
-#interpolation CT (dic) : - NAs at the end
-#impute_dic <- na_seadec(Somlit_interpol$dic, algorithm = "interpolation", find_frequency = T)
-
-ggplot_na_imputations(SOMLIT_pcO2$dic, SOMLIT_pcO2$impute_dic, x_axis_labels = SOMLIT_pcO2$datetime, xlab = "", 
-                      ylab="AT (µmol/kg)", 
-                      title="Point B - Total carbon time series (µmol/kg) - period 2007-2022")
-
-
-
+# 
+# #interpolation alcalinity : - NAs at the end
+# 
+# impute_ta <- na_seadec(SOMLIT_pcO2$ta, algorithm = "interpolation", find_frequency = T)
+# 
+# ggplot_na_imputations(SOMLIT_pcO2$ta, SOMLIT_pcO2$impute_ta, x_axis_labels = SOMLIT_pcO2$datetime, xlab = "", 
+#                       ylab="AT (µmol/kg)", 
+#                       title="Point B - Total alkalinity time series (µmol/kg) - period 2007-2022")
+# 
+# 
+# #interpolation CT (dic) : - NAs at the end
+# 
+# impute_dic <- na_seadec(Somlit_interpol$dic, algorithm = "interpolation", find_frequency = T)
+# 
+# ggplot_na_imputations(SOMLIT_pcO2$dic, SOMLIT_pcO2$impute_dic, x_axis_labels = SOMLIT_pcO2$datetime, xlab = "", 
+#                       ylab="AT (µmol/kg)", 
+#                       title="Point B - Total carbon time series (µmol/kg) - period 2007-2022")
 ```
   
+## Atmospheric *p*CO~2~ (µatm) 
   
-### Data of atmospheric pCO~2~ (µatm):  
-  
-period : Jan.2007 - Dec.2021 
-  
-Frequency : daily (09:00 AM)
-Unity : µatm  
+Period: Jan.2007 - Dec.2023 
+Frequency: daily (09:00 AM) - To be changed
+Unit: µatm  
   
 → Corse Ersa (40m) - 2013-2020  
 → Plateau Rosa (10m) - 2007-2022  
@@ -136,13 +143,13 @@ Unity : µatm
   
 ```{r importation pCO2 air, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7,fig.height=4}
 
- pCO2_air <- read_delim("../../Data/atmospheric_pco2_icos/DATA_pCO2_atmos_06-22.csv", 
+ pCO2_air <- read_delim("../../Data/atmospheric_pco2_icos/DATA_pCO2_atmos_06-23.csv", 
      delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
-   dplyr::filter(datetime >= "2007-01-01" & datetime <= "2021-12-31") %>% 
+   dplyr::filter(datetime >= "2007-01-01" & datetime <= "2023-12-31") %>% 
    dplyr::select(-c(CO2_LAMP, CO2_CORSE, CO2_PR, CO2_HP, CO2_MC, pCO2_MC, pCO2_HP))
  
  
-# merge1 <- left_join(SOMLIT_pcO2, pCO2_air, by="datetime")
+merge1 <- left_join(SOMLIT_pcO2, pCO2_air, by="datetime")
 
 ##RAPPORT
 
@@ -177,31 +184,29 @@ pCO2_air %>%
 
 ```{r cross interpolation atmospheric pCO2, echo=FALSE, warning=FALSE, message=FALSE}
 
-#pCO2_atmos = interpolation between 3 sites (Corsica x Lampedusa x Plateau Rosa)
+# pCO2_atmos = interpolation between 3 sites (Corsica x Lampedusa x Plateau Rosa)
 
-# merge1 <- merge1 %>% 
-#   mutate(pCO2_CORSE = str_replace_na(pCO2_CORSE, replacement = "NA"),
-#          pCO2_PR = str_replace_na(pCO2_PR, replacement = "NA"),
-#          pCO2_LAMP = str_replace_na(pCO2_LAMP, replacement = "NA"),
-#          pCO2_atmos = case_when(pCO2_CORSE == "NA" ~ pCO2_LAMP, TRUE ~ pCO2_CORSE),
-#          pCO2_atmos = case_when(pCO2_atmos == "NA" ~ pCO2_PR, TRUE ~ pCO2_atmos))
-# 
-# 
-# merge1 <- merge1 %>% 
-#   mutate(pCO2_CORSE = as.numeric(pCO2_CORSE),
-#          pCO2_PR = as.numeric(pCO2_PR),
-#          pCO2_LAMP = as.numeric(pCO2_LAMP),
-#          pCO2_atmos = as.numeric(pCO2_atmos)) #110 NAs
-# ##
-# 
-# 
-# #creation merge1_interpol = merge1 without last rows ( - pCO2_atmos NAs)
-# merge1_interpol <- merge1 %>% dplyr::filter(datetime <= "2021-12-28")
+merge1 <- merge1 %>% 
+ mutate(pCO2_CORSE = str_replace_na(pCO2_CORSE.x, replacement = "NA"),
+        pCO2_PR = str_replace_na(pCO2_PR.x, replacement = "NA"),
+        pCO2_LAMP = str_replace_na(pCO2_LAMP.x, replacement = "NA"),
+        pCO2_atmos = case_when(pCO2_CORSE == "NA" ~ pCO2_LAMP, TRUE ~ pCO2_CORSE),
+        pCO2_atmos = case_when(pCO2_atmos == "NA" ~ pCO2_PR, TRUE ~ pCO2_atmos))
+ 
+ 
+merge1 <- merge1 %>% 
+ mutate(pCO2_CORSE = as.numeric(pCO2_CORSE),
+        pCO2_PR = as.numeric(pCO2_PR),
+        pCO2_LAMP = as.numeric(pCO2_LAMP),
+        pCO2_atmos = as.numeric(pCO2_atmos)) #110 NAs
+ 
+# creation merge1_interpol = merge1 without last rows ( - pCO2_atmos NAs)
 
-##
+merge1_interpol <- merge1 %>% dplyr::filter(datetime <= "2021-12-28")
 
-# #linear interpolation pCO2 atmos :
-# impute_pCO2_atmos <- na_seadec(merge1_interpol$pCO2_atmos, algorithm="interpolation")
+#linear interpolation pCO2 atmos :
+
+impute_pCO2_atmos <- na_seadec(merge1_interpol$pCO2_atmos, algorithm="interpolation")
  
 ggplot_na_imputations(SOMLIT_pcO2$pCO2_atmos, SOMLIT_pcO2$impute_pCO2_atmos, x_axis_labels = SOMLIT_pcO2$datetime, 
                        xlab = "", ylab="pCO2 (µatm)", 
