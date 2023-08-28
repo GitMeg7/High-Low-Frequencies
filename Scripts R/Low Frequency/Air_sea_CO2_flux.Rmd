@@ -92,17 +92,17 @@ Wind_EOL <- Wind_EOL[319:121962,] #jan.2009 to dec.2022
 ## Annual means of wind speed (2009-2022) : EOL buoy  
   
 
-```{r filter 9 AM + graph, echo=FALSE, warning=FALSE, message=FALSE}
+```{r Wind graph, echo=FALSE, warning=FALSE, message=FALSE}
 
-Wind_EOL_9AM <- Wind_EOL %>% 
+Wind_EOL <- Wind_EOL %>% 
   mutate(Hour = format(date, format="%H:%M:%S")) %>% 
   dplyr::filter(Hour == "09:00:00") %>% 
   mutate(datetime = format(date, format="%Y-%m-%d"),
          datetime = as.POSIXct(datetime)) %>% 
-  dplyr::select(datetime, speed_ms)
-##
+dplyr::select(datetime, speed_ms)
 
-graph_wind_eol <- Wind_EOL_9AM %>% 
+
+graph_wind_eol <- Wind_EOL %>% 
   mutate(year = format(datetime, format="%Y")) %>% 
   group_by(year) %>% 
   mutate(mean = mean(speed_ms))
