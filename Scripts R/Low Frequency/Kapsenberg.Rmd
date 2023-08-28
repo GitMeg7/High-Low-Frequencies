@@ -1,11 +1,22 @@
 ---
-title: "Kapsenberg"
-author: "Mégane"
+title: Comparison with Kapsenberg et al. (2017)
+author: |
+   | M&eacute;gane Ballin
+   
 date: '`r format(Sys.time(), "%d %B %Y %H:%M")`'
-output: html_document
+
+output:
+    rmdformats::robobook:
+     self_contained: true
+     thumbnails: false
+     lightbox: true
+     gallery: true
+     highlight: pygments
 ---
 
-# Time series trends analysis by residuals (substracting climatological monthly means)
+# Description
+
+Time series trends analysis by residuals (substracting climatological monthly means)
 
 Kapsenberg et al. (2017)
 
@@ -62,11 +73,11 @@ Mytheme <- function(size_labs = 6, face_font="plain", ...) {
 ##
 ```
 
-## 2007-2015 : Comparison with Kapsenberg results
+# 2007-2015 : Comparison with Kapsenberg results
 
-#### SURFACE
+## SURFACE
 
-##### [Table of monthly means (2007-2015) - surface data]{style="color:blue"}
+### [Table of monthly means (2007-2015) - surface data]{style="color:blue"}
 
 ➝ Comparaison supplement, Tab S1 (Kapsenberg) same period : results ok ✓
 
@@ -89,7 +100,7 @@ monthly_means_0m_0715 <- ungroup(data_0715) %>%
 monthly_means_0m_0715
 ```
 
-##### [Table of time series anomalies regression analyses (2007-2015) - surface data]{style="color:green"}
+### [Table of time series anomalies regression analyses (2007-2015) - surface data]{style="color:green"}
 
 ➝ Comparison Table 2 (Kapsenberg) same period : results ok ✓
 
@@ -244,7 +255,7 @@ reg_ano_surf
 
 ```
 
-###### Plot of anomalies : temperature (2007-2015) - surface
+### Plot of anomalies : temperature (2007-2015) - surface
 
 ```{r, plot anomalies temperature 2007-2015 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -275,7 +286,7 @@ plot_ano_temp_0715
 
 ```
 
-###### Plot of anomalies : salinity (2007-2015) - surface
+### Plot of anomalies : salinity (2007-2015) - surface
 
 ```{r, plot anomalies salinity 2007-2015 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -301,7 +312,7 @@ plot_sal_0715
 plot_ano_sal_0715
 ```
 
-###### Plot of anomalies : pH (2007-2015) - surface
+### Plot of anomalies : pH (2007-2015) - surface
 
 ```{r, plot anomalies pH 2007-2015 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -328,7 +339,7 @@ plot_ph_0715
 plot_ano_ph_0715
 ```
 
-###### Plot of anomalies : alkalinity (2007-2015) - surface
+### Plot of anomalies : alkalinity (2007-2015) - surface
 
 ```{r, plot anomalies alcalinity 2007-2015 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -355,7 +366,7 @@ plot_ta_0715
 plot_ano_ta_0715
 ```
 
-###### Plot of anomalies : pCO2 (2007-2015) - surface
+### Plot of anomalies : pCO2 (2007-2015) - surface
 
 ```{r, plot anomalies CO2 1 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 plot_ano_pCO2_0715 <- ggplot(data = ano_0m_0715, aes(x = sampling_date, y = pCO2_ano), na.rm=TRUE) +
@@ -381,9 +392,9 @@ plot_pCO2_0715
 plot_ano_pCO2_0715
 ```
 
-### DEPTH 50 m
+## DEPTH 50 m
 
-##### [Table of monthly means (2007-2015) - 50m data]{style="color:blue"}
+### [Table of monthly means (2007-2015) - 50m data]{style="color:blue"}
 
 ➝ Comparaison supplement, Tab S1 (Kapsenberg) same period : results ok ✓
 
@@ -406,7 +417,7 @@ monthly_means_50m_0715 <- ungroup(data_0715_50m) %>%
 monthly_means_50m_0715
 ```
 
-##### [Table of time series anomalies regression analyses (2007-2015) - 50m data]{style="color:green"}
+### [Table of time series anomalies regression analyses (2007-2015) - 50m data]{style="color:green"}
 
 ➝ Comparison Table 2 (Kapsenberg) same period: results ok ✓
 
@@ -558,7 +569,7 @@ reg_ano_50
 
 ```
 
-###### Plot of anomalies : temperature (2007-2015) - 50m
+### Plot of anomalies : temperature (2007-2015) - 50m
 
 ```{r, plot anomalies temperature 2007-2015 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -588,7 +599,7 @@ plot_ano_temp_0715_50m
 
 ```
 
-###### Plot of anomalies : salinity (2007-2015) - 50m
+### Plot of anomalies : salinity (2007-2015) - 50m
 
 ```{r, plot anomalies salinity 2007-2015 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -615,7 +626,7 @@ plot_sal_0715_50m
 plot_ano_sal_0715_50m
 ```
 
-###### Plot of anomalies : pH (2007-2015) - 50m
+### Plot of anomalies : pH (2007-2015) - 50m
 
 ```{r, plot anomalies pH 2007-2015 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -642,7 +653,7 @@ plot_ph_0715_50m
 plot_ano_ph_0715_50m
 ```
 
-###### Plot of anomalies : alcalinity (2007-2015) - 50m
+### Plot of anomalies : alcalinity (2007-2015) - 50m
 
 ```{r, plot anomalies alcalinity 2007-2015 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -669,7 +680,7 @@ plot_ta_0715_50m
 plot_ano_ta_0715_50m
 ```
 
-###### Plot of anomalies : pCO2 (2007-2015) - 50m
+### Plot of anomalies : pCO2 (2007-2015) - 50m
 
 ```{r, plot anomalies CO2 2007-2015 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -696,13 +707,13 @@ plot_pCO2_0715_50m
 plot_ano_pCO2_0715_50m
 ```
 
-## 2007-2022
+# 2007-2022
 
 *→ SOMLIT clean + interpolations ok ☑*
 
-### SURFACE
+## SURFACE
 
-##### [Table of monthly means (2007-2022) - surface data]{style="color:blue"}
+### [Table of monthly means (2007-2022) - surface data]{style="color:blue"}
 
 ```{r import data 2007-2022 at 0m and 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -765,7 +776,7 @@ monthly_means_0m_0722 <- ungroup(data_0722) %>%
 
 ```
 
-##### [Table of time series anomaly regression analyses (2007-2022) - surface data]{style="color:green"}
+### [Table of time series anomaly regression analyses (2007-2022) - surface data]{style="color:green"}
 
 ```{r calculate anomalies + regression 2007-2022 - surface, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -857,7 +868,7 @@ reg_ano_surf2
 
 ```
 
-###### Plot of anomalies : Temperature (2007-2022) - surface
+### Plot of anomalies : Temperature (2007-2022) - surface
 
 ```{r, plot anomalies temperature 2007-2022 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -880,7 +891,7 @@ plot_temp_0722
 plot_ano_temp2
 ```
 
-###### Plot of anomalies : salinity (2007-2022) - surface
+### Plot of anomalies : salinity (2007-2022) - surface
 
 ```{r, plot anomalies salinity 2007-2022 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 plot_ano_sal2 <- ggplot(data = ano_0m_0722, aes(x = datetime, y = Salinity_ano), na.rm=TRUE) +
@@ -902,7 +913,7 @@ plot_sal_0722
 plot_ano_sal2
 ```
 
-###### Plot of anomalies : pH_calc (2007-2022) - surface
+### Plot of anomalies : pH_calc (2007-2022) - surface
 
 ```{r, plot anomalies pH 2007-2022 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -924,7 +935,7 @@ plot_ph_0722
 plot_ano_ph2
 ```
 
-###### Plot of anomalies : pH(18) (2007-2022) - surface
+### Plot of anomalies : pH(18) (2007-2022) - surface
 
 ```{r, plot anomalies pH_18 2007-2022 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -946,7 +957,7 @@ plot_ph_18_0722
 plot_ano_ph_18_2
 ```
 
-###### Plot of anomalies : alkalinity (2007-2022) - surface
+### Plot of anomalies : alkalinity (2007-2022) - surface
 
 ```{r, plot anomalies alkalinity 2007-2022 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -969,7 +980,7 @@ plot_ta_0722
 plot_ano_ta_0722
 ```
 
-###### Plot of anomalies : DIC (2007-2022) - surface
+### Plot of anomalies : DIC (2007-2022) - surface
 
 ```{r, plot anomalies DIC 2007-2022 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -991,7 +1002,7 @@ plot_dic_0722
 plot_ano_dic_0722
 ```
 
-###### Plot of anomalies : pCO2 (2007-2022) - surface
+### Plot of anomalies : pCO2 (2007-2022) - surface
 
 ```{r, plot anomalies CO2 2007-2015 - surface, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -1023,9 +1034,9 @@ plot_grid_1
 
 ```
 
-### DEPTH 50 m
+## DEPTH 50 m
 
-##### [Table of monthly means (2007-2022) - 50m data]{style="color:blue"}
+### [Table of monthly means (2007-2022) - 50m data]{style="color:blue"}
 
 *(rajouter les SD)*
 
@@ -1073,7 +1084,7 @@ monthly_means_50m_0722
 
 ```
 
-##### [Table of time series anomaly regression analyses (2007-2022) - 50m data]{style="color:green"}
+### [Table of time series anomaly regression analyses (2007-2022) - 50m data]{style="color:green"}
 
 ```{r calculate anomalies + regression 2007-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -1167,7 +1178,7 @@ reg_ano_50m
 
 ```
 
-###### Plot of anomalies : Temperature (2007-2022) - 50m
+### Plot of anomalies : Temperature (2007-2022) - 50m
 
 ```{r, plot anomalies temperature 2007-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -1189,7 +1200,7 @@ plot_temp_0722_50m
 plot_ano_temp2_50m
 ```
 
-###### Plot of anomalies : salinity (2007-2022) - 50m
+### Plot of anomalies : salinity (2007-2022) - 50m
 
 ```{r, plot anomalies salinity 2007-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -1212,7 +1223,7 @@ plot_sal_0722_50m
 plot_ano_sal2_50m
 ```
 
-###### Plot of anomalies : pH_calc (2007-2022) - 50m
+### Plot of anomalies : pH_calc (2007-2022) - 50m
 
 ```{r, plot anomalies pH 2007-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -1234,7 +1245,7 @@ plot_ph_0722_50m
 plot_ano_ph2_50m
 ```
 
-###### Plot of anomalies : pH(18) (2007-2022) - 50m
+### Plot of anomalies : pH(18) (2007-2022) - 50m
 
 ```{r, plot anomalies pH_18 2007-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -1256,7 +1267,7 @@ plot_ph_18_0722_50m
 plot_ano_ph_18_2_50m
 ```
 
-###### Plot of anomalies : alkalinity (2007-2022) - 50m
+### Plot of anomalies : alkalinity (2007-2022) - 50m
 
 ```{r, plot anomalies alcalinity 2007-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -1279,7 +1290,7 @@ plot_ano_ta_0722_50m
 
 ```
 
-###### Plot of anomalies : DIC (2007-2022) - 50m
+### Plot of anomalies : DIC (2007-2022) - 50m
 
 ```{r, plot anomalies DIC 2007-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -1301,7 +1312,7 @@ plot_dic_0722_50m
 plot_ano_dic_0722_50m
 ```
 
-###### Plot of anomalies : pCO2 (2007-2022) - 50m
+### Plot of anomalies : pCO2 (2007-2022) - 50m
 
 ```{r, plot anomalies CO2 2007-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -1340,11 +1351,11 @@ plot_grid_2
 
 ```
 
-## 1995-2022 : temperature & salinity
+# 1995-2022 : temperature & salinity
 
 05-92 to 12-22 but not enough data before Jan. 1995
 
-### SURFACE
+## SURFACE
 
 ```{r import data temperature + salinity Point B - 0m et 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -1355,7 +1366,7 @@ TS_9522_surf <- read_delim("../../Data/data_PointB/PointB_T_S_1995-2022_CLEAN_im
 
 ```
 
-##### [Table of monthly means for salinity and temperature (1995-2022) - 0m data]{style="color:blue"}
+### [Table of monthly means for salinity and temperature (1995-2022) - 0m data]{style="color:blue"}
 
 ```{r calculate monthly means 1992-2022 - 0m, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -1370,7 +1381,7 @@ monthly_means_0m_9522
 
 ```
 
-##### [Table of salinity and temperature time series anomaly regression analyses (1995-2022) - 0m data]{style="color:green"}
+### [Table of salinity and temperature time series anomaly regression analyses (1995-2022) - 0m data]{style="color:green"}
 
 ```{r calculate anomalies + regression on salinity and temperature (1992-2022) - 0m, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -1435,7 +1446,7 @@ reg_ano_ST_0m_9522
 
 ```
 
-###### Plot of anomalies : Temperature (1995-2022) - 0m
+### Plot of anomalies : Temperature (1995-2022) - 0m
 
 ```{r plot anomalies temperature 1995-2022 - 0m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -1458,7 +1469,7 @@ plot_ano_temp_9522
 
 ```
 
-###### Plot of anomalies : salinity (1995-2022) - 0m
+### Plot of anomalies : salinity (1995-2022) - 0m
 
 ```{r plot anomalies salinity 1992-2022 - 0m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=9,fig.height=16,fig.align='center'}
 
@@ -1488,9 +1499,9 @@ plot_ano_sal_9522
 
 ```
 
-### DEPTH 50
+## DEPTH 50
 
-##### [Table of monthly means for salinity and temperature (1995-2022) - 50m data]{style="color:blue"}
+### [Table of monthly means for salinity and temperature (1995-2022) - 50m data]{style="color:blue"}
 
 ```{r calculate monthly means 1995-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -1510,7 +1521,7 @@ monthly_means_50m_9522
 
 ```
 
-##### [Table of salinity and temperature time series anomaly regression analyses (1995-2022) - 50m data]{style="color:green"}
+### [Table of salinity and temperature time series anomaly regression analyses (1995-2022) - 50m data]{style="color:green"}
 
 ```{r calculate anomalies + regression on salinity and temperature (1995-2022) - 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -1575,7 +1586,7 @@ reg_ano_ST_50m_9522
 
 ```
 
-###### Plot of anomalies : Temperature (1995-2022) - 50m
+### Plot of anomalies : Temperature (1995-2022) - 50m
 
 ```{r plot anomalies temperature 1995-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -1597,7 +1608,7 @@ plot_ano_temp_9522_50m
 
 ```
 
-###### Plot of anomalies : salinity (1995-2022) - 50m
+### Plot of anomalies : salinity (1995-2022) - 50m
 
 ```{r plot anomalies salinity 1995-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=9,fig.height=16,fig.align='center'}
 
@@ -1627,13 +1638,13 @@ plot_ano_sal_9522_prof
 
 ```
 
-## 2000-2022 : Analysis every 10 years
+# 2000-2022 : Analysis every 10 years
 
-### SURFACE
+## SURFACE
 
-#### Jan.2000 - Dec.2009
+### Jan.2000 - Dec.2009
 
-##### [Table of monthly means (2000-2009) - 0m data]{style="color:blue"}
+#### [Table of monthly means (2000-2009) - 0m data]{style="color:blue"}
 
 ```{r calculate monthly means 2000-2009 - 0m, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -1653,7 +1664,7 @@ monthly_means_0m_2000
 
 ```
 
-##### [Table of anomaly regression analyses (2000-2009) - 0m data]{style="color:green"}
+#### [Table of anomaly regression analyses (2000-2009) - 0m data]{style="color:green"}
 
 ```{r calculate anomalies + regression (2000-2009) - 0m, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -1777,7 +1788,7 @@ reg_ano_0m_2000
 
 ```
 
-###### Plot of anomalies : Temperature (2000-2009) - 0m
+#### Plot of anomalies : Temperature (2000-2009) - 0m
 
 ```{r plot anomalies temperature 2000-2009 - 0m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -1800,7 +1811,7 @@ plot_ano_temp_2000_0m
 
 ```
 
-###### Plot of anomalies : Salinity (2000-2009) - 0m
+#### Plot of anomalies : Salinity (2000-2009) - 0m
 
 ```{r plot anomalies salinity 2000-2009 - 0m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -1823,9 +1834,9 @@ plot_ano_sal_2000_0m
 
 ```
 
-#### Jan.2010 - Dec.2022
+### Jan.2010 - Dec.2022
 
-##### [Table of monthly means (2010-2022) - 0m data]{style="color:blue"}
+#### [Table of monthly means (2010-2022) - 0m data]{style="color:blue"}
 
 ```{r calculate monthly means 2010-2022 - 0m, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -1844,7 +1855,7 @@ monthly_means_0m_2010
 
 ```
 
-##### [Table of anomaly regression analyses (2010-2022) - 0m data]{style="color:green"}
+#### [Table of anomaly regression analyses (2010-2022) - 0m data]{style="color:green"}
 
 ```{r calculate anomalies + regression (2010-2022) - 0m, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -1968,7 +1979,7 @@ reg_ano_0m_2010
 
 ```
 
-###### Plot of anomalies : Temperature (2010-2022) - 0m
+#### Plot of anomalies : Temperature (2010-2022) - 0m
 
 ```{r plot anomalies temperature 2010-2022 - 0m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -1991,7 +2002,7 @@ plot_ano_temp_2010_0m
 
 ```
 
-###### Plot of anomalies : Salinity (2010-2022) - 0m
+#### Plot of anomalies : Salinity (2010-2022) - 0m
 
 ```{r plot anomalies salinity 2010-2022 - 0m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -2014,11 +2025,11 @@ plot_ano_sal_2010_0m
 
 ```
 
-### DEPTH 50
+## DEPTH 50
 
-#### Jan.2000 - Dec.2009
+### Jan.2000 - Dec.2009
 
-##### [Table of monthly means (2000-2009) - 50m data]{style="color:blue"}
+#### [Table of monthly means (2000-2009) - 50m data]{style="color:blue"}
 
 ```{r calculate monthly means 2000-2009 - 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -2037,7 +2048,7 @@ monthly_means_50m_2000
 
 ```
 
-##### [Table of anomaly regression analyses (2000-2009) - 50m data]{style="color:green"}
+#### [Table of anomaly regression analyses (2000-2009) - 50m data]{style="color:green"}
 
 ```{r calculate anomalies + regression (2000-2009) - 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -2161,7 +2172,7 @@ reg_ano_50m_2000
 
 ```
 
-###### Plot of anomalies : Temperature (2000-2009) - 50m
+#### Plot of anomalies : Temperature (2000-2009) - 50m
 
 ```{r plot anomalies temperature 2000-2009 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -2184,7 +2195,7 @@ plot_ano_temp_2000_50m
 
 ```
 
-###### Plot of anomalies : Salinity (2000-2009) - 50m
+#### Plot of anomalies : Salinity (2000-2009) - 50m
 
 ```{r plot anomalies salinity 2000-2009 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -2207,9 +2218,9 @@ plot_ano_sal_2000_50m
 
 ```
 
-#### Jan.2010 - Dec.2022
+### Jan.2010 - Dec.2022
 
-##### [Table of monthly means (2010-2022) - 50m data]{style="color:blue"}
+#### [Table of monthly means (2010-2022) - 50m data]{style="color:blue"}
 
 ```{r calculate monthly means 2010-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -2228,7 +2239,7 @@ monthly_means_50m_2010
 
 ```
 
-##### [Table of anomaly regression analyses (2010-2022) - 50m data]{style="color:green"}
+#### [Table of anomaly regression analyses (2010-2022) - 50m data]{style="color:green"}
 
 ```{r calculate anomalies + regression (2010-2022) - 50m, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -2352,7 +2363,7 @@ reg_ano_50m_2010
 
 ```
 
-###### Plot of anomalies : Temperature (2010-2022) - 50m
+#### Plot of anomalies : Temperature (2010-2022) - 50m
 
 ```{r plot anomalies temperature 2010-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -2375,7 +2386,7 @@ plot_ano_temp_2010_50m
 
 ```
 
-###### Plot of anomalies : Salinity (2010-2022) - 50m
+#### Plot of anomalies : Salinity (2010-2022) - 50m
 
 ```{r plot anomalies salinity 2010-2022 - 50m, echo=FALSE, warning=FALSE, message=FALSE, fig.width=8,fig.height=4,fig.align='center'}
 
@@ -2400,13 +2411,13 @@ plot_ano_sal_2010_50m
 
 ------------------------------------------------------------------------
 
-## Comparison SOMLIT - EOL results : 2018-2022
+# Comparison SOMLIT - EOL results : 2018-2022
 
-### SURFACE
+## SURFACE
 
 temperature (°C) & salinity
 
-##### [Table and plot of monthly means (2017-2022) - EOL temperature & salinity]{style="color:blue"}
+### [Table and plot of monthly means (2017-2022) - EOL temperature & salinity]{style="color:blue"}
 
 ```{r importation Data EOL hourly + creation SOMLIT 18-22, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -2454,7 +2465,7 @@ monthly_means_somlit_1822
 
 ```
 
-##### [Table of anomalies regression analyses (2018-2022) - EOL temperature & salinity]{style="color:green"}
+### [Table of anomalies regression analyses (2018-2022) - EOL temperature & salinity]{style="color:green"}
 
 ```{r regression analysis - temperature & salinity - EOL - 2018-2022, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -2578,7 +2589,7 @@ reg_ano_EOL_1822_surf <- reg
 reg_ano_EOL_1822_surf
 ```
 
-##### [Table of anomalies regression analyses (2018-2022) - SOMLIT temperature & salinity]{style="color:green"}
+### [Table of anomalies regression analyses (2018-2022) - SOMLIT temperature & salinity]{style="color:green"}
 
 ```{r regression analysis - temperature & salinity - SOMLIT - 2018-2022, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -2700,7 +2711,7 @@ reg_ano_SOM_1822 <- reg
 reg_ano_SOM_1822
 ```
 
-###### EOL : Plot of anomalies : Temperature (°C) (2018-2022)
+### EOL : Plot of anomalies : Temperature (°C) (2018-2022)
 
 ```{r plot anomalies + trends - temperature - EOL 1822, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -2723,7 +2734,7 @@ plot_temperature_EOL_1822
 plot_ano_temp_EOL_1822
 ```
 
-###### EOL : Plot of anomalies : Salinity (2018-2022)
+### EOL : Plot of anomalies : Salinity (2018-2022)
 
 *without interpolation*
 
@@ -2748,7 +2759,7 @@ plot_salinity_EOL_1822
 plot_ano_sal_EOL_1822
 ```
 
-###### SOMLIT : Plot of anomalies : Temperature (°C) (2018-2022)
+### SOMLIT : Plot of anomalies : Temperature (°C) (2018-2022)
 
 ```{r plot anomalies + trends - temperature - SOMLIT 1822, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -2772,7 +2783,7 @@ plot_temperature_SOM_1822
 plot_ano_temp_SOM_1822
 ```
 
-###### SOMLIT : Plot of anomalies : Salinity (2018-2022)
+### SOMLIT : Plot of anomalies : Salinity (2018-2022)
 
 ```{r plot anomalies + trends - salinity - SOMLIT 1822, echo=FALSE, warning=FALSE, message=FALSE}
 
